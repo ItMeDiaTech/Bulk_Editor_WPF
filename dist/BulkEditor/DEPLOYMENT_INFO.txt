@@ -1,0 +1,20 @@
+﻿BulkEditor Deployment Information
+================================
+
+Build Date: 2025-09-03 11:33:12
+Configuration: Release
+Runtime: win-x64
+.NET Version: 8.0
+
+Installation Instructions:
+1. Extract all files to a directory of your choice
+2. Ensure .NET 8.0 Runtime is installed on target machine
+3. Run BulkEditor.UI.exe to start the application
+4. Configure settings via the Settings menu
+
+System Requirements:
+- Windows 10/11 (x64)
+- .NET 8.0 Runtime (must be installed separately)
+- Microsoft Word (for document processing)
+
+For support and documentation, see README.md
