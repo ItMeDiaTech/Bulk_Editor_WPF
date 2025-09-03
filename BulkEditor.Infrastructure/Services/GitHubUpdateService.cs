@@ -430,9 +430,35 @@ try {{
 
     if (Test-Path ""{installerPath}"") {{
         # Run installer silently with installation directory
-        $installProcess = Start-Process -FilePath ""{installerPath}"" -ArgumentList ""/S"", ""/D={currentExeDir}"" -Wait -PassThru
+        # Check if it's an MSI or EXE installer
+         $fileExtension = [System.IO.Path]::GetExtension(""{installerPath}"").ToLower()
 
-        if ($installProcess.ExitCode -eq 0) {{
+         if ($fileExtension -eq "".msi"") {{
+             # Run MSI installer silently
+             Write-Host ""Installing MSI package silently..."" -ForegroundColor Yellow
+             $installProcess = Start-Process -FilePath ""msiexec.exe"" -ArgumentList ""/i"", """"""{installerPath}"""""", ""/quiet"", ""/norestart"" -Wait -PassThru
+         }} else {{
+             # Run EXE installer silently
+             Write-Host ""Installing EXE package silently..."" -ForegroundColor Yellow
+             $installProcess = Start-Process -FilePath ""{installerPath}"" -ArgumentList ""/S"", ""/SILENT"" -Wait -PassThru
+         }}
+
+        if ($installProcess.ExitCode -eq 0 -or $installProcess.ExitCode -eq 3010) {{
+             # 0 = success, 3010 = success but restart required
+         }} elseif ($installProcess.ExitCode -eq 1639) {{
+             Write-Host ""Product already installed, attempting repair..."" -ForegroundColor Yellow
+             # Try repair instead for MSI
+             if ($fileExtension -eq "".msi"") {{
+                 $repairProcess = Start-Process -FilePath ""msiexec.exe"" -ArgumentList ""/f"", """"""{installerPath}"""""", ""/quiet"", ""/norestart"" -Wait -PassThru
+                 if ($repairProcess.ExitCode -eq 0) {{
+                     Write-Host ""Repair completed successfully"" -ForegroundColor Green
+                 }} else {{
+                     Write-Host ""Repair failed with exit code: $($repairProcess.ExitCode)"" -ForegroundColor Red
+                 }}
+             }}
+         }}
+
+         if ($installProcess.ExitCode -eq 0 -or $installProcess.ExitCode -eq 3010) {{
             Write-Host ""Installation completed successfully"" -ForegroundColor Green
 
             # Check if application should be pinned to taskbar
