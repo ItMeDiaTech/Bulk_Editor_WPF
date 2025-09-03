@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenXmlDocument = DocumentFormat.OpenXml.Wordprocessing.Document;
@@ -23,6 +24,12 @@ namespace BulkEditor.Infrastructure.Services
         private readonly IReplacementService _replacementService;
         private readonly ILoggingService _logger;
         private readonly Core.Configuration.AppSettings _appSettings;
+
+        // VBA-compatible regex pattern for exact Lookup_ID matching
+        // Must match Base_File.vba exactly but ensure exactly 6 digits (not 7+)
+        // Using negative lookahead (?![0-9]) to prevent matching partial patterns
+        private static readonly Regex LookupIdRegex = new Regex(@"(TSRC-[^-]+-[0-9]{6}(?![0-9])|CMS-[^-]+-[0-9]{6}(?![0-9]))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex DocIdRegex = new Regex(@"docid=([^&]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public DocumentProcessor(IFileService fileService, IHyperlinkValidator hyperlinkValidator, ITextOptimizer textOptimizer, IReplacementService replacementService, ILoggingService logger, Core.Configuration.AppSettings appSettings)
         {
@@ -188,7 +195,7 @@ namespace BulkEditor.Infrastructure.Services
                 if (!document.Hyperlinks.Any())
                     return document.Hyperlinks;
 
-                _logger.LogDebug("Validating {Count} hyperlinks in document: {FileName}", document.Hyperlinks.Count, document.FileName);
+                _logger.LogInformation("Validating {Count} hyperlinks", document.Hyperlinks.Count);
 
                 var validationResults = await _hyperlinkValidator.ValidateHyperlinksAsync(document.Hyperlinks, cancellationToken);
 
@@ -230,6 +237,7 @@ namespace BulkEditor.Infrastructure.Services
                 document.Metadata.HasExpiredLinks = document.Hyperlinks.Any(h => h.Status == HyperlinkStatus.Expired);
                 document.Metadata.HasInvalidLinks = document.Hyperlinks.Any(h => h.Status == HyperlinkStatus.Invalid || h.Status == HyperlinkStatus.NotFound);
 
+                _logger.LogInformation("Completed validation of {Count} hyperlinks", document.Hyperlinks.Count);
                 return document.Hyperlinks;
             }
             catch (Exception ex)
@@ -486,33 +494,65 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Determines if a hyperlink should be automatically validated based on VBA criteria
+        /// Uses EXACT same logic as Base_File.vba ExtractLookupID function
         /// </summary>
         /// <param name="url">Hyperlink URL</param>
         /// <param name="displayText">Hyperlink display text</param>
         /// <returns>True if hyperlink should be auto-validated</returns>
         private bool ShouldAutoValidateHyperlink(string url, string displayText)
         {
-            if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(displayText))
+            if (string.IsNullOrEmpty(url))
                 return false;
 
-            // Check if URL contains docid= parameter
-            if (!string.IsNullOrEmpty(url) && url.Contains("docid=", StringComparison.OrdinalIgnoreCase))
-                return true;
+            var lookupId = ExtractLookupIdUsingVbaLogic(url, "");
+            var shouldValidate = !string.IsNullOrEmpty(lookupId);
 
-            // Check if URL contains TSRC or CMS
-            if (!string.IsNullOrEmpty(url) && (url.Contains("TSRC", StringComparison.OrdinalIgnoreCase) ||
-                                               url.Contains("CMS", StringComparison.OrdinalIgnoreCase)))
-                return true;
+            _logger.LogDebug("Hyperlink validation check: URL={Url}, LookupID={LookupId}, ShouldValidate={ShouldValidate}",
+                url, lookupId, shouldValidate);
 
-            // Check if display text contains Content ID pattern (5 or 6 digits in parentheses)
-            if (!string.IsNullOrEmpty(displayText))
+            return shouldValidate;
+        }
+
+        /// <summary>
+        /// Extracts Lookup_ID using EXACT same logic as VBA ExtractLookupID function
+        /// This ensures consistent behavior between VBA and C# implementations
+        /// </summary>
+        /// <param name="address">Hyperlink address</param>
+        /// <param name="subAddress">Hyperlink sub-address</param>
+        /// <returns>Extracted Lookup_ID or empty string if no match</returns>
+        private string ExtractLookupIdUsingVbaLogic(string address, string subAddress)
+        {
+            try
             {
-                var contentIdPattern = @"\([0-9]{5,6}\)";
-                if (System.Text.RegularExpressions.Regex.IsMatch(displayText, contentIdPattern))
-                    return true;
-            }
+                // Combine address and subAddress like VBA: addr & IIf(Len(subAddr) > 0, "#" & subAddr, "")
+                var fullUrl = address + (!string.IsNullOrEmpty(subAddress) ? "#" + subAddress : "");
 
-            return false;
+                // First, try exact VBA regex pattern: (TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})
+                var regexMatch = LookupIdRegex.Match(fullUrl);
+                if (regexMatch.Success)
+                {
+                    var lookupId = regexMatch.Value.ToUpperInvariant();
+                    _logger.LogDebug("Extracted Lookup_ID from regex: {LookupId} from URL: {Url}", lookupId, fullUrl);
+                    return lookupId;
+                }
+
+                // Fallback: Check for docid= parameter (like VBA)
+                var docIdMatch = DocIdRegex.Match(fullUrl);
+                if (docIdMatch.Success)
+                {
+                    var docId = docIdMatch.Groups[1].Value.Trim();
+                    _logger.LogDebug("Extracted docid from URL: {DocId} from URL: {Url}", docId, fullUrl);
+                    return docId;
+                }
+
+                _logger.LogDebug("No Lookup_ID found in URL: {Url}", fullUrl);
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error extracting Lookup_ID from URL: {Url}. Error: {Error}", address, ex.Message);
+                return string.Empty;
+            }
         }
 
         private async Task UpdateHyperlinkInDocument(MainDocumentPart mainPart, string relationshipId, Hyperlink hyperlinkToUpdate, BulkEditor.Core.Entities.Document document)
@@ -673,43 +713,46 @@ namespace BulkEditor.Infrastructure.Services
                 _logger.LogInformation("Processing document in single session to prevent corruption: {FileName}", document.FileName);
 
                 // Open document once and perform ALL operations within this session
-                using var wordDocument = WordprocessingDocument.Open(document.FilePath, true);
-                var mainPart = wordDocument.MainDocumentPart;
-
-                if (mainPart?.Document?.Body == null)
+                using (var wordDocument = WordprocessingDocument.Open(document.FilePath, true))
                 {
-                    throw new InvalidOperationException($"Document has no main content: {document.FilePath}");
-                }
+                    var mainPart = wordDocument.MainDocumentPart;
 
-                // STEP 1: Extract metadata (read-only operations first)
-                progress?.Report("Extracting metadata...");
-                document.Metadata = ExtractDocumentMetadataFromOpenDocument(wordDocument);
+                    if (mainPart?.Document?.Body == null)
+                    {
+                        throw new InvalidOperationException($"Document has no main content: {document.FilePath}");
+                    }
 
-                // STEP 2: Extract hyperlinks from the open document
-                progress?.Report("Extracting hyperlinks...");
-                document.Hyperlinks = ExtractHyperlinksFromOpenDocument(mainPart);
+                    // STEP 1: Extract metadata (read-only operations first)
+                    progress?.Report("Extracting metadata...");
+                    document.Metadata = ExtractDocumentMetadataFromOpenDocument(wordDocument);
 
-                // STEP 3: Remove invisible hyperlinks (write operations)
-                progress?.Report("Removing invisible hyperlinks...");
-                await RemoveInvisibleHyperlinksInSessionAsync(mainPart, document, cancellationToken);
+                    // STEP 2: Extract hyperlinks from the open document
+                    progress?.Report("Extracting hyperlinks...");
+                    document.Hyperlinks = ExtractHyperlinksFromOpenDocument(mainPart);
 
-                // STEP 4: Validate hyperlinks (external API calls)
-                if (document.Hyperlinks.Any())
-                {
-                    progress?.Report("Validating hyperlinks...");
-                    await ValidateHyperlinksAsync(document, cancellationToken);
-                }
+                    // STEP 3: Remove invisible hyperlinks (write operations)
+                    progress?.Report("Removing invisible hyperlinks...");
+                    await RemoveInvisibleHyperlinksInSessionAsync(mainPart, document, cancellationToken);
 
-                // STEP 5: Update hyperlinks in the same session
-                progress?.Report("Updating hyperlinks...");
-                await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken);
+                    // STEP 4: Validate hyperlinks (external API calls)
+                    if (document.Hyperlinks.Any())
+                    {
+                        progress?.Report("Validating hyperlinks...");
+                        await ValidateHyperlinksAsync(document, cancellationToken);
+                    }
 
-                // STEP 6: Save document once at the end
-                progress?.Report("Saving document...");
-                mainPart.Document.Save();
+                    // STEP 5: Update hyperlinks in the same session
+                    progress?.Report("Updating hyperlinks...");
+                    await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken);
 
-                // STEP 7: Validate document integrity after saving
-                await ValidateDocumentIntegrityAsync(document.FilePath, cancellationToken);
+                    // STEP 6: Save document once at the end
+                    progress?.Report("Saving document...");
+                    mainPart.Document.Save();
+                } // CRITICAL FIX: WordprocessingDocument is disposed here - ensures file handles are released
+
+                // STEP 7: Validate document integrity after proper disposal with delay
+                progress?.Report("Validating document integrity...");
+                await ValidateDocumentIntegrityWithRetryAsync(document.FilePath, cancellationToken);
 
                 _logger.LogInformation("Document processed successfully in single session: {FileName}", document.FileName);
             }
@@ -721,31 +764,53 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
-        /// Validates document integrity after processing to ensure it's not corrupted
+        /// Validates document integrity after processing with retry logic to handle file locking issues
         /// </summary>
-        private async Task ValidateDocumentIntegrityAsync(string filePath, CancellationToken cancellationToken)
+        private async Task ValidateDocumentIntegrityWithRetryAsync(string filePath, CancellationToken cancellationToken)
         {
-            try
-            {
-                // Try to open the document in read-only mode to verify it's not corrupted
-                using var testDocument = WordprocessingDocument.Open(filePath, false);
-                var mainPart = testDocument.MainDocumentPart;
+            const int maxRetries = 3;
+            const int retryDelayMs = 100;
 
-                if (mainPart?.Document?.Body == null)
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
                 {
-                    throw new InvalidOperationException("Document appears to be corrupted - no main content found");
+                    // Add small delay to ensure file handles are fully released
+                    if (attempt > 1)
+                    {
+                        await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                    }
+
+                    // Try to open the document in read-only mode to verify it's not corrupted
+                    using var testDocument = WordprocessingDocument.Open(filePath, false);
+                    var mainPart = testDocument.MainDocumentPart;
+
+                    if (mainPart?.Document?.Body == null)
+                    {
+                        throw new InvalidOperationException("Document appears to be corrupted - no main content found");
+                    }
+
+                    // Try to access the document content to ensure it's readable
+                    var _ = mainPart.Document.Body.InnerText;
+
+                    _logger.LogDebug("Document integrity validation passed on attempt {Attempt}: {FilePath}", attempt, filePath);
+                    return; // Success
                 }
+                catch (IOException ioEx) when (ioEx.Message.Contains("being used by another process") && attempt < maxRetries)
+                {
+                    _logger.LogWarning("File access conflict on attempt {Attempt}/{MaxRetries}: {FilePath}. Retrying...",
+                        attempt, maxRetries, filePath);
+                    continue; // Retry
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Document integrity validation failed on attempt {Attempt}: {FilePath}", attempt, filePath);
 
-                // Try to access the document content to ensure it's readable
-                var _ = mainPart.Document.Body.InnerText;
-
-                _logger.LogDebug("Document integrity validation passed: {FilePath}", filePath);
-                await Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Document integrity validation failed: {FilePath}", filePath);
-                throw new InvalidOperationException($"Document appears to be corrupted after processing: {ex.Message}", ex);
+                    if (attempt == maxRetries)
+                    {
+                        throw new InvalidOperationException($"Document appears to be corrupted after processing: {ex.Message}", ex);
+                    }
+                }
             }
         }
 
