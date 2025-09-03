@@ -47,19 +47,34 @@ namespace BulkEditor.Tests.Application.Services
                 Status = DocumentStatus.Completed
             };
 
-            _mockFileService.Setup(x => x.FileExists(filePath)).Returns(true);
-            _mockFileService.Setup(x => x.IsValidWordDocument(filePath)).Returns(true);
-            _mockFileService.Setup(x => x.GetFileInfo(filePath)).Returns(new System.IO.FileInfo(filePath));
-            _mockDocumentProcessor.Setup(x => x.ProcessDocumentAsync(filePath, It.IsAny<IProgress<string>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expectedDocument);
+            // Create a temporary file for testing
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, "test content");
+            var fileInfo = new FileInfo(tempFile);
+            fileInfo.IsReadOnly = false;
 
-            // Act
-            var result = await _applicationService.ProcessSingleDocumentAsync(filePath);
+            try
+            {
+                _mockFileService.Setup(x => x.FileExists(filePath)).Returns(true);
+                _mockFileService.Setup(x => x.IsValidWordDocument(filePath)).Returns(true);
+                _mockFileService.Setup(x => x.GetFileInfo(filePath)).Returns(fileInfo);
+                _mockDocumentProcessor.Setup(x => x.ProcessDocumentAsync(filePath, It.IsAny<IProgress<string>>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(expectedDocument);
 
-            // Assert
-            result.Should().NotBeNull();
-            result.FilePath.Should().Be(filePath);
-            result.Status.Should().Be(DocumentStatus.Completed);
+                // Act
+                var result = await _applicationService.ProcessSingleDocumentAsync(filePath);
+
+                // Assert
+                result.Should().NotBeNull();
+                result.FilePath.Should().Be(filePath);
+                result.Status.Should().Be(DocumentStatus.Completed);
+            }
+            finally
+            {
+                // Cleanup
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+            }
         }
 
         [Fact]
@@ -68,18 +83,33 @@ namespace BulkEditor.Tests.Application.Services
             // Arrange
             var filePaths = new[] { "test1.docx", "test2.docx" };
 
-            _mockFileService.Setup(x => x.FileExists(It.IsAny<string>())).Returns(true);
-            _mockFileService.Setup(x => x.IsValidWordDocument(It.IsAny<string>())).Returns(true);
-            _mockFileService.Setup(x => x.GetFileInfo(It.IsAny<string>())).Returns(new System.IO.FileInfo("test.docx"));
+            // Create a temporary file for testing
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, "test content");
+            var fileInfo = new FileInfo(tempFile);
+            fileInfo.IsReadOnly = false;
 
-            // Act
-            var result = await _applicationService.ValidateFilesAsync(filePaths);
+            try
+            {
+                _mockFileService.Setup(x => x.FileExists(It.IsAny<string>())).Returns(true);
+                _mockFileService.Setup(x => x.IsValidWordDocument(It.IsAny<string>())).Returns(true);
+                _mockFileService.Setup(x => x.GetFileInfo(It.IsAny<string>())).Returns(fileInfo);
 
-            // Assert
-            result.Should().NotBeNull();
-            result.ValidFiles.Should().HaveCount(2);
-            result.InvalidFiles.Should().BeEmpty();
-            result.ErrorMessages.Should().BeEmpty();
+                // Act
+                var result = await _applicationService.ValidateFilesAsync(filePaths);
+
+                // Assert
+                result.Should().NotBeNull();
+                result.ValidFiles.Should().HaveCount(2);
+                result.InvalidFiles.Should().BeEmpty();
+                result.ErrorMessages.Should().BeEmpty();
+            }
+            finally
+            {
+                // Cleanup
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+            }
         }
 
         [Fact]
@@ -153,19 +183,34 @@ namespace BulkEditor.Tests.Application.Services
                 Status = DocumentStatus.Completed
             }).ToList();
 
-            _mockFileService.Setup(x => x.FileExists(It.IsAny<string>())).Returns(true);
-            _mockFileService.Setup(x => x.IsValidWordDocument(It.IsAny<string>())).Returns(true);
-            _mockFileService.Setup(x => x.GetFileInfo(It.IsAny<string>())).Returns(new System.IO.FileInfo("test.docx"));
-            _mockDocumentProcessor.Setup(x => x.ProcessDocumentsBatchAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<IProgress<BatchProcessingProgress>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expectedDocuments);
+            // Create a temporary file for testing
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, "test content");
+            var fileInfo = new FileInfo(tempFile);
+            fileInfo.IsReadOnly = false;
 
-            // Act
-            var results = await _applicationService.ProcessDocumentsBatchAsync(filePaths);
+            try
+            {
+                _mockFileService.Setup(x => x.FileExists(It.IsAny<string>())).Returns(true);
+                _mockFileService.Setup(x => x.IsValidWordDocument(It.IsAny<string>())).Returns(true);
+                _mockFileService.Setup(x => x.GetFileInfo(It.IsAny<string>())).Returns(fileInfo);
+                _mockDocumentProcessor.Setup(x => x.ProcessDocumentsBatchAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<IProgress<BatchProcessingProgress>>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(expectedDocuments);
 
-            // Assert
-            results.Should().NotBeNull();
-            results.Should().HaveCount(2);
-            results.All(d => d.Status == DocumentStatus.Completed).Should().BeTrue();
+                // Act
+                var results = await _applicationService.ProcessDocumentsBatchAsync(filePaths);
+
+                // Assert
+                results.Should().NotBeNull();
+                results.Should().HaveCount(2);
+                results.All(d => d.Status == DocumentStatus.Completed).Should().BeTrue();
+            }
+            finally
+            {
+                // Cleanup
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+            }
         }
 
     }
