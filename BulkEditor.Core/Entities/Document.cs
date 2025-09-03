@@ -27,6 +27,7 @@ namespace BulkEditor.Core.Entities
         Processing,
         Completed,
         Failed,
-        Cancelled
+        Cancelled,
+        Recovered
     }
 }
