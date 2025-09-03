@@ -450,10 +450,9 @@ namespace BulkEditor.UI.ViewModels
         {
             try
             {
-                var settingsWindow = _serviceProvider.GetRequiredService<SettingsWindow>();
                 var settingsViewModel = _serviceProvider.GetRequiredService<SettingsViewModel>();
+                var settingsWindow = new SettingsWindow(settingsViewModel);
 
-                settingsWindow.DataContext = settingsViewModel;
                 settingsWindow.Owner = System.Windows.Application.Current.MainWindow;
 
                 var result = settingsWindow.ShowDialog();

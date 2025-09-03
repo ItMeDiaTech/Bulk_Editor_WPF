@@ -413,32 +413,44 @@ namespace BulkEditor.UI.ViewModels
                 IsBusy = true;
                 BusyMessage = "Saving settings...";
 
+                _logger.LogInformation("Starting save settings process");
+
                 // Update current settings from UI properties
                 UpdateSettingsFromProperties();
+                _logger.LogInformation("Settings updated from properties");
 
                 // Validate settings
                 if (!ValidateSettings())
                 {
+                    _logger.LogWarning("Settings validation failed, save aborted");
                     IsBusy = false;
                     return;
                 }
+                _logger.LogInformation("Settings validation passed");
 
                 // Copy current settings back to original
                 CopySettingsTo(_currentSettings, _originalSettings);
+                _logger.LogInformation("Settings copied to original");
+
+                // Ensure AppData directories exist before saving
+                await _configurationService.InitializeAsync();
+                _logger.LogInformation("Configuration service initialized");
 
                 // Save settings to file
                 await SaveSettingsToFileAsync();
-
-                _logger.LogInformation("Settings saved successfully");
+                _logger.LogInformation("Settings saved to file successfully");
 
                 IsBusy = false;
                 RequestClose?.Invoke(this, true);
+                _logger.LogInformation("Settings dialog closed with success result");
             }
             catch (Exception ex)
             {
                 IsBusy = false;
-                _logger.LogError(ex, "Error saving settings");
-                // The error will be shown via the notification service in the parent window
+                _logger.LogError(ex, "Error saving settings: {Message}", ex.Message);
+                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+                // Re-throw to ensure the error is properly handled by the UI
+                throw;
             }
         }
 
@@ -560,6 +572,29 @@ namespace BulkEditor.UI.ViewModels
                         _logger.LogWarning("Text rule has identical source and replacement text: {SourceText}", rule.SourceText);
                         return false;
                     }
+                }
+            }
+
+            // Validate update settings
+            if (CheckIntervalHours < 1 || CheckIntervalHours > 168) // 1 hour to 1 week
+            {
+                _logger.LogWarning("Check interval hours must be between 1 and 168 (1 week)");
+                return false;
+            }
+
+            // Validate GitHub repository settings if auto-update is enabled
+            if (AutoUpdateEnabled)
+            {
+                if (string.IsNullOrWhiteSpace(GitHubOwner))
+                {
+                    _logger.LogWarning("GitHub owner is required when auto-update is enabled");
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(GitHubRepository))
+                {
+                    _logger.LogWarning("GitHub repository is required when auto-update is enabled");
+                    return false;
                 }
             }
 
