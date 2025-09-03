@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\BulkEditor.Application\BulkEditor.Application.csproj" />
@@ -15,14 +15,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <AssemblyVersion>1.2.0</AssemblyVersion>
-    <FileVersion>1.2.0</FileVersion>
-    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.5</AssemblyVersion>
+    <FileVersion>1.2.5</FileVersion>
+    <Version>1.2.5</Version>
     <AssemblyTitle>Bulk Document Editor</AssemblyTitle>
     <AssemblyDescription>Bulk Document Editor for processing Word documents with hyperlink validation and content optimization</AssemblyDescription>
     <AssemblyCompany>DiaTech</AssemblyCompany>
     <AssemblyProduct>BulkEditor</AssemblyProduct>
-    <AssemblyCopyright>Copyright © DiaTech 2024</AssemblyCopyright>
+    <AssemblyCopyright>Copyright (c) DiaTech 2024</AssemblyCopyright>
   </PropertyGroup>
 
 </Project>
