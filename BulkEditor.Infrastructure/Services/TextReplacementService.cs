@@ -26,6 +26,93 @@ namespace BulkEditor.Infrastructure.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        /// <summary>
+        /// NEW METHOD: Processes text replacements using an already opened WordprocessingDocument to prevent corruption
+        /// </summary>
+        public async Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, CoreDocument document, IEnumerable<TextReplacementRule> rules, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var activeRules = rules.Where(r => r.IsEnabled && !string.IsNullOrWhiteSpace(r.SourceText) && !string.IsNullOrWhiteSpace(r.ReplacementText)).ToList();
+
+                if (!activeRules.Any())
+                {
+                    _logger.LogDebug("No active text replacement rules found for document: {FileName}", document.FileName);
+                    return 0;
+                }
+
+                _logger.LogInformation("Processing {Count} text replacement rules in session for document: {FileName}", activeRules.Count, document.FileName);
+
+                var mainPart = wordDocument.MainDocumentPart;
+                if (mainPart?.Document?.Body == null)
+                {
+                    _logger.LogWarning("No document body found for text replacement: {FileName}", document.FileName);
+                    return 0;
+                }
+
+                var totalReplacements = 0;
+
+                // Process all text elements in the document
+                var textElements = mainPart.Document.Body.Descendants<Text>().ToList();
+
+                foreach (var textElement in textElements)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (string.IsNullOrEmpty(textElement.Text))
+                        continue;
+
+                    var originalText = textElement.Text;
+                    var modifiedText = originalText;
+                    var replacementsMadeInElement = 0;
+
+                    foreach (var rule in activeRules)
+                    {
+                        var replacementResult = ReplaceTextWithCapitalizationPreservation(
+                            modifiedText, rule.SourceText, rule.ReplacementText);
+
+                        if (replacementResult != modifiedText)
+                        {
+                            modifiedText = replacementResult;
+                            replacementsMadeInElement++;
+                        }
+                    }
+
+                    // Update text element if any replacements were made
+                    if (replacementsMadeInElement > 0)
+                    {
+                        textElement.Text = modifiedText;
+                        totalReplacements += replacementsMadeInElement;
+
+                        // Log the change in document
+                        document.ChangeLog.Changes.Add(new ChangeEntry
+                        {
+                            Type = ChangeType.TextReplaced,
+                            Description = "Text replaced using replacement rules",
+                            OldValue = originalText,
+                            NewValue = modifiedText,
+                            ElementId = Guid.NewGuid().ToString(),
+                            Details = $"Applied {replacementsMadeInElement} replacement rule(s)"
+                        });
+
+                        _logger.LogDebug("Text replacement in session element: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
+                    }
+                }
+
+                _logger.LogInformation("Text replacement processing completed in session for document: {FileName}, replacements made: {Count}", document.FileName, totalReplacements);
+                return totalReplacements;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing text replacements in session for document: {FileName}", document.FileName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// LEGACY METHOD: Opens document independently - can cause corruption
+        /// </summary>
+        [System.Obsolete("Use ProcessTextReplacementsInSessionAsync to prevent file corruption")]
         public async Task<CoreDocument> ProcessTextReplacementsAsync(CoreDocument document, IEnumerable<TextReplacementRule> rules, CancellationToken cancellationToken = default)
         {
             try

@@ -74,13 +74,9 @@ namespace BulkEditor.Infrastructure.Services
                 progress?.Report("Processing document...");
                 await ProcessDocumentInSingleSessionAsync(document, progress, cancellationToken);
 
-                // Process replacements (hyperlinks and text) - external service
-                progress?.Report("Processing replacements...");
-                await _replacementService.ProcessReplacementsAsync(document, cancellationToken);
-
-                // Optimize text if enabled - external service
-                progress?.Report("Optimizing document text...");
-                await _textOptimizer.OptimizeDocumentTextAsync(document, cancellationToken);
+                // NOTE: Replacements and text optimization are now handled within the single session
+                // to prevent file corruption from multiple document opens
+                progress?.Report("Document processing completed in single session");
 
                 // Optimize memory after processing
                 await OptimizeMemoryAsync(cancellationToken);
@@ -572,9 +568,30 @@ namespace BulkEditor.Infrastructure.Services
                     ? $"https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid={docIdForUrl}"
                     : hyperlinkToUpdate.OriginalUrl;
 
-                // Delete old relationship and create new one
-                mainPart.DeleteReferenceRelationship(relationshipId);
-                var newRelationship = mainPart.AddHyperlinkRelationship(new Uri(newUrl), true, relationshipId);
+                // CRITICAL FIX: Use safer relationship update method
+                // Create new relationship first, then delete old one to prevent corruption
+                var newRelationship = mainPart.AddHyperlinkRelationship(new Uri(newUrl), true);
+
+                // Find the hyperlink element that uses this relationship and update its ID
+                var hyperlinkElement = mainPart.Document.Body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>()
+                    .FirstOrDefault(h => h.Id?.Value == relationshipId);
+
+                if (hyperlinkElement != null)
+                {
+                    hyperlinkElement.Id = newRelationship.Id;
+                }
+
+                // Now safely delete the old relationship
+                try
+                {
+                    mainPart.DeleteReferenceRelationship(relationshipId);
+                }
+                catch (System.Collections.Generic.KeyNotFoundException)
+                {
+                    _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relationshipId);
+                }
+
+                _logger.LogDebug("Updated hyperlink relationship safely: {OldRelId} -> {NewRelId}", relationshipId, newRelationship.Id);
 
                 // Update hyperlink object
                 hyperlinkToUpdate.UpdatedUrl = newUrl;
@@ -745,13 +762,37 @@ namespace BulkEditor.Infrastructure.Services
                     progress?.Report("Updating hyperlinks...");
                     await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken);
 
-                    // STEP 6: Update document fields (TOC, page numbers, etc.) before saving
-                    progress?.Report("Updating document fields...");
-                    MarkDocumentFieldsForUpdate(wordDocument);
+                    // STEP 6: Process replacements in the same session
+                    progress?.Report("Processing replacements...");
+                    await _replacementService.ProcessReplacementsInSessionAsync(wordDocument, document, cancellationToken);
 
-                    // STEP 7: Save document once at the end
+                    // STEP 7: Optimize text in the same session
+                    progress?.Report("Optimizing document text...");
+                    await _textOptimizer.OptimizeDocumentTextInSessionAsync(wordDocument, document, cancellationToken);
+
+                    // STEP 8: Update document fields (TOC, page numbers, etc.) before saving
+                    // TEMPORARILY DISABLED: Field updates can cause document corruption
+                    // TODO: Implement safer field update mechanism
+                    progress?.Report("Skipping field updates to prevent corruption...");
+                    _logger.LogDebug("Field updates temporarily disabled to prevent document corruption: {FileName}", document.FileName);
+                    // MarkDocumentFieldsForUpdate(wordDocument);
+
+                    // STEP 9: Save document once at the end with enhanced error handling
                     progress?.Report("Saving document...");
-                    mainPart.Document.Save();
+                    try
+                    {
+                        // Ensure all changes are committed before saving
+                        mainPart.Document.Save();
+                        _logger.LogDebug("Document saved successfully: {FileName}", document.FileName);
+
+                        // Add a small delay to ensure file handles are properly released
+                        await Task.Delay(50, cancellationToken);
+                    }
+                    catch (Exception saveEx)
+                    {
+                        _logger.LogError(saveEx, "Critical error saving document: {FileName}", document.FileName);
+                        throw new InvalidOperationException($"Failed to save document: {saveEx.Message}", saveEx);
+                    }
                 } // CRITICAL FIX: WordprocessingDocument is disposed here - ensures file handles are released
 
                 // STEP 7: Validate document integrity after proper disposal with delay
@@ -1100,9 +1141,24 @@ namespace BulkEditor.Infrastructure.Services
                     ? $"https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid={docIdForUrl}"
                     : hyperlinkToUpdate.OriginalUrl;
 
-                // Delete old relationship and create new one with same ID
-                mainPart.DeleteReferenceRelationship(relationshipId);
-                var newRelationship = mainPart.AddHyperlinkRelationship(new Uri(newUrl), true, relationshipId);
+                // CRITICAL FIX: Use safer relationship update method
+                // Create new relationship first, then update hyperlink element, then delete old one
+                var newRelationship = mainPart.AddHyperlinkRelationship(new Uri(newUrl), true);
+
+                // Update the hyperlink element to use the new relationship ID
+                openXmlHyperlink.Id = newRelationship.Id;
+
+                // Now safely delete the old relationship
+                try
+                {
+                    mainPart.DeleteReferenceRelationship(relationshipId);
+                }
+                catch (System.Collections.Generic.KeyNotFoundException)
+                {
+                    _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relationshipId);
+                }
+
+                _logger.LogDebug("Updated hyperlink relationship safely in VBA logic: {OldRelId} -> {NewRelId}", relationshipId, newRelationship.Id);
 
                 // EXACT VBA LOGIC: Content_ID appending (lines 254-280 in Base_File.vba)
                 var newDisplayText = currentDisplayText;

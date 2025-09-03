@@ -25,6 +25,95 @@ namespace BulkEditor.Infrastructure.Services
             _settings = settings ?? new TextOptimizationSettings();
         }
 
+        /// <summary>
+        /// NEW METHOD: Optimizes text in an already opened WordprocessingDocument to prevent corruption
+        /// </summary>
+        public async Task<int> OptimizeDocumentTextInSessionAsync(WordprocessingDocument wordDocument, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogInformation("Starting text optimization in session for document: {FileName}", document.FileName);
+
+                var mainPart = wordDocument.MainDocumentPart;
+                if (mainPart?.Document?.Body == null)
+                {
+                    _logger.LogWarning("No document body found for text optimization: {FileName}", document.FileName);
+                    return 0;
+                }
+
+                var changesMade = 0;
+
+                // 1. Optimize whitespace
+                if (_settings.RemoveExtraSpaces)
+                {
+                    changesMade += await OptimizeWhitespaceInDocumentAsync(mainPart, document, cancellationToken);
+                }
+
+                // 2. Remove empty paragraphs
+                if (_settings.RemoveEmptyParagraphs)
+                {
+                    changesMade += await RemoveEmptyParagraphsAsync(mainPart, document, cancellationToken);
+                }
+
+                // 3. Standardize line breaks
+                if (_settings.StandardizeLineBreaks)
+                {
+                    changesMade += await StandardizeLineBreaksAsync(mainPart, document, cancellationToken);
+                }
+
+                // 4. Optimize table formatting
+                if (_settings.OptimizeTableFormatting)
+                {
+                    changesMade += await OptimizeTableFormattingAsync(mainPart, document, cancellationToken);
+                }
+
+                // 5. Optimize list formatting
+                if (_settings.OptimizeListFormatting)
+                {
+                    changesMade += await OptimizeListFormattingAsync(mainPart, document, cancellationToken);
+                }
+
+                // Log summary change
+                if (changesMade > 0)
+                {
+                    document.ChangeLog.Changes.Add(new ChangeEntry
+                    {
+                        Type = ChangeType.TextOptimized,
+                        Description = $"Text optimization completed: {changesMade} improvements made",
+                        Details = $"Optimized whitespace, paragraphs, formatting"
+                    });
+
+                    _logger.LogInformation("Text optimization completed in session for {FileName}: {Changes} improvements made",
+                        document.FileName, changesMade);
+                }
+                else
+                {
+                    _logger.LogInformation("No text optimization needed for document: {FileName}", document.FileName);
+                }
+
+                return changesMade;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during text optimization in session for document: {FileName}", document.FileName);
+
+                document.ProcessingErrors.Add($"Text optimization failed: {ex.Message}");
+
+                document.ChangeLog.Changes.Add(new ChangeEntry
+                {
+                    Type = ChangeType.Error,
+                    Description = "Text optimization failed",
+                    Details = ex.Message
+                });
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// LEGACY METHOD: Opens document independently - can cause corruption
+        /// </summary>
+        [System.Obsolete("Use OptimizeDocumentTextInSessionAsync to prevent file corruption")]
         public async Task<BulkEditor.Core.Entities.Document> OptimizeDocumentTextAsync(BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken = default)
         {
             try

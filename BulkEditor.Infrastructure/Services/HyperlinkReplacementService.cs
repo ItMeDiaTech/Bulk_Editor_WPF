@@ -37,6 +37,76 @@ namespace BulkEditor.Infrastructure.Services
             _sixDigitRegex = new Regex(@"[0-9]{6}", RegexOptions.Compiled);
         }
 
+        /// <summary>
+        /// NEW METHOD: Processes hyperlink replacements using an already opened WordprocessingDocument to prevent corruption
+        /// </summary>
+        public async Task<int> ProcessHyperlinkReplacementsInSessionAsync(WordprocessingDocument wordDocument, CoreDocument document, IEnumerable<HyperlinkReplacementRule> rules, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var activeRules = rules.Where(r => r.IsEnabled && !string.IsNullOrWhiteSpace(r.TitleToMatch) && !string.IsNullOrWhiteSpace(r.ContentId)).ToList();
+
+                if (!activeRules.Any())
+                {
+                    _logger.LogDebug("No active hyperlink replacement rules found for document: {FileName}", document.FileName);
+                    return 0;
+                }
+
+                _logger.LogInformation("Processing {Count} hyperlink replacement rules in session for document: {FileName}", activeRules.Count, document.FileName);
+
+                var mainPart = wordDocument.MainDocumentPart;
+                if (mainPart?.Document?.Body == null)
+                {
+                    _logger.LogWarning("No document body found for hyperlink replacement: {FileName}", document.FileName);
+                    return 0;
+                }
+
+                var hyperlinks = mainPart.Document.Body.Descendants<OpenXmlHyperlink>().ToList();
+                var replacementsMade = 0;
+
+                foreach (var openXmlHyperlink in hyperlinks)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var currentDisplayText = openXmlHyperlink.InnerText?.Trim();
+                    if (string.IsNullOrEmpty(currentDisplayText))
+                        continue;
+
+                    // Remove any existing Content ID from display text for comparison
+                    var cleanDisplayText = RemoveContentIdFromText(currentDisplayText).Trim().ToLowerInvariant();
+
+                    foreach (var rule in activeRules)
+                    {
+                        var ruleTitleLower = rule.TitleToMatch.Trim().ToLowerInvariant();
+
+                        if (cleanDisplayText.Equals(ruleTitleLower, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var result = await ProcessHyperlinkReplacementAsync(mainPart, openXmlHyperlink, rule, document, cancellationToken);
+                            if (result.WasReplaced)
+                            {
+                                replacementsMade++;
+                                _logger.LogInformation("Replaced hyperlink in session: '{OriginalTitle}' -> '{NewTitle}' with Content ID: {ContentId}",
+                                    result.OriginalTitle, result.NewTitle, result.ContentId);
+                            }
+                            break; // Only apply first matching rule
+                        }
+                    }
+                }
+
+                _logger.LogInformation("Hyperlink replacement processing completed in session for document: {FileName}, replacements made: {Count}", document.FileName, replacementsMade);
+                return replacementsMade;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing hyperlink replacements in session for document: {FileName}", document.FileName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// LEGACY METHOD: Opens document independently - can cause corruption
+        /// </summary>
+        [System.Obsolete("Use ProcessHyperlinkReplacementsInSessionAsync to prevent file corruption")]
         public async Task<CoreDocument> ProcessHyperlinkReplacementsAsync(CoreDocument document, IEnumerable<HyperlinkReplacementRule> rules, CancellationToken cancellationToken = default)
         {
             try
@@ -235,10 +305,24 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     try
                     {
-                        // Delete old relationship and create new one
-                        mainPart.DeleteReferenceRelationship(relId);
-                        mainPart.AddExternalRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-                            new Uri(newUrl), relId);
+                        // CRITICAL FIX: Use safer relationship update method
+                        // Instead of deleting and recreating with same ID, create new relationship
+                        var newRelationship = mainPart.AddHyperlinkRelationship(new Uri(newUrl), true);
+
+                        // Update the hyperlink element to use the new relationship ID
+                        openXmlHyperlink.Id = newRelationship.Id;
+
+                        // Now safely delete the old relationship
+                        try
+                        {
+                            mainPart.DeleteReferenceRelationship(relId);
+                        }
+                        catch (System.Collections.Generic.KeyNotFoundException)
+                        {
+                            _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relId);
+                        }
+
+                        _logger.LogDebug("Updated hyperlink relationship safely: {OldRelId} -> {NewRelId}", relId, newRelationship.Id);
                     }
                     catch (Exception ex)
                     {
