@@ -745,7 +745,11 @@ namespace BulkEditor.Infrastructure.Services
                     progress?.Report("Updating hyperlinks...");
                     await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken);
 
-                    // STEP 6: Save document once at the end
+                    // STEP 6: Update document fields (TOC, page numbers, etc.) before saving
+                    progress?.Report("Updating document fields...");
+                    MarkDocumentFieldsForUpdate(wordDocument);
+
+                    // STEP 7: Save document once at the end
                     progress?.Report("Saving document...");
                     mainPart.Document.Save();
                 } // CRITICAL FIX: WordprocessingDocument is disposed here - ensures file handles are released
@@ -1022,7 +1026,7 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
-        /// Updates hyperlinks within the current document session
+        /// Updates hyperlinks within the current document session using exact VBA Base_File.vba logic
         /// </summary>
         private async Task UpdateHyperlinksInSessionAsync(MainDocumentPart mainPart, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
@@ -1036,7 +1040,7 @@ namespace BulkEditor.Infrastructure.Services
                     return;
                 }
 
-                _logger.LogInformation("Updating {Count} hyperlinks in document session: {FileName}", hyperlinksToUpdate.Count, document.FileName);
+                _logger.LogInformation("Updating {Count} hyperlinks in document session using VBA logic: {FileName}", hyperlinksToUpdate.Count, document.FileName);
 
                 var hyperlinks = mainPart.Document.Body.Descendants<OpenXmlHyperlink>().ToList();
 
@@ -1050,11 +1054,12 @@ namespace BulkEditor.Infrastructure.Services
                     {
                         var relationship = mainPart.GetReferenceRelationship(hyperlinkRelId);
                         var currentUrl = relationship.Uri.ToString();
+                        var currentDisplayText = openXmlHyperlink.InnerText ?? string.Empty;
 
                         var hyperlinkToUpdate = hyperlinksToUpdate.FirstOrDefault(h => h.OriginalUrl == currentUrl);
                         if (hyperlinkToUpdate != null)
                         {
-                            await UpdateHyperlinkInSessionAsync(mainPart, hyperlinkRelId, hyperlinkToUpdate, document);
+                            await UpdateHyperlinkWithVbaLogicAsync(mainPart, openXmlHyperlink, hyperlinkRelId, hyperlinkToUpdate, document, cancellationToken);
                         }
                     }
                     catch (System.Collections.Generic.KeyNotFoundException)
@@ -1075,13 +1080,18 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
-        /// Updates a hyperlink within the current document session
+        /// Updates a hyperlink using EXACT VBA Base_File.vba logic for Content_ID appending
+        /// Lines 254-280 in Base_File.vba - handles 5-digit to 6-digit upgrade and Content_ID appending
         /// </summary>
-        private async Task UpdateHyperlinkInSessionAsync(MainDocumentPart mainPart, string relationshipId, Hyperlink hyperlinkToUpdate, BulkEditor.Core.Entities.Document document)
+        private async Task UpdateHyperlinkWithVbaLogicAsync(MainDocumentPart mainPart, OpenXmlHyperlink openXmlHyperlink, string relationshipId, Hyperlink hyperlinkToUpdate, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
             try
             {
-                // CRITICAL: Use Document_ID for URL generation (like VBA), not Content_ID
+                var currentDisplayText = openXmlHyperlink.InnerText ?? string.Empty;
+                var alreadyExpired = currentDisplayText.Contains(" - Expired", StringComparison.OrdinalIgnoreCase);
+                var alreadyNotFound = currentDisplayText.Contains(" - Not Found", StringComparison.OrdinalIgnoreCase);
+
+                // Update URL first (using Document_ID like VBA)
                 var docIdForUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId)
                     ? hyperlinkToUpdate.DocumentId
                     : hyperlinkToUpdate.ContentId;
@@ -1094,28 +1104,171 @@ namespace BulkEditor.Infrastructure.Services
                 mainPart.DeleteReferenceRelationship(relationshipId);
                 var newRelationship = mainPart.AddHyperlinkRelationship(new Uri(newUrl), true, relationshipId);
 
+                // EXACT VBA LOGIC: Content_ID appending (lines 254-280 in Base_File.vba)
+                var newDisplayText = currentDisplayText;
+                var appended = false;
+
+                if (!alreadyExpired && !alreadyNotFound && !string.IsNullOrEmpty(hyperlinkToUpdate.ContentId))
+                {
+                    // Get last 6 and last 5 digits like VBA
+                    var last6 = hyperlinkToUpdate.ContentId.Length >= 6
+                        ? hyperlinkToUpdate.ContentId.Substring(hyperlinkToUpdate.ContentId.Length - 6)
+                        : hyperlinkToUpdate.ContentId;
+                    var last5 = last6.Length >= 5
+                        ? last6.Substring(1)
+                        : last6;
+
+                    var last5Pattern = $" ({last5})";
+                    var last6Pattern = $" ({last6})";
+
+                    // VBA Logic: If ends with " (last5)" but NOT " (last6)", replace 5-digit with 6-digit
+                    if (currentDisplayText.EndsWith(last5Pattern) && !currentDisplayText.EndsWith(last6Pattern))
+                    {
+                        newDisplayText = currentDisplayText.Substring(0, currentDisplayText.Length - last5Pattern.Length) + last6Pattern;
+                        appended = true;
+                        _logger.LogInformation("Upgraded 5-digit Content_ID to 6-digit: {Old} -> {New}", last5Pattern, last6Pattern);
+                    }
+                    // VBA Logic: If Content_ID not already present, append it
+                    else if (!currentDisplayText.Contains(last6Pattern, StringComparison.OrdinalIgnoreCase))
+                    {
+                        newDisplayText = currentDisplayText.Trim() + last6Pattern;
+                        appended = true;
+                        _logger.LogInformation("Appended Content_ID to hyperlink: {ContentId}", last6);
+                    }
+
+                    // Update display text in the document
+                    if (appended)
+                    {
+                        openXmlHyperlink.RemoveAllChildren();
+                        openXmlHyperlink.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Text(newDisplayText));
+
+                        document.ChangeLog.Changes.Add(new ChangeEntry
+                        {
+                            Type = ChangeType.ContentIdAdded,
+                            Description = "Content ID appended using VBA logic",
+                            OldValue = currentDisplayText,
+                            NewValue = newDisplayText,
+                            ElementId = hyperlinkToUpdate.Id,
+                            Details = $"Content ID: {last6}"
+                        });
+                    }
+                }
+
+                // Handle status suffixes like VBA (Expired/Not Found)
+                if (hyperlinkToUpdate.Status == HyperlinkStatus.Expired && !alreadyExpired)
+                {
+                    newDisplayText += " - Expired";
+                    openXmlHyperlink.RemoveAllChildren();
+                    openXmlHyperlink.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Text(newDisplayText));
+
+                    document.ChangeLog.Changes.Add(new ChangeEntry
+                    {
+                        Type = ChangeType.HyperlinkStatusAdded,
+                        Description = "Added Expired status",
+                        OldValue = currentDisplayText,
+                        NewValue = newDisplayText,
+                        ElementId = hyperlinkToUpdate.Id
+                    });
+                }
+                else if (hyperlinkToUpdate.Status == HyperlinkStatus.NotFound && !alreadyNotFound && !alreadyExpired)
+                {
+                    newDisplayText += " - Not Found";
+                    openXmlHyperlink.RemoveAllChildren();
+                    openXmlHyperlink.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Text(newDisplayText));
+
+                    document.ChangeLog.Changes.Add(new ChangeEntry
+                    {
+                        Type = ChangeType.HyperlinkStatusAdded,
+                        Description = "Added Not Found status",
+                        OldValue = currentDisplayText,
+                        NewValue = newDisplayText,
+                        ElementId = hyperlinkToUpdate.Id
+                    });
+                }
+
                 // Update hyperlink object
                 hyperlinkToUpdate.UpdatedUrl = newUrl;
+                hyperlinkToUpdate.DisplayText = newDisplayText;
                 hyperlinkToUpdate.ActionTaken = HyperlinkAction.Updated;
 
-                // Log the change
+                // Log URL change
                 document.ChangeLog.Changes.Add(new ChangeEntry
                 {
                     Type = ChangeType.HyperlinkUpdated,
-                    Description = "Hyperlink updated in session",
+                    Description = "Hyperlink URL updated using VBA logic",
                     OldValue = hyperlinkToUpdate.OriginalUrl,
                     NewValue = newUrl,
                     ElementId = hyperlinkToUpdate.Id,
                     Details = $"Document ID: {docIdForUrl}"
                 });
 
-                _logger.LogInformation("Updated hyperlink in session: {RelId} -> {NewUrl}", relationshipId, newUrl);
+                _logger.LogInformation("Updated hyperlink with VBA logic: {RelId} -> {NewUrl}, Display: '{NewDisplay}'",
+                    relationshipId, newUrl, newDisplayText);
                 await Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating hyperlink in session: {RelationshipId}", relationshipId);
+                _logger.LogError(ex, "Error updating hyperlink with VBA logic: {RelationshipId}", relationshipId);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// DEPRECATED: Legacy update method - replaced by UpdateHyperlinkWithVbaLogicAsync
+        /// </summary>
+        private async Task UpdateHyperlinkInSessionAsync(MainDocumentPart mainPart, string relationshipId, Hyperlink hyperlinkToUpdate, BulkEditor.Core.Entities.Document document)
+        {
+            // This method is deprecated - use UpdateHyperlinkWithVbaLogicAsync instead
+            _logger.LogDebug("UpdateHyperlinkInSessionAsync called - using VBA logic method instead");
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Marks document fields for update to prevent TOC formatting issues
+        /// </summary>
+        private void MarkDocumentFieldsForUpdate(WordprocessingDocument wordDocument)
+        {
+            try
+            {
+                _logger.LogDebug("Marking document fields for update to prevent TOC formatting issues");
+
+                var mainPart = wordDocument.MainDocumentPart;
+                if (mainPart?.Document?.Body == null)
+                    return;
+
+                // Find and mark field codes for update
+                var fieldCodes = mainPart.Document.Body.Descendants<DocumentFormat.OpenXml.Wordprocessing.FieldCode>().ToList();
+                var fieldsNeedingUpdate = 0;
+
+                foreach (var fieldCode in fieldCodes)
+                {
+                    var fieldText = fieldCode.Text ?? string.Empty;
+
+                    // Mark TOC, hyperlink-related fields, and page number fields for update
+                    if (fieldText.Contains("TOC", StringComparison.OrdinalIgnoreCase) ||
+                        fieldText.Contains("HYPERLINK", StringComparison.OrdinalIgnoreCase) ||
+                        fieldText.Contains("PAGE", StringComparison.OrdinalIgnoreCase) ||
+                        fieldText.Contains("REF", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Find the parent field character and mark as dirty
+                        var fieldChar = fieldCode.Ancestors<DocumentFormat.OpenXml.Wordprocessing.FieldChar>().FirstOrDefault();
+                        if (fieldChar != null)
+                        {
+                            fieldChar.Dirty = true;
+                            fieldsNeedingUpdate++;
+                        }
+                    }
+                }
+
+                if (fieldsNeedingUpdate > 0)
+                {
+                    _logger.LogInformation("Marked {Count} document fields for update (TOC, hyperlinks, page numbers)", fieldsNeedingUpdate);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error marking document fields for update: {Error}", ex.Message);
+                // Don't throw - this is not critical enough to fail the entire operation
             }
         }
 

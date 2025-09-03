@@ -48,56 +48,39 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                // Try to get version from the UI assembly (main application)
+                // First priority: Get version from entry assembly (UI project)
                 var entryAssembly = Assembly.GetEntryAssembly();
                 if (entryAssembly != null)
                 {
-                    var version = entryAssembly.GetName().Version;
-                    if (version != null && version.Major > 0)
+                    var assemblyVersion = entryAssembly.GetName().Version;
+                    if (assemblyVersion != null && assemblyVersion.Major > 0)
                     {
-                        _logger.LogDebug("Current version from entry assembly: {Version}", version);
-                        return version;
+                        _logger.LogDebug("Current version from entry assembly: {Version}", assemblyVersion);
+                        return assemblyVersion;
                     }
-                }
 
-                // Try to get version from assembly file version attribute
-                try
-                {
-                    var fileAssembly = entryAssembly ?? Assembly.GetExecutingAssembly();
-                    var fileVersionAttr = fileAssembly.GetCustomAttribute<System.Reflection.AssemblyFileVersionAttribute>();
+                    // Try AssemblyFileVersion attribute from entry assembly
+                    var fileVersionAttr = entryAssembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
                     if (fileVersionAttr != null && !string.IsNullOrEmpty(fileVersionAttr.Version))
                     {
                         if (Version.TryParse(fileVersionAttr.Version, out var fileVersion))
                         {
-                            _logger.LogDebug("Current version from file version attribute: {Version}", fileVersion);
+                            _logger.LogDebug("Current version from entry assembly file version: {Version}", fileVersion);
                             return fileVersion;
                         }
                     }
-                }
-                catch (Exception attrEx)
-                {
-                    _logger.LogWarning("Failed to get version from file version attribute: {Error}", attrEx.Message);
-                }
 
-                // Try to get version from assembly informational version
-                try
-                {
-                    var infoAssembly = entryAssembly ?? Assembly.GetExecutingAssembly();
-                    var infoVersionAttr = infoAssembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>();
+                    // Try AssemblyInformationalVersion attribute from entry assembly
+                    var infoVersionAttr = entryAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
                     if (infoVersionAttr != null && !string.IsNullOrEmpty(infoVersionAttr.InformationalVersion))
                     {
-                        // Parse version from informational version (may contain additional info like "1.2.3-beta")
                         var versionString = infoVersionAttr.InformationalVersion.Split('-')[0];
                         if (Version.TryParse(versionString, out var infoVersion))
                         {
-                            _logger.LogDebug("Current version from informational version attribute: {Version}", infoVersion);
+                            _logger.LogDebug("Current version from entry assembly informational version: {Version}", infoVersion);
                             return infoVersion;
                         }
                     }
-                }
-                catch (Exception infoEx)
-                {
-                    _logger.LogWarning("Failed to get version from informational version attribute: {Error}", infoEx.Message);
                 }
 
                 // Try reading version from version.json file if it exists
@@ -124,23 +107,14 @@ namespace BulkEditor.Infrastructure.Services
                     _logger.LogWarning("Failed to read version from version.json: {Error}", jsonEx.Message);
                 }
 
-                // Fallback to executing assembly
-                var fallbackAssembly = Assembly.GetExecutingAssembly();
-                var fallbackVersion = fallbackAssembly.GetName().Version;
-                if (fallbackVersion != null && fallbackVersion.Major > 0)
-                {
-                    _logger.LogDebug("Current version from executing assembly: {Version}", fallbackVersion);
-                    return fallbackVersion;
-                }
-
-                // Final fallback - try to determine version from current release
-                _logger.LogWarning("Unable to determine current version from any source, using fallback version 1.1.1");
-                return new Version(1, 1, 1, 0);
+                // Final fallback - return the expected current version
+                _logger.LogWarning("Unable to determine current version from assembly attributes, using fallback version 1.2.0");
+                return new Version(1, 2, 0, 0);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get current version");
-                return new Version(1, 1, 1, 0);
+                return new Version(1, 2, 0, 0);
             }
         }
 

@@ -37,6 +37,28 @@ if (-not ($Version -match '^\d+\.\d+\.\d+(\.\d+)?$')) {
     throw "Version must be in format x.y.z or x.y.z.w"
 }
 
+# Update version information in project files
+Write-Host "Updating version information..." -ForegroundColor Yellow
+$uiProjectFile = Join-Path $rootDir "BulkEditor.UI\BulkEditor.UI.csproj"
+
+if (Test-Path $uiProjectFile) {
+    $content = Get-Content $uiProjectFile -Raw
+
+    # Update AssemblyVersion
+    $content = $content -replace '<AssemblyVersion>[^<]*</AssemblyVersion>', "<AssemblyVersion>$Version</AssemblyVersion>"
+
+    # Update FileVersion
+    $content = $content -replace '<FileVersion>[^<]*</FileVersion>', "<FileVersion>$Version</FileVersion>"
+
+    # Update Version
+    $content = $content -replace '<Version>[^<]*</Version>', "<Version>$Version</Version>"
+
+    Set-Content $uiProjectFile -Value $content -NoNewline
+    Write-Host "Updated version information in BulkEditor.UI.csproj to $Version" -ForegroundColor Green
+} else {
+    Write-Host "Warning: UI project file not found at $uiProjectFile" -ForegroundColor Yellow
+}
+
 # Run tests first
 Write-Host "Running tests..." -ForegroundColor Yellow
 dotnet test "$rootDir\BulkEditor.Tests\BulkEditor.Tests.csproj" --configuration Release --no-build

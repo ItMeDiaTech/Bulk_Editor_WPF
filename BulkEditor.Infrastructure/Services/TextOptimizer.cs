@@ -116,14 +116,9 @@ namespace BulkEditor.Infrastructure.Services
 
             try
             {
-                // Remove multiple consecutive spaces
+                // Only remove multiple consecutive spaces (2 or more) and replace with single space
+                // This preserves necessary single spaces after colons, semicolons, periods, etc.
                 var optimized = Regex.Replace(text, @" {2,}", " ");
-
-                // Remove trailing spaces at end of lines
-                optimized = Regex.Replace(optimized, @" +$", "", RegexOptions.Multiline);
-
-                // Remove leading spaces at beginning of lines (except intentional indentation)
-                optimized = Regex.Replace(optimized, @"^ +", "", RegexOptions.Multiline);
 
                 // Standardize line endings
                 optimized = Regex.Replace(optimized, @"\r\n|\r|\n", Environment.NewLine);
