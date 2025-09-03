@@ -1,11 +1,14 @@
 ﻿using BulkEditor.Application.Services;
 using BulkEditor.Core.Configuration;
-using BulkEditor.Infrastructure.DependencyInjection;
+using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
+using BulkEditor.Infrastructure.Services;
 using BulkEditor.UI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System;
 using System.IO;
+using System.Net.Http;
 using System.Windows;
 
 namespace BulkEditor.UI
@@ -16,24 +19,74 @@ namespace BulkEditor.UI
     public partial class App : System.Windows.Application
     {
         private ServiceProvider? _serviceProvider;
+        private UpdateManager? _updateManager;
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             try
             {
+                // Configure basic Serilog first for ConfigurationService
+                ConfigureSerilog();
+
+                // Create temporary logger for ConfigurationService
+                var tempLogger = new BulkEditor.Infrastructure.Services.SerilogService();
+
+                // Initialize configuration service early to avoid double registration
+                var configService = new ConfigurationService(tempLogger);
+                await configService.InitializeAsync();
+                await configService.MigrateSettingsAsync();
+                var appSettings = await configService.LoadSettingsAsync();
+
+                // Reconfigure Serilog with proper settings
+                ConfigureSerilog(appSettings);
+
                 // Configure services
                 var services = new ServiceCollection();
 
-                // Create default configuration
-                var appSettings = CreateDefaultSettings();
+                // Register core instances
+                services.AddSingleton<IConfigurationService>(configService);
                 services.AddSingleton(appSettings);
 
-                // Register infrastructure services (simplified)
-                services.AddSingleton(Log.Logger);
-                services.AddInfrastructureServicesSimplified();
+                // Register infrastructure services
+                services.AddSingleton<BulkEditor.Core.Interfaces.ILoggingService, BulkEditor.Infrastructure.Services.SerilogService>();
+                services.AddSingleton<BulkEditor.Core.Interfaces.IFileService, BulkEditor.Infrastructure.Services.FileService>();
+
+                // Configure HttpClient properly with all necessary headers and settings
+                services.AddSingleton<System.Net.Http.HttpClient>(provider =>
+                {
+                    var httpClient = new HttpClient();
+                    httpClient.Timeout = TimeSpan.FromSeconds(30);
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", "BulkEditor/1.0");
+                    httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+                    return httpClient;
+                });
+
+                services.AddSingleton<BulkEditor.Core.Interfaces.IHttpService, BulkEditor.Infrastructure.Services.HttpService>();
+                services.AddSingleton<BulkEditor.Core.Interfaces.ICacheService, BulkEditor.Infrastructure.Services.MemoryCacheService>();
+
+                // Document Processing Services
+                services.AddScoped<BulkEditor.Core.Interfaces.IDocumentProcessor, BulkEditor.Infrastructure.Services.DocumentProcessor>();
+                services.AddScoped<BulkEditor.Core.Interfaces.IHyperlinkValidator, BulkEditor.Infrastructure.Services.HyperlinkValidator>();
+                services.AddScoped<BulkEditor.Core.Interfaces.ITextOptimizer, BulkEditor.Infrastructure.Services.TextOptimizer>();
+
+                // Replacement Services
+                services.AddScoped<BulkEditor.Core.Interfaces.IReplacementService, BulkEditor.Infrastructure.Services.ReplacementService>();
+                services.AddScoped<BulkEditor.Core.Interfaces.IHyperlinkReplacementService, BulkEditor.Infrastructure.Services.HyperlinkReplacementService>();
+                services.AddScoped<BulkEditor.Core.Interfaces.ITextReplacementService, BulkEditor.Infrastructure.Services.TextReplacementService>();
 
                 // Register application services
-                services.AddScoped<IApplicationService, ApplicationService>();
+                services.AddScoped<IApplicationService, BulkEditor.Application.Services.ApplicationService>();
+
+                // Register update services
+                services.AddSingleton<IUpdateService, GitHubUpdateService>(provider =>
+                {
+                    var httpClient = provider.GetRequiredService<System.Net.Http.HttpClient>();
+                    var logger = provider.GetRequiredService<BulkEditor.Core.Interfaces.ILoggingService>();
+                    var configServiceProvider = provider.GetRequiredService<IConfigurationService>();
+                    return new GitHubUpdateService(httpClient, logger, configServiceProvider,
+                        appSettings.Update.GitHubOwner, appSettings.Update.GitHubRepository);
+                });
+                services.AddSingleton<UpdateManager>();
 
                 // Register UI Services
                 services.AddSingleton<BulkEditor.UI.Services.INotificationService, BulkEditor.UI.Services.NotificationService>();
@@ -48,8 +101,19 @@ namespace BulkEditor.UI
                 // Build service provider
                 _serviceProvider = services.BuildServiceProvider();
 
-                // Initialize Serilog
-                ConfigureSerilog();
+                // Initialize Serilog with proper paths
+                ConfigureSerilog(appSettings);
+
+                // Initialize update manager
+                _updateManager = _serviceProvider.GetRequiredService<UpdateManager>();
+                await _updateManager.StartAsync();
+
+                // Subscribe to update events
+                var updateService = _serviceProvider.GetRequiredService<IUpdateService>();
+                if (updateService is GitHubUpdateService githubUpdateService)
+                {
+                    githubUpdateService.UpdateRequiresRestart += OnUpdateRequiresRestart;
+                }
 
                 // Create and show the main window
                 var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
@@ -71,6 +135,8 @@ namespace BulkEditor.UI
         {
             try
             {
+                _updateManager?.Stop();
+                _updateManager?.Dispose();
                 _serviceProvider?.Dispose();
                 Log.CloseAndFlush();
             }
@@ -82,6 +148,15 @@ namespace BulkEditor.UI
             {
                 base.OnExit(e);
             }
+        }
+
+        private void OnUpdateRequiresRestart(object sender, EventArgs e)
+        {
+            Log.Information("Update requires application restart");
+            Dispatcher.BeginInvoke(() =>
+            {
+                Shutdown();
+            });
         }
 
         private void Application_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
@@ -146,51 +221,64 @@ namespace BulkEditor.UI
                     EnableTextReplacement = false,
                     MaxReplacementRules = 50,
                     ValidateContentIds = true
+                },
+                Api = new ApiSettings
+                {
+                    BaseUrl = string.Empty,
+                    ApiKey = string.Empty,
+                    Timeout = TimeSpan.FromSeconds(30),
+                    EnableCaching = true,
+                    CacheExpiry = TimeSpan.FromHours(1)
+                },
+                Update = new UpdateSettings
+                {
+                    AutoUpdateEnabled = true,
+                    CheckIntervalHours = 24,
+                    InstallSecurityUpdatesAutomatically = true,
+                    NotifyOnUpdatesAvailable = true,
+                    CreateBackupBeforeUpdate = true,
+                    GitHubOwner = "DiaTech",
+                    GitHubRepository = "Bulk_Editor",
+                    IncludePrerelease = false
                 }
             };
         }
 
-        private void ConfigureSerilog()
+        private void ConfigureSerilog(AppSettings appSettings = null)
         {
+            var logDirectory = appSettings?.Logging?.LogDirectory ??
+                              Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BulkEditor", "Logs");
+
+            var logLevel = appSettings?.Logging?.LogLevel ?? "Information";
+
+            // Ensure log directory exists
+            Directory.CreateDirectory(logDirectory);
+
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
+                .MinimumLevel.Is(ParseLogLevel(logLevel))
                 .Enrich.FromLogContext()
                 .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .WriteTo.File(
-                    path: Path.Combine("Logs", "bulkeditor-.log"),
+                    path: Path.Combine(logDirectory, "bulkeditor-.log"),
                     rollingInterval: RollingInterval.Day,
                     outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .CreateLogger();
 
             Log.Information("Application starting up");
         }
-    }
 
-    /// <summary>
-    /// Simplified extension methods for DI registration
-    /// </summary>
-    public static class ServiceExtensions
-    {
-        public static IServiceCollection AddInfrastructureServicesSimplified(this IServiceCollection services)
+        private static Serilog.Events.LogEventLevel ParseLogLevel(string logLevel)
         {
-            // Core Services
-            services.AddSingleton<BulkEditor.Core.Interfaces.ILoggingService, BulkEditor.Infrastructure.Services.SerilogService>();
-            services.AddSingleton<BulkEditor.Core.Interfaces.IFileService, BulkEditor.Infrastructure.Services.FileService>();
-            services.AddSingleton<System.Net.Http.HttpClient>();
-            services.AddSingleton<BulkEditor.Core.Interfaces.IHttpService, BulkEditor.Infrastructure.Services.HttpService>();
-            services.AddSingleton<BulkEditor.Core.Interfaces.ICacheService, BulkEditor.Infrastructure.Services.MemoryCacheService>();
-
-            // Document Processing Services
-            services.AddScoped<BulkEditor.Core.Interfaces.IDocumentProcessor, BulkEditor.Infrastructure.Services.DocumentProcessor>();
-            services.AddScoped<BulkEditor.Core.Interfaces.IHyperlinkValidator, BulkEditor.Infrastructure.Services.HyperlinkValidator>();
-            services.AddScoped<BulkEditor.Core.Interfaces.ITextOptimizer, BulkEditor.Infrastructure.Services.TextOptimizer>();
-
-            // Replacement Services
-            services.AddScoped<BulkEditor.Core.Interfaces.IReplacementService, BulkEditor.Infrastructure.Services.ReplacementService>();
-            services.AddScoped<BulkEditor.Core.Interfaces.IHyperlinkReplacementService, BulkEditor.Infrastructure.Services.HyperlinkReplacementService>();
-            services.AddScoped<BulkEditor.Core.Interfaces.ITextReplacementService, BulkEditor.Infrastructure.Services.TextReplacementService>();
-
-            return services;
+            return logLevel?.ToLowerInvariant() switch
+            {
+                "verbose" => Serilog.Events.LogEventLevel.Verbose,
+                "debug" => Serilog.Events.LogEventLevel.Debug,
+                "information" => Serilog.Events.LogEventLevel.Information,
+                "warning" => Serilog.Events.LogEventLevel.Warning,
+                "error" => Serilog.Events.LogEventLevel.Error,
+                "fatal" => Serilog.Events.LogEventLevel.Fatal,
+                _ => Serilog.Events.LogEventLevel.Information
+            };
         }
     }
 }

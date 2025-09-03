@@ -35,6 +35,7 @@ namespace BulkEditor.Core.Entities
         Information,
         HyperlinkUpdated,
         HyperlinkRemoved,
+        HyperlinkStatusAdded,
         ContentIdAdded,
         TitleChanged,
         TitleReplaced,

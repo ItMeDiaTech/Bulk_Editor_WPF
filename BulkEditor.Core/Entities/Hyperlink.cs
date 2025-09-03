@@ -13,7 +13,8 @@ namespace BulkEditor.Core.Entities
         public string UpdatedUrl { get; set; } = string.Empty;
         public HyperlinkStatus Status { get; set; } = HyperlinkStatus.Pending;
         public string LookupId { get; set; } = string.Empty; // TSRC-xxx-xxxxxx or CMS-xxx-xxxxxx
-        public string ContentId { get; set; } = string.Empty;
+        public string ContentId { get; set; } = string.Empty; // Used for title display (6-digit with leading zero padding)
+        public string DocumentId { get; set; } = string.Empty; // Used for URL generation in docid parameter
         public DateTime? LastChecked { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
         public bool RequiresUpdate { get; set; }

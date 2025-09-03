@@ -16,6 +16,11 @@ namespace BulkEditor.Core.Interfaces
         Task<HttpResponseMessage> GetAsync(string url, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Sends a POST request with JSON content to the specified URL
+        /// </summary>
+        Task<HttpResponseMessage> PostJsonAsync(string url, object data, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Sends a HEAD request to check URL availability
         /// </summary>
         Task<HttpResponseMessage> HeadAsync(string url, CancellationToken cancellationToken = default);

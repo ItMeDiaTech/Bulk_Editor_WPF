@@ -21,6 +21,8 @@ namespace BulkEditor.Infrastructure.Services
         private readonly IHttpService _httpService;
         private readonly ILoggingService _logger;
         private readonly Regex _contentIdRegex;
+        private readonly Regex _fiveDigitRegex;
+        private readonly Regex _sixDigitRegex;
 
         public HyperlinkReplacementService(IHttpService httpService, ILoggingService logger)
         {
@@ -29,6 +31,10 @@ namespace BulkEditor.Infrastructure.Services
 
             // Regex for extracting 6-digit content IDs from Content ID field
             _contentIdRegex = new Regex(@"[0-9]{6}", RegexOptions.Compiled);
+            // Regex for detecting 5-digit content IDs that need padding
+            _fiveDigitRegex = new Regex(@"[0-9]{5}", RegexOptions.Compiled);
+            // Regex for detecting 6-digit content IDs
+            _sixDigitRegex = new Regex(@"[0-9]{6}", RegexOptions.Compiled);
         }
 
         public async Task<CoreDocument> ProcessHyperlinkReplacementsAsync(CoreDocument document, IEnumerable<HyperlinkReplacementRule> rules, CancellationToken cancellationToken = default)
@@ -103,19 +109,8 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(contentId))
-                    return string.Empty;
-
-                // Extract 6-digit Content ID if it's in a different format
-                var match = _contentIdRegex.Match(contentId);
-                var cleanContentId = match.Success ? match.Value : contentId;
-
-                // Simulate title lookup - in a real implementation, this would query a CMS or API
-                // For now, we'll use a simple mapping or generate a title
-                var title = await SimulateTitleLookupAsync(cleanContentId, cancellationToken);
-
-                _logger.LogDebug("Looked up title '{Title}' for Content ID: {ContentId}", title, cleanContentId);
-                return title;
+                var documentRecord = await LookupDocumentByContentIdAsync(contentId, cancellationToken);
+                return documentRecord?.Title ?? $"Document {contentId}";
             }
             catch (Exception ex)
             {
@@ -128,6 +123,11 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                // This is the legacy method that incorrectly used Content_ID for URL
+                // For backward compatibility, we'll simulate the old behavior
+                // but log a warning that this should use Document_ID instead
+                _logger.LogWarning("BuildUrlFromContentId called - this method should use Document_ID instead of Content_ID for URL generation");
+
                 if (string.IsNullOrWhiteSpace(contentId))
                     throw new ArgumentException("Content ID cannot be null or empty", nameof(contentId));
 
@@ -135,15 +135,60 @@ namespace BulkEditor.Infrastructure.Services
                 var match = _contentIdRegex.Match(contentId);
                 var cleanContentId = match.Success ? match.Value : contentId;
 
-                // Build URL using the same pattern as existing hyperlink processing
-                var url = $"https://example.com/content/{cleanContentId}";
+                // For backward compatibility, build URL using Content_ID (but this is incorrect)
+                var url = $"https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid={cleanContentId}";
 
-                _logger.LogDebug("Built URL '{Url}' from Content ID: {ContentId}", url, cleanContentId);
+                _logger.LogDebug("Built URL '{Url}' from Content ID: {ContentId} (legacy method)", url, cleanContentId);
                 return url;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error building URL from Content ID: {ContentId}", contentId);
+                throw;
+            }
+        }
+
+        public async Task<DocumentRecord> LookupDocumentByContentIdAsync(string contentId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(contentId))
+                    return null;
+
+                // Extract 6-digit Content ID if it's in a different format
+                var match = _contentIdRegex.Match(contentId);
+                var cleanContentId = match.Success ? match.Value : contentId;
+
+                // Simulate document lookup - in a real implementation, this would query a CMS or API
+                // For now, we'll use a simple mapping or generate a document record
+                var documentRecord = await SimulateDocumentLookupAsync(cleanContentId, cancellationToken);
+
+                _logger.LogDebug("Looked up document record for Content ID: {ContentId}", cleanContentId);
+                return documentRecord;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error looking up document for Content ID: {ContentId}", contentId);
+                return null;
+            }
+        }
+
+        public string BuildUrlFromDocumentId(string documentId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(documentId))
+                    throw new ArgumentException("Document ID cannot be null or empty", nameof(documentId));
+
+                // Build URL using the correct CVS Health format with Document_ID
+                var url = $"https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid={documentId}";
+
+                _logger.LogDebug("Built URL '{Url}' from Document ID: {DocumentId}", url, documentId);
+                return url;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error building URL from Document ID: {DocumentId}", documentId);
                 throw;
             }
         }
@@ -163,23 +208,22 @@ namespace BulkEditor.Infrastructure.Services
 
             try
             {
-                // Look up the title for the Content ID
-                var newTitle = await LookupTitleByContentIdAsync(rule.ContentId, cancellationToken);
-                if (string.IsNullOrEmpty(newTitle))
+                // Look up the document record for the Content ID
+                var documentRecord = await LookupDocumentByContentIdAsync(rule.ContentId, cancellationToken);
+                if (documentRecord == null || string.IsNullOrEmpty(documentRecord.Title))
                 {
-                    result.ErrorMessage = $"Could not lookup title for Content ID: {rule.ContentId}";
+                    result.ErrorMessage = $"Could not lookup document for Content ID: {rule.ContentId}";
                     return result;
                 }
 
-                // Extract 6-digit Content ID
-                var match = _contentIdRegex.Match(rule.ContentId);
-                var cleanContentId = match.Success ? match.Value : rule.ContentId;
+                // Extract and format Content ID - pad 5-digit IDs with leading zero
+                var cleanContentId = FormatContentId(rule.ContentId);
 
-                // Build new display text: "Title (Content_ID)"
-                var newDisplayText = $"{newTitle} ({cleanContentId})";
+                // Build new display text: "Title (Content_ID)" - using Content_ID in title
+                var newDisplayText = $"{documentRecord.Title} ({cleanContentId})";
 
-                // Build new URL
-                var newUrl = BuildUrlFromContentId(cleanContentId);
+                // Build new URL using Document_ID, not Content_ID
+                var newUrl = BuildUrlFromDocumentId(documentRecord.Document_ID);
 
                 // Update the hyperlink display text
                 openXmlHyperlink.RemoveAllChildren();
@@ -216,7 +260,7 @@ namespace BulkEditor.Infrastructure.Services
                     OldValue = result.OriginalTitle,
                     NewValue = newDisplayText,
                     ElementId = result.HyperlinkId,
-                    Details = $"Content ID: {cleanContentId}, URL: {newUrl}"
+                    Details = $"Content ID: {cleanContentId}, Document ID: {documentRecord.Document_ID}, URL: {newUrl}"
                 });
 
                 return result;
@@ -234,14 +278,48 @@ namespace BulkEditor.Infrastructure.Services
             if (string.IsNullOrEmpty(text))
                 return string.Empty;
 
-            // Remove patterns like " (123456)" or "(123456)" from the end of text
-            var pattern = @"\s*\([0-9]{6}\)\s*$";
-            var result = Regex.Replace(text, pattern, "", RegexOptions.IgnoreCase).Trim();
+            // Remove patterns like " (123456)" or "(123456)" from the end of text (6-digit)
+            var pattern6 = @"\s*\([0-9]{6}\)\s*$";
+            var result = Regex.Replace(text, pattern6, "", RegexOptions.IgnoreCase).Trim();
+
+            // Also remove 5-digit patterns like " (12345)" from the end of text
+            var pattern5 = @"\s*\([0-9]{5}\)\s*$";
+            result = Regex.Replace(result, pattern5, "", RegexOptions.IgnoreCase).Trim();
 
             return result;
         }
 
-        private async Task<string> SimulateTitleLookupAsync(string contentId, CancellationToken cancellationToken)
+        /// <summary>
+        /// Formats Content ID to ensure 6-digit format with leading zero padding if needed
+        /// </summary>
+        /// <param name="contentId">Raw content ID</param>
+        /// <returns>Formatted 6-digit content ID</returns>
+        private string FormatContentId(string contentId)
+        {
+            if (string.IsNullOrWhiteSpace(contentId))
+                return contentId;
+
+            // First try to extract 6-digit ID
+            var sixDigitMatch = _sixDigitRegex.Match(contentId);
+            if (sixDigitMatch.Success)
+            {
+                return sixDigitMatch.Value;
+            }
+
+            // If no 6-digit found, try 5-digit and pad with leading zero
+            var fiveDigitMatch = _fiveDigitRegex.Match(contentId);
+            if (fiveDigitMatch.Success)
+            {
+                var paddedId = "0" + fiveDigitMatch.Value;
+                _logger.LogDebug("Padded 5-digit Content ID '{OriginalId}' to 6-digit '{PaddedId}'", fiveDigitMatch.Value, paddedId);
+                return paddedId;
+            }
+
+            // Return original if no numeric pattern found
+            return contentId;
+        }
+
+        private async Task<DocumentRecord> SimulateDocumentLookupAsync(string contentId, CancellationToken cancellationToken)
         {
             try
             {
@@ -249,13 +327,26 @@ namespace BulkEditor.Infrastructure.Services
                 await Task.Delay(50, cancellationToken);
 
                 // In a real implementation, this would query a CMS/API
-                // For now, return a formatted title based on Content ID
-                return $"Document Title {contentId}";
+                // For now, return a simulated document record
+                return new DocumentRecord
+                {
+                    Document_ID = $"doc-{contentId}-{DateTime.Now.Ticks % 1000}",
+                    Content_ID = contentId,
+                    Title = $"Document Title {contentId}",
+                    Status = "Released",
+                    Lookup_ID = $"TSRC-{contentId}"
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Error in title lookup simulation for Content ID: {ContentId}. Error: {Error}", contentId, ex.Message);
-                return $"Document {contentId}";
+                _logger.LogWarning("Error in document lookup simulation for Content ID: {ContentId}. Error: {Error}", contentId, ex.Message);
+                return new DocumentRecord
+                {
+                    Document_ID = $"fallback-doc-{contentId}",
+                    Content_ID = contentId,
+                    Title = $"Document {contentId}",
+                    Status = "Unknown"
+                };
             }
         }
     }

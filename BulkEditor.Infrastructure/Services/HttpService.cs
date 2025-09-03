@@ -20,9 +20,7 @@ namespace BulkEditor.Infrastructure.Services
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Set default timeout and user agent
-            _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "BulkEditor/1.0");
+            // Note: HttpClient configuration moved to DI container to avoid modification after first request
         }
 
         public async Task<HttpResponseMessage> GetAsync(string url, CancellationToken cancellationToken = default)
@@ -39,6 +37,74 @@ namespace BulkEditor.Infrastructure.Services
                 _logger.LogError(ex, "Error sending GET request to: {Url}", url);
                 throw;
             }
+        }
+
+        public async Task<HttpResponseMessage> PostJsonAsync(string url, object data, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogDebug("Sending POST request to: {Url}", url);
+
+                // Handle test mode
+                if (url.ToLower() == "test")
+                {
+                    return CreateTestApiResponse();
+                }
+
+                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync(url, content, cancellationToken);
+                _logger.LogDebug("Received response {StatusCode} from POST: {Url}", response.StatusCode, url);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending POST request to: {Url}", url);
+                throw;
+            }
+        }
+
+        private HttpResponseMessage CreateTestApiResponse()
+        {
+            var testResponse = new
+            {
+                Version = "2.1",
+                Changes = "Test mode - mock data response",
+                Results = new[]
+                {
+                    new
+                    {
+                        Document_ID = "test-doc-001",
+                        Content_ID = "TEST-CONTENT-123456",
+                        Title = "Test Document Title",
+                        Status = "Released"
+                    },
+                    new
+                    {
+                        Document_ID = "test-doc-002",
+                        Content_ID = "TEST-CONTENT-789012",
+                        Title = "Expired Test Document",
+                        Status = "Expired"
+                    },
+                    new
+                    {
+                        Document_ID = "test-doc-003",
+                        Content_ID = "TEST-CONTENT-345678",
+                        Title = "Another Released Document",
+                        Status = "Released"
+                    }
+                }
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(testResponse);
+            var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            _logger.LogInformation("Generated test API response with {ResultCount} results", testResponse.Results.Length);
+            return response;
         }
 
         public async Task<HttpResponseMessage> HeadAsync(string url, CancellationToken cancellationToken = default)
@@ -113,15 +179,14 @@ namespace BulkEditor.Infrastructure.Services
 
         public void SetTimeout(TimeSpan timeout)
         {
-            _httpClient.Timeout = timeout;
-            _logger.LogDebug("HTTP client timeout set to: {Timeout}", timeout);
+            // Note: Timeout modification disabled to prevent "Properties can only be modified before sending the first request" error
+            _logger.LogDebug("HTTP client timeout change requested: {Timeout} (not applied to avoid HttpClient configuration errors)", timeout);
         }
 
         public void SetUserAgent(string userAgent)
         {
-            _httpClient.DefaultRequestHeaders.Remove("User-Agent");
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
-            _logger.LogDebug("HTTP client user agent set to: {UserAgent}", userAgent);
+            // Note: User-Agent modification disabled to prevent "Properties can only be modified before sending the first request" error
+            _logger.LogDebug("HTTP client user agent change requested: {UserAgent} (not applied to avoid HttpClient configuration errors)", userAgent);
         }
     }
 }

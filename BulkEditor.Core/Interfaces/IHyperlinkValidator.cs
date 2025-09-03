@@ -46,6 +46,7 @@ namespace BulkEditor.Core.Interfaces
         public string ErrorMessage { get; set; } = string.Empty;
         public string LookupId { get; set; } = string.Empty;
         public string ContentId { get; set; } = string.Empty;
+        public string DocumentId { get; set; } = string.Empty; // Used for URL generation
         public bool IsExpired { get; set; }
         public bool RequiresUpdate { get; set; }
         public string SuggestedUrl { get; set; } = string.Empty;

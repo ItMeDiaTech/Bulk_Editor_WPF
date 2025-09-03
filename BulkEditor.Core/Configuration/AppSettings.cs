@@ -15,6 +15,7 @@ namespace BulkEditor.Core.Configuration
         public UiSettings UI { get; set; } = new();
         public ApiSettings Api { get; set; } = new();
         public ReplacementSettings Replacement { get; set; } = new();
+        public UpdateSettings Update { get; set; } = new();
     }
 
     /// <summary>
@@ -148,5 +149,21 @@ namespace BulkEditor.Core.Configuration
         public string ReplacementText { get; set; } = string.Empty;
         public bool IsEnabled { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Auto-update settings
+    /// </summary>
+    public class UpdateSettings
+    {
+        public bool AutoUpdateEnabled { get; set; } = true;
+        public int CheckIntervalHours { get; set; } = 24;
+        public bool InstallSecurityUpdatesAutomatically { get; set; } = true;
+        public bool NotifyOnUpdatesAvailable { get; set; } = true;
+        public bool CreateBackupBeforeUpdate { get; set; } = true;
+        public string GitHubOwner { get; set; } = "DiaTech";
+        public string GitHubRepository { get; set; } = "Bulk_Editor";
+        public DateTime LastUpdateCheck { get; set; } = DateTime.MinValue;
+        public bool IncludePrerelease { get; set; } = false;
     }
 }

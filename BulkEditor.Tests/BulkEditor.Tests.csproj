@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +24,7 @@
     <ProjectReference Include="..\BulkEditor.Core\BulkEditor.Core.csproj" />
     <ProjectReference Include="..\BulkEditor.Application\BulkEditor.Application.csproj" />
     <ProjectReference Include="..\BulkEditor.Infrastructure\BulkEditor.Infrastructure.csproj" />
+    <ProjectReference Include="..\BulkEditor.UI\BulkEditor.UI.csproj" />
   </ItemGroup>
 
 </Project>

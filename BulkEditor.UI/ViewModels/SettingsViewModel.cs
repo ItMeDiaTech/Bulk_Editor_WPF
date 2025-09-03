@@ -1,5 +1,6 @@
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -17,6 +18,8 @@ namespace BulkEditor.UI.ViewModels
     public partial class SettingsViewModel : ViewModelBase
     {
         private readonly ILoggingService _logger;
+        private readonly IConfigurationService _configurationService;
+        private readonly IUpdateService _updateService;
         private readonly AppSettings _originalSettings;
         private readonly AppSettings _currentSettings;
 
@@ -75,6 +78,22 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private bool _reportTitleDifferences;
 
+        // API Settings
+        [ObservableProperty]
+        private string _apiBaseUrl = string.Empty;
+
+        [ObservableProperty]
+        private string _apiKey = string.Empty;
+
+        [ObservableProperty]
+        private int _apiTimeoutSeconds;
+
+        [ObservableProperty]
+        private bool _enableApiCaching;
+
+        [ObservableProperty]
+        private int _apiCacheExpiryHours;
+
         // Backup Settings
         [ObservableProperty]
         private string _backupDirectory = string.Empty;
@@ -123,14 +142,41 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private bool _validateContentIds;
 
+        // Update Settings
+        [ObservableProperty]
+        private bool _autoUpdateEnabled;
+
+        [ObservableProperty]
+        private int _checkIntervalHours;
+
+        [ObservableProperty]
+        private bool _installSecurityUpdatesAutomatically;
+
+        [ObservableProperty]
+        private bool _notifyOnUpdatesAvailable;
+
+        [ObservableProperty]
+        private bool _createBackupBeforeUpdate;
+
+        [ObservableProperty]
+        private bool _includePrerelease;
+
+        [ObservableProperty]
+        private string _gitHubOwner = string.Empty;
+
+        [ObservableProperty]
+        private string _gitHubRepository = string.Empty;
+
         // Replacement Rules Collections
         public ObservableCollection<HyperlinkReplacementRule> HyperlinkRules { get; set; } = new();
         public ObservableCollection<TextReplacementRule> TextRules { get; set; } = new();
 
-        public SettingsViewModel(AppSettings appSettings, ILoggingService logger)
+        public SettingsViewModel(AppSettings appSettings, ILoggingService logger, IConfigurationService configurationService, IUpdateService updateService)
         {
             _originalSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+            _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
 
             // Create a copy of the settings to work with
             _currentSettings = CloneSettings(appSettings);
@@ -184,6 +230,23 @@ namespace BulkEditor.UI.ViewModels
             // Title replacement settings
             AutoReplaceTitles = _currentSettings.Validation.AutoReplaceTitles;
             ReportTitleDifferences = _currentSettings.Validation.ReportTitleDifferences;
+
+            // API Settings
+            ApiBaseUrl = _currentSettings.Api.BaseUrl;
+            ApiKey = _currentSettings.Api.ApiKey;
+            ApiTimeoutSeconds = (int)_currentSettings.Api.Timeout.TotalSeconds;
+            EnableApiCaching = _currentSettings.Api.EnableCaching;
+            ApiCacheExpiryHours = (int)_currentSettings.Api.CacheExpiry.TotalHours;
+
+            // Update Settings
+            AutoUpdateEnabled = _currentSettings.Update.AutoUpdateEnabled;
+            CheckIntervalHours = _currentSettings.Update.CheckIntervalHours;
+            InstallSecurityUpdatesAutomatically = _currentSettings.Update.InstallSecurityUpdatesAutomatically;
+            NotifyOnUpdatesAvailable = _currentSettings.Update.NotifyOnUpdatesAvailable;
+            CreateBackupBeforeUpdate = _currentSettings.Update.CreateBackupBeforeUpdate;
+            IncludePrerelease = _currentSettings.Update.IncludePrerelease;
+            GitHubOwner = _currentSettings.Update.GitHubOwner;
+            GitHubRepository = _currentSettings.Update.GitHubRepository;
 
             // Load replacement rules into collections
             HyperlinkRules.Clear();
@@ -247,6 +310,23 @@ namespace BulkEditor.UI.ViewModels
             _currentSettings.Validation.AutoReplaceTitles = AutoReplaceTitles;
             _currentSettings.Validation.ReportTitleDifferences = ReportTitleDifferences;
 
+            // API Settings
+            _currentSettings.Api.BaseUrl = ApiBaseUrl;
+            _currentSettings.Api.ApiKey = ApiKey;
+            _currentSettings.Api.Timeout = TimeSpan.FromSeconds(ApiTimeoutSeconds);
+            _currentSettings.Api.EnableCaching = EnableApiCaching;
+            _currentSettings.Api.CacheExpiry = TimeSpan.FromHours(ApiCacheExpiryHours);
+
+            // Update Settings
+            _currentSettings.Update.AutoUpdateEnabled = AutoUpdateEnabled;
+            _currentSettings.Update.CheckIntervalHours = CheckIntervalHours;
+            _currentSettings.Update.InstallSecurityUpdatesAutomatically = InstallSecurityUpdatesAutomatically;
+            _currentSettings.Update.NotifyOnUpdatesAvailable = NotifyOnUpdatesAvailable;
+            _currentSettings.Update.CreateBackupBeforeUpdate = CreateBackupBeforeUpdate;
+            _currentSettings.Update.IncludePrerelease = IncludePrerelease;
+            _currentSettings.Update.GitHubOwner = GitHubOwner;
+            _currentSettings.Update.GitHubRepository = GitHubRepository;
+
             // Update replacement rules from collections
             _currentSettings.Replacement.HyperlinkRules.Clear();
             _currentSettings.Replacement.HyperlinkRules.AddRange(HyperlinkRules);
@@ -304,6 +384,8 @@ namespace BulkEditor.UI.ViewModels
                 _currentSettings.Backup = defaultSettings.Backup;
                 _currentSettings.Logging = defaultSettings.Logging;
                 _currentSettings.Replacement = defaultSettings.Replacement;
+                _currentSettings.Api = defaultSettings.Api;
+                _currentSettings.Update = defaultSettings.Update;
 
                 // Reload properties from updated settings - this will trigger PropertyChanged
                 LoadSettingsIntoProperties();
@@ -421,6 +503,30 @@ namespace BulkEditor.UI.ViewModels
                 return false;
             }
 
+            // Validate API settings
+            if (ApiTimeoutSeconds < 1 || ApiTimeoutSeconds > 300)
+            {
+                _logger.LogWarning("API timeout must be between 1 and 300 seconds");
+                return false;
+            }
+
+            if (ApiCacheExpiryHours < 1 || ApiCacheExpiryHours > 24)
+            {
+                _logger.LogWarning("API cache expiry must be between 1 and 24 hours");
+                return false;
+            }
+
+            // Validate API URL format if provided
+            if (!string.IsNullOrWhiteSpace(ApiBaseUrl) && ApiBaseUrl.ToLower() != "test")
+            {
+                if (!Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != "http" && uri.Scheme != "https"))
+                {
+                    _logger.LogWarning("API Base URL must be a valid HTTP or HTTPS URL");
+                    return false;
+                }
+            }
+
             // Validate hyperlink replacement rules if enabled
             if (EnableHyperlinkReplacement)
             {
@@ -464,13 +570,7 @@ namespace BulkEditor.UI.ViewModels
         {
             try
             {
-                var settingsPath = Path.Combine(Environment.CurrentDirectory, "appsettings.json");
-                var json = System.Text.Json.JsonSerializer.Serialize(_currentSettings, new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-
-                await File.WriteAllTextAsync(settingsPath, json);
+                await _configurationService.SaveSettingsAsync(_currentSettings);
             }
             catch (Exception ex)
             {
@@ -493,6 +593,8 @@ namespace BulkEditor.UI.ViewModels
             target.Backup = source.Backup;
             target.Logging = source.Logging;
             target.Replacement = source.Replacement;
+            target.Api = source.Api;
+            target.Update = source.Update;
         }
 
         private static AppSettings CreateDefaultSettings()
@@ -546,6 +648,25 @@ namespace BulkEditor.UI.ViewModels
                     EnableTextReplacement = false,
                     MaxReplacementRules = 50,
                     ValidateContentIds = true
+                },
+                Api = new ApiSettings
+                {
+                    BaseUrl = string.Empty,
+                    ApiKey = string.Empty,
+                    Timeout = TimeSpan.FromSeconds(30),
+                    EnableCaching = true,
+                    CacheExpiry = TimeSpan.FromHours(1)
+                },
+                Update = new UpdateSettings
+                {
+                    AutoUpdateEnabled = true,
+                    CheckIntervalHours = 24,
+                    InstallSecurityUpdatesAutomatically = true,
+                    NotifyOnUpdatesAvailable = true,
+                    CreateBackupBeforeUpdate = true,
+                    GitHubOwner = "DiaTech",
+                    GitHubRepository = "Bulk_Editor",
+                    IncludePrerelease = false
                 }
             };
         }
@@ -624,6 +745,84 @@ namespace BulkEditor.UI.ViewModels
             {
                 _logger.LogInformation("Cleared {HyperlinkCount} invalid hyperlink rules and {TextCount} invalid text rules",
                     invalidHyperlinkRules.Count, invalidTextRules.Count);
+            }
+        }
+
+        [RelayCommand]
+        private async Task TestApiConnection()
+        {
+            try
+            {
+                IsBusy = true;
+                BusyMessage = "Testing API connection...";
+
+                if (string.IsNullOrWhiteSpace(ApiBaseUrl))
+                {
+                    _logger.LogWarning("API Base URL is required for connection test");
+                    return;
+                }
+
+                if (ApiBaseUrl.ToLower() == "test")
+                {
+                    _logger.LogInformation("API connection test successful (Test mode)");
+                    return;
+                }
+
+                // Test actual API connection
+                using var httpClient = new System.Net.Http.HttpClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(ApiTimeoutSeconds);
+
+                var response = await httpClient.GetAsync(ApiBaseUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("API connection test successful - Status: {StatusCode}", response.StatusCode);
+                }
+                else
+                {
+                    _logger.LogWarning("API connection test failed - Status: {StatusCode}", response.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "API connection test failed");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task CheckForUpdates()
+        {
+            try
+            {
+                IsBusy = true;
+                BusyMessage = "Checking for updates...";
+
+                _logger.LogInformation("Manual update check initiated");
+
+                var updateInfo = await _updateService.CheckForUpdatesAsync();
+                if (updateInfo != null)
+                {
+                    _logger.LogInformation("Update available: Version {Version}", updateInfo.Version);
+                    _logger.LogInformation("Release notes: {ReleaseNotes}", updateInfo.ReleaseNotes);
+                }
+                else
+                {
+                    _logger.LogInformation("No updates available");
+                }
+
+                _logger.LogInformation("Update check completed");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to check for updates");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
     }

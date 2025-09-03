@@ -174,6 +174,66 @@
                             </StackPanel>
                         </GroupBox>
 
+                        <!-- API Configuration -->
+                        <GroupBox Header="API Configuration">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="300"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="API Base URL:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding ApiBaseUrl}"
+                                             HorizontalAlignment="Stretch" Margin="0,0,8,0"
+                                             ToolTip="Enter API URL or 'Test' for test mode"/>
+                                    <Button Grid.Column="2" Content="Test Connection"
+                                            Command="{Binding TestApiConnectionCommand}"
+                                            Padding="12,4"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="300"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="API Key:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding ApiKey}"
+                                             HorizontalAlignment="Stretch"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="API Timeout (seconds):" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding ApiTimeoutSeconds}"
+                                             HorizontalAlignment="Stretch"/>
+                                </Grid>
+
+                                <CheckBox Content="Enable API response caching"
+                                          IsChecked="{Binding EnableApiCaching}"
+                                          Margin="0,0,0,8"/>
+
+                                <Grid Margin="0,0,0,8" IsEnabled="{Binding EnableApiCaching}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Cache expiry (hours):" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding ApiCacheExpiryHours}"
+                                             HorizontalAlignment="Stretch"/>
+                                </Grid>
+
+                                <TextBlock Text="Note: Enter 'Test' as API URL to use test mode with mock data."
+                                           FontStyle="Italic"
+                                           Foreground="Gray"
+                                           FontSize="11"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
                         <GroupBox Header="Validation Options">
                             <StackPanel>
                                 <CheckBox Content="Check for expired content"
@@ -455,6 +515,97 @@
                                                FontSize="11"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Update Settings -->
+            <TabItem Header="Updates">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+
+                        <GroupBox Header="Auto-Update Configuration">
+                            <StackPanel>
+                                <CheckBox Content="Enable automatic updates"
+                                          IsChecked="{Binding AutoUpdateEnabled}"
+                                          Margin="0,0,0,8"/>
+
+                                <Grid Margin="0,0,0,8" IsEnabled="{Binding AutoUpdateEnabled}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Check for updates every (hours):" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding CheckIntervalHours}"
+                                             HorizontalAlignment="Stretch"/>
+                                </Grid>
+
+                                <CheckBox Content="Install security updates automatically"
+                                          IsChecked="{Binding InstallSecurityUpdatesAutomatically}"
+                                          IsEnabled="{Binding AutoUpdateEnabled}"
+                                          Margin="0,0,0,8"/>
+
+                                <CheckBox Content="Notify when updates are available"
+                                          IsChecked="{Binding NotifyOnUpdatesAvailable}"
+                                          IsEnabled="{Binding AutoUpdateEnabled}"
+                                          Margin="0,0,0,8"/>
+
+                                <CheckBox Content="Create backup before updating"
+                                          IsChecked="{Binding CreateBackupBeforeUpdate}"
+                                          IsEnabled="{Binding AutoUpdateEnabled}"
+                                          Margin="0,0,0,8"/>
+
+                                <CheckBox Content="Include pre-release versions"
+                                          IsChecked="{Binding IncludePrerelease}"
+                                          IsEnabled="{Binding AutoUpdateEnabled}"
+                                          Margin="0,0,0,8"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Update Source">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="200"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="GitHub Owner:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding GitHubOwner}"
+                                             HorizontalAlignment="Stretch"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="200"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="GitHub Repository:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding GitHubRepository}"
+                                             HorizontalAlignment="Stretch"/>
+                                </Grid>
+
+                                <TextBlock Text="Updates are downloaded from GitHub releases. Ensure the repository information is correct."
+                                           FontStyle="Italic"
+                                           Foreground="Gray"
+                                           FontSize="11"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Manual Update Check">
+                            <StackPanel>
+                                <TextBlock Text="Current Version: 1.0.0.0" Margin="0,0,0,8"/>
+                                <Button Content="Check for Updates"
+                                        Command="{Binding CheckForUpdatesCommand}"
+                                        HorizontalAlignment="Left"
+                                        Padding="16,8"
+                                        Margin="0,0,0,8"/>
+                                <TextBlock Text="Last checked: Never"
+                                           FontSize="11"
+                                           Foreground="Gray"/>
                             </StackPanel>
                         </GroupBox>
 

@@ -202,9 +202,13 @@ namespace BulkEditor.Infrastructure.Services
                         hyperlink.Status = result.Status;
                         hyperlink.LookupId = result.LookupId;
                         hyperlink.ContentId = result.ContentId;
+                        hyperlink.DocumentId = result.DocumentId; // Set Document_ID for URL generation
                         hyperlink.ErrorMessage = result.ErrorMessage;
                         hyperlink.RequiresUpdate = result.RequiresUpdate;
                         hyperlink.LastChecked = DateTime.UtcNow;
+
+                        // Handle status suffix appending (Expired/Not Found) based on VBA logic
+                        await HandleHyperlinkStatusSuffixAsync(document, hyperlink, cancellationToken);
 
                         // Handle title differences if detected
                         if (result.TitleComparison?.TitlesDiffer == true)
@@ -523,7 +527,8 @@ namespace BulkEditor.Infrastructure.Services
                             {
                                 OriginalUrl = url,
                                 DisplayText = displayText,
-                                LookupId = _hyperlinkValidator.ExtractLookupId(url)
+                                LookupId = _hyperlinkValidator.ExtractLookupId(url),
+                                RequiresUpdate = ShouldAutoValidateHyperlink(url, displayText)
                             };
 
                             hyperlinks.Add(hyperlink);
@@ -543,6 +548,37 @@ namespace BulkEditor.Infrastructure.Services
             return hyperlinks;
         }
 
+        /// <summary>
+        /// Determines if a hyperlink should be automatically validated based on VBA criteria
+        /// </summary>
+        /// <param name="url">Hyperlink URL</param>
+        /// <param name="displayText">Hyperlink display text</param>
+        /// <returns>True if hyperlink should be auto-validated</returns>
+        private bool ShouldAutoValidateHyperlink(string url, string displayText)
+        {
+            if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(displayText))
+                return false;
+
+            // Check if URL contains docid= parameter
+            if (!string.IsNullOrEmpty(url) && url.Contains("docid=", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Check if URL contains TSRC or CMS
+            if (!string.IsNullOrEmpty(url) && (url.Contains("TSRC", StringComparison.OrdinalIgnoreCase) ||
+                                               url.Contains("CMS", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            // Check if display text contains Content ID pattern (5 or 6 digits in parentheses)
+            if (!string.IsNullOrEmpty(displayText))
+            {
+                var contentIdPattern = @"\([0-9]{5,6}\)";
+                if (System.Text.RegularExpressions.Regex.IsMatch(displayText, contentIdPattern))
+                    return true;
+            }
+
+            return false;
+        }
+
         private async Task UpdateHyperlinkInDocument(MainDocumentPart mainPart, string relationshipId, Hyperlink hyperlinkToUpdate, BulkEditor.Core.Entities.Document document)
         {
             try
@@ -550,9 +586,14 @@ namespace BulkEditor.Infrastructure.Services
                 // Update the relationship target
                 var relationship = mainPart.GetReferenceRelationship(relationshipId);
 
-                // Create new URL based on content ID if available
-                var newUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.ContentId)
-                    ? $"https://example.com/content/{hyperlinkToUpdate.ContentId}"
+                // Create new URL using Document_ID for docid parameter (correct approach)
+                // Fallback to Content_ID if Document_ID is not available
+                var docIdForUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId)
+                    ? hyperlinkToUpdate.DocumentId
+                    : hyperlinkToUpdate.ContentId;
+
+                var newUrl = !string.IsNullOrEmpty(docIdForUrl)
+                    ? $"https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid={docIdForUrl}"
                     : hyperlinkToUpdate.OriginalUrl;
 
                 // Delete old relationship and create new one
@@ -592,6 +633,7 @@ namespace BulkEditor.Infrastructure.Services
             var contentIdAdded = changes.Count(c => c.Type == ChangeType.ContentIdAdded);
             var titleReplacements = changes.Count(c => c.Type == ChangeType.TitleReplaced);
             var titleChanges = changes.Count(c => c.Type == ChangeType.PossibleTitleChange);
+            var statusAdded = changes.Count(c => c.Type == ChangeType.HyperlinkStatusAdded);
             var errors = changes.Count(c => c.Type == ChangeType.Error);
 
             var summaryParts = new List<string>();
@@ -608,10 +650,80 @@ namespace BulkEditor.Infrastructure.Services
             if (titleChanges > 0)
                 summaryParts.Add($"{titleChanges} possible title changes");
 
+            if (statusAdded > 0)
+                summaryParts.Add($"{statusAdded} status suffixes added");
+
             if (errors > 0)
                 summaryParts.Add($"{errors} errors");
 
             document.ChangeLog.Summary = summary + (summaryParts.Any() ? string.Join(", ", summaryParts) : "no changes required");
+        }
+
+        /// <summary>
+        /// Handles appending status suffixes like " - Expired" or " - Not Found" to hyperlink display text
+        /// Based on VBA logic: hl.TextToDisplay = hl.TextToDisplay & " - Expired"
+        /// </summary>
+        private async Task HandleHyperlinkStatusSuffixAsync(BulkEditor.Core.Entities.Document document, Hyperlink hyperlink, CancellationToken cancellationToken)
+        {
+            try
+            {
+                string statusSuffix = null;
+                ChangeType changeType = ChangeType.Information;
+
+                // Determine status suffix based on hyperlink status
+                switch (hyperlink.Status)
+                {
+                    case HyperlinkStatus.Expired:
+                        statusSuffix = " - Expired";
+                        changeType = ChangeType.HyperlinkStatusAdded;
+                        break;
+                    case HyperlinkStatus.NotFound:
+                        statusSuffix = " - Not Found";
+                        changeType = ChangeType.HyperlinkStatusAdded;
+                        break;
+                    default:
+                        return; // No suffix needed for other statuses
+                }
+
+                // Check if the suffix is already present to avoid duplicates
+                var currentDisplayText = hyperlink.DisplayText ?? string.Empty;
+                if (currentDisplayText.EndsWith(statusSuffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("Status suffix '{StatusSuffix}' already present in hyperlink: {HyperlinkId}", statusSuffix, hyperlink.Id);
+                    return;
+                }
+
+                // Append the status suffix to the display text
+                var newDisplayText = currentDisplayText + statusSuffix;
+
+                // Update the hyperlink in the document
+                await UpdateHyperlinkTitleInDocumentAsync(document.FilePath, hyperlink, newDisplayText, cancellationToken);
+
+                // Log the change
+                document.ChangeLog.Changes.Add(new ChangeEntry
+                {
+                    Type = changeType,
+                    Description = $"Appended status suffix: {statusSuffix}",
+                    OldValue = currentDisplayText,
+                    NewValue = newDisplayText,
+                    ElementId = hyperlink.Id,
+                    Details = $"Hyperlink status: {hyperlink.Status}"
+                });
+
+                _logger.LogInformation("Appended status suffix '{StatusSuffix}' to hyperlink: {HyperlinkId}", statusSuffix, hyperlink.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling status suffix for hyperlink: {HyperlinkId}", hyperlink.Id);
+
+                document.ChangeLog.Changes.Add(new ChangeEntry
+                {
+                    Type = ChangeType.Error,
+                    Description = "Error appending status suffix",
+                    ElementId = hyperlink.Id,
+                    Details = ex.Message
+                });
+            }
         }
 
         public void Dispose()

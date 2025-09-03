@@ -30,8 +30,8 @@ namespace BulkEditor.Infrastructure.Services
             // Initialize the lookup ID regex pattern
             _lookupIdRegex = new Regex(@"(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-            // Initialize Content ID extraction regex for title comparison
-            _contentIdRegex = new Regex(@"\s*\([0-9]{6}\)\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            // Initialize Content ID extraction regex for title comparison (handle both 5 and 6 digit IDs)
+            _contentIdRegex = new Regex(@"\s*\([0-9]{5,6}\)\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         }
 
         public async Task<BulkEditor.Core.Interfaces.HyperlinkValidationResult> ValidateHyperlinkAsync(Hyperlink hyperlink, CancellationToken cancellationToken = default)
@@ -87,10 +87,17 @@ namespace BulkEditor.Infrastructure.Services
                     result.RequiresUpdate = true;
                 }
 
-                // Generate Content ID if lookup ID is found
+                // Generate Content ID and get Document ID if lookup ID is found
                 if (!string.IsNullOrEmpty(result.LookupId))
                 {
                     result.ContentId = await GenerateContentIdAsync(result.LookupId, cancellationToken);
+
+                    // Get document record to extract Document_ID for URL generation
+                    var documentRecord = await SimulateApiLookupAsync(result.LookupId, cancellationToken);
+                    if (documentRecord != null)
+                    {
+                        result.DocumentId = documentRecord.Document_ID;
+                    }
 
                     // Check for title differences and handle replacement/reporting
                     var titleComparison = await CheckTitleDifferenceAsync(hyperlink, result.LookupId, result.ContentId, cancellationToken);
@@ -312,10 +319,11 @@ namespace BulkEditor.Infrastructure.Services
                     await Task.Delay(100, cancellationToken);
 
                     // In a real implementation, this would make an HTTP request to get document info
+                    var contentId = await GenerateContentIdAsync(lookupId, cancellationToken);
                     return new DocumentRecord
                     {
-                        Document_ID = Guid.NewGuid().ToString(),
-                        Content_ID = await GenerateContentIdAsync(lookupId, cancellationToken),
+                        Document_ID = $"doc-{contentId}-{DateTime.Now.Ticks % 1000}",
+                        Content_ID = FormatContentIdWithPadding(contentId),
                         Title = $"Updated API Title for {lookupId}",
                         Status = "Active",
                         Lookup_ID = lookupId
@@ -329,6 +337,28 @@ namespace BulkEditor.Infrastructure.Services
                 _logger.LogWarning("Error in API lookup simulation for lookup ID: {LookupId}. Error: {Error}", lookupId, ex.Message);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Formats Content ID to ensure 6-digit format with leading zero padding if needed
+        /// </summary>
+        /// <param name="contentId">Raw content ID</param>
+        /// <returns>Formatted 6-digit content ID</returns>
+        private string FormatContentIdWithPadding(string contentId)
+        {
+            if (string.IsNullOrWhiteSpace(contentId))
+                return contentId;
+
+            // If it's exactly 5 digits, pad with leading zero
+            if (Regex.IsMatch(contentId, @"^[0-9]{5}$"))
+            {
+                var paddedId = "0" + contentId;
+                _logger.LogDebug("Padded 5-digit Content ID '{OriginalId}' to 6-digit '{PaddedId}'", contentId, paddedId);
+                return paddedId;
+            }
+
+            // Return as-is if already 6 digits or not a pure numeric string
+            return contentId;
         }
     }
 }

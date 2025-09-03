@@ -25,13 +25,14 @@ namespace BulkEditor.Tests.Core.Entities
             hyperlink.UpdatedUrl.Should().BeEmpty();
             hyperlink.LookupId.Should().BeEmpty();
             hyperlink.ContentId.Should().BeEmpty();
+            hyperlink.DocumentId.Should().BeEmpty();
             hyperlink.ErrorMessage.Should().BeEmpty();
         }
 
         [Theory]
-        [InlineData("https://example.com/content/TSRC-ABC-123456", "TSRC-ABC-123456")]
-        [InlineData("https://example.com/content/CMS-DEF-789012", "CMS-DEF-789012")]
-        [InlineData("https://example.com/no-lookup", "")]
+        [InlineData("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=doc-123456", "TSRC-ABC-123456")]
+        [InlineData("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=doc-789012", "CMS-DEF-789012")]
+        [InlineData("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=no-lookup", "")]
         public void Hyperlink_WithUrl_ShouldAcceptVariousFormats(string url, string expectedLookupId)
         {
             // Arrange & Act
