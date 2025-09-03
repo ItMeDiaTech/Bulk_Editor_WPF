@@ -32,6 +32,11 @@ namespace BulkEditor.Infrastructure.DependencyInjection
             // Document Processing Services
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
             services.AddScoped<IHyperlinkValidator, HyperlinkValidator>();
+            services.AddScoped<IReplacementService, ReplacementService>();
+            services.AddScoped<ITextOptimizer, TextOptimizer>();
+            services.AddScoped<ICacheService, MemoryCacheService>();
+            services.AddScoped<BulkEditor.Core.Services.IConfigurationService, ConfigurationService>();
+            services.AddScoped<BulkEditor.Core.Services.IUpdateService, GitHubUpdateService>();
 
             // Configure Serilog
             ConfigureSerilog(configuration);
