@@ -111,6 +111,20 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                // Handle file:// URLs which are not supported by HttpClient
+                if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("Handling file:// URL: {Url}", url);
+
+                    // Extract local file path from file:// URL
+                    var filePath = new Uri(url).LocalPath;
+                    var fileExists = System.IO.File.Exists(filePath);
+
+                    var fileResponse = new HttpResponseMessage(fileExists ? HttpStatusCode.OK : HttpStatusCode.NotFound);
+                    _logger.LogDebug("File {FilePath} exists: {FileExists}", filePath, fileExists);
+                    return fileResponse;
+                }
+
                 _logger.LogDebug("Sending HEAD request to: {Url}", url);
                 var request = new HttpRequestMessage(HttpMethod.Head, url);
                 var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -128,6 +142,15 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                // Handle file:// URLs directly
+                if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var filePath = new Uri(url).LocalPath;
+                    var fileAccessible = System.IO.File.Exists(filePath);
+                    _logger.LogDebug("File URL {Url} accessibility check: {IsAccessible}", url, fileAccessible);
+                    return fileAccessible;
+                }
+
                 using var response = await HeadAsync(url, cancellationToken);
                 var isAccessible = response.IsSuccessStatusCode;
                 _logger.LogDebug("URL {Url} accessibility check: {IsAccessible} (Status: {StatusCode})",
@@ -164,6 +187,18 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                // Handle file:// URLs directly
+                if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var filePath = new Uri(url).LocalPath;
+                    var fileExists = System.IO.File.Exists(filePath);
+                    var actualStatus = fileExists ? HttpStatusCode.OK : HttpStatusCode.NotFound;
+                    var statusMatches = actualStatus == expectedStatus;
+                    _logger.LogDebug("File URL {Url} status check: Expected {ExpectedStatus}, Got {ActualStatus}, Match: {HasExpectedStatus}",
+                        url, expectedStatus, actualStatus, statusMatches);
+                    return statusMatches;
+                }
+
                 using var response = await HeadAsync(url, cancellationToken);
                 var hasExpectedStatus = response.StatusCode == expectedStatus;
                 _logger.LogDebug("URL {Url} status check: Expected {ExpectedStatus}, Got {ActualStatus}, Match: {HasExpectedStatus}",

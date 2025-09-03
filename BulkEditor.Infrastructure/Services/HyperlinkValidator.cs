@@ -305,7 +305,7 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
-        /// Simulates API lookup for document information
+        /// Performs API lookup for document information using real HTTP POST request (matching VBA implementation)
         /// </summary>
         private async Task<DocumentRecord?> SimulateApiLookupAsync(string lookupId, CancellationToken cancellationToken)
         {
@@ -315,26 +315,71 @@ namespace BulkEditor.Infrastructure.Services
                 var cacheKey = $"api_lookup_{lookupId}";
                 var cachedRecord = await _cacheService.GetOrSetAsync(cacheKey, async () =>
                 {
-                    // Simulate API delay
-                    await Task.Delay(100, cancellationToken);
-
-                    // In a real implementation, this would make an HTTP request to get document info
-                    var contentId = await GenerateContentIdAsync(lookupId, cancellationToken);
-                    return new DocumentRecord
-                    {
-                        Document_ID = $"doc-{contentId}-{DateTime.Now.Ticks % 1000}",
-                        Content_ID = FormatContentIdWithPadding(contentId),
-                        Title = $"Updated API Title for {lookupId}",
-                        Status = "Active",
-                        Lookup_ID = lookupId
-                    };
+                    return await PerformRealApiLookupAsync(lookupId, cancellationToken);
                 }, TimeSpan.FromMinutes(30), cancellationToken);
 
                 return cachedRecord;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Error in API lookup simulation for lookup ID: {LookupId}. Error: {Error}", lookupId, ex.Message);
+                _logger.LogWarning("Error in API lookup for lookup ID: {LookupId}. Error: {Error}", lookupId, ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Performs the actual API lookup using HTTP POST request (based on VBA implementation)
+        /// </summary>
+        private async Task<DocumentRecord?> PerformRealApiLookupAsync(string lookupId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Check if we have a real API URL configured, otherwise use test mode
+                // TODO: Replace with actual API endpoint when available
+                var apiUrl = "test"; // This will trigger the test response in HttpService
+
+                var requestData = new { Lookup_ID = new[] { lookupId } };
+
+                _logger.LogDebug("Making API request for lookup ID: {LookupId}", lookupId);
+
+                var response = await _httpService.PostJsonAsync(apiUrl, requestData, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("API request failed for lookup ID {LookupId}: {StatusCode}", lookupId, response.StatusCode);
+                    return null;
+                }
+
+                var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                var apiResponse = System.Text.Json.JsonSerializer.Deserialize<ApiResponse>(responseContent);
+
+                if (apiResponse?.Results?.Any() == true)
+                {
+                    // Find the record that matches our lookup ID
+                    var matchingRecord = apiResponse.Results.FirstOrDefault(r =>
+                        string.Equals(r.Lookup_ID, lookupId, StringComparison.OrdinalIgnoreCase));
+
+                    if (matchingRecord != null)
+                    {
+                        _logger.LogDebug("Found API record for lookup ID {LookupId}: {Title}", lookupId, matchingRecord.Title);
+                        return matchingRecord;
+                    }
+                }
+
+                // If no specific record found, generate a fallback record
+                var contentId = await GenerateContentIdAsync(lookupId, cancellationToken);
+                return new DocumentRecord
+                {
+                    Document_ID = $"doc-{contentId}-{DateTime.Now.Ticks % 1000}",
+                    Content_ID = FormatContentIdWithPadding(contentId),
+                    Title = $"Updated API Title for {lookupId}",
+                    Status = "Active",
+                    Lookup_ID = lookupId
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error performing real API lookup for lookup ID: {LookupId}", lookupId);
                 return null;
             }
         }

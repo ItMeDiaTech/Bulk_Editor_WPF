@@ -381,6 +381,23 @@
                             </StackPanel>
                         </GroupBox>
 
+                        <GroupBox Header="Log Management">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="View application logs for troubleshooting and monitoring."
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="Open Logs Folder"
+                                            Command="{Binding OpenLogsFolderCommand}"
+                                            Padding="12,6"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -597,15 +614,65 @@
 
                         <GroupBox Header="Manual Update Check">
                             <StackPanel>
-                                <TextBlock Text="Current Version: 1.0.0.0" Margin="0,0,0,8"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Current Version: " VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding CurrentVersion}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,8" Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Latest Version: " VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding LatestVersion}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Foreground="Green"/>
+                                </Grid>
+
                                 <Button Content="Check for Updates"
                                         Command="{Binding CheckForUpdatesCommand}"
                                         HorizontalAlignment="Left"
                                         Padding="16,8"
                                         Margin="0,0,0,8"/>
-                                <TextBlock Text="Last checked: Never"
+
+                                <TextBlock Text="{Binding UpdateCheckStatus}"
                                            FontSize="11"
-                                           Foreground="Gray"/>
+                                           Foreground="Gray"
+                                           Margin="0,0,0,8"
+                                           TextWrapping="Wrap"/>
+
+                                <ScrollViewer MaxHeight="100"
+                                              VerticalScrollBarVisibility="Auto"
+                                              Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding ReleaseNotes}"
+                                               FontSize="11"
+                                               Foreground="DarkBlue"
+                                               TextWrapping="Wrap"
+                                               Margin="0,4,0,0"/>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Troubleshooting">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Access application logs for troubleshooting and monitoring."
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="Open Logs Folder"
+                                            Command="{Binding OpenLogsFolderCommand}"
+                                            Padding="12,6"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
                             </StackPanel>
                         </GroupBox>
 

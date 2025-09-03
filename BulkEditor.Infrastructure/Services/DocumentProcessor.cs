@@ -71,6 +71,10 @@ namespace BulkEditor.Infrastructure.Services
                 progress?.Report("Extracting hyperlinks...");
                 document.Hyperlinks = ExtractHyperlinks(filePath);
 
+                // Remove invisible hyperlinks (STEP 1 - like VBA implementation)
+                progress?.Report("Removing invisible hyperlinks...");
+                await RemoveInvisibleHyperlinksAsync(document, cancellationToken);
+
                 // Validate hyperlinks
                 if (document.Hyperlinks.Any())
                 {
@@ -267,13 +271,21 @@ namespace BulkEditor.Infrastructure.Services
                         if (string.IsNullOrEmpty(hyperlinkRelId))
                             continue;
 
-                        var relationship = mainPart.GetReferenceRelationship(hyperlinkRelId);
-                        var currentUrl = relationship.Uri.ToString();
-
-                        var hyperlinkToUpdate = hyperlinksToUpdate.FirstOrDefault(h => h.OriginalUrl == currentUrl);
-                        if (hyperlinkToUpdate != null)
+                        try
                         {
-                            await UpdateHyperlinkInDocument(mainPart, hyperlinkRelId, hyperlinkToUpdate, document);
+                            var relationship = mainPart.GetReferenceRelationship(hyperlinkRelId);
+                            var currentUrl = relationship.Uri.ToString();
+
+                            var hyperlinkToUpdate = hyperlinksToUpdate.FirstOrDefault(h => h.OriginalUrl == currentUrl);
+                            if (hyperlinkToUpdate != null)
+                            {
+                                await UpdateHyperlinkInDocument(mainPart, hyperlinkRelId, hyperlinkToUpdate, document);
+                            }
+                        }
+                        catch (System.Collections.Generic.KeyNotFoundException)
+                        {
+                            _logger.LogWarning("Skipping hyperlink update for invalid relationship ID: {RelId} in document: {FileName}", hyperlinkRelId, document.FileName);
+                            continue;
                         }
                     }
 
@@ -519,19 +531,29 @@ namespace BulkEditor.Infrastructure.Services
                             if (string.IsNullOrEmpty(relId))
                                 continue;
 
-                            var relationship = mainPart.GetReferenceRelationship(relId);
-                            var url = relationship.Uri.ToString();
-                            var displayText = openXmlHyperlink.InnerText;
-
-                            var hyperlink = new Hyperlink
+                            // Safely try to get the relationship - some hyperlinks may have invalid IDs
+                            try
                             {
-                                OriginalUrl = url,
-                                DisplayText = displayText,
-                                LookupId = _hyperlinkValidator.ExtractLookupId(url),
-                                RequiresUpdate = ShouldAutoValidateHyperlink(url, displayText)
-                            };
+                                var relationship = mainPart.GetReferenceRelationship(relId);
+                                var url = relationship.Uri.ToString();
+                                var displayText = openXmlHyperlink.InnerText;
 
-                            hyperlinks.Add(hyperlink);
+                                var hyperlink = new Hyperlink
+                                {
+                                    OriginalUrl = url,
+                                    DisplayText = displayText,
+                                    LookupId = _hyperlinkValidator.ExtractLookupId(url),
+                                    RequiresUpdate = ShouldAutoValidateHyperlink(url, displayText)
+                                };
+
+                                hyperlinks.Add(hyperlink);
+                            }
+                            catch (System.Collections.Generic.KeyNotFoundException)
+                            {
+                                // Hyperlink has invalid relationship ID - skip it
+                                _logger.LogWarning("Skipping hyperlink with invalid relationship ID: {RelId} in document: {FilePath}", relId, filePath);
+                                continue;
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -598,8 +620,7 @@ namespace BulkEditor.Infrastructure.Services
 
                 // Delete old relationship and create new one
                 mainPart.DeleteReferenceRelationship(relationshipId);
-                var newRelationship = mainPart.AddExternalRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-                    new Uri(newUrl), relationshipId);
+                var newRelationship = mainPart.AddHyperlinkRelationship(new Uri(newUrl), true, relationshipId);
 
                 // Update hyperlink object
                 hyperlinkToUpdate.UpdatedUrl = newUrl;
@@ -630,6 +651,7 @@ namespace BulkEditor.Infrastructure.Services
             var summary = $"Processed {document.FileName}: ";
 
             var hyperlinkUpdates = changes.Count(c => c.Type == ChangeType.HyperlinkUpdated);
+            var hyperlinkDeleted = changes.Count(c => c.Type == ChangeType.HyperlinkRemoved);
             var contentIdAdded = changes.Count(c => c.Type == ChangeType.ContentIdAdded);
             var titleReplacements = changes.Count(c => c.Type == ChangeType.TitleReplaced);
             var titleChanges = changes.Count(c => c.Type == ChangeType.PossibleTitleChange);
@@ -640,6 +662,9 @@ namespace BulkEditor.Infrastructure.Services
 
             if (hyperlinkUpdates > 0)
                 summaryParts.Add($"{hyperlinkUpdates} hyperlinks updated");
+
+            if (hyperlinkDeleted > 0)
+                summaryParts.Add($"{hyperlinkDeleted} invisible hyperlinks deleted");
 
             if (contentIdAdded > 0)
                 summaryParts.Add($"{contentIdAdded} content IDs added");
@@ -721,6 +746,141 @@ namespace BulkEditor.Infrastructure.Services
                     Type = ChangeType.Error,
                     Description = "Error appending status suffix",
                     ElementId = hyperlink.Id,
+                    Details = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Removes invisible hyperlinks (empty display text with non-empty URL) based on VBA logic
+        /// </summary>
+        private async Task RemoveInvisibleHyperlinksAsync(BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var invisibleLinksRemoved = 0;
+
+                using var wordDocument = WordprocessingDocument.Open(document.FilePath, true);
+                var mainPart = wordDocument.MainDocumentPart;
+
+                if (mainPart?.Document?.Body != null)
+                {
+                    var hyperlinks = mainPart.Document.Body.Descendants<OpenXmlHyperlink>().ToList();
+
+                    // Process hyperlinks from end to beginning to avoid index issues when deleting
+                    for (int i = hyperlinks.Count - 1; i >= 0; i--)
+                    {
+                        var openXmlHyperlink = hyperlinks[i];
+
+                        try
+                        {
+                            var relId = openXmlHyperlink.Id?.Value;
+                            if (string.IsNullOrEmpty(relId))
+                                continue;
+
+                            // Safely try to get the relationship - some hyperlinks may have invalid IDs
+                            try
+                            {
+                                var relationship = mainPart.GetReferenceRelationship(relId);
+                                var url = relationship.Uri.ToString();
+                                var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
+
+                                // Check if hyperlink is invisible (empty display text but has URL)
+                                if (string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url))
+                                {
+                                    // Find corresponding hyperlink in document.Hyperlinks to get position info
+                                    var hyperlinkToRemove = document.Hyperlinks.FirstOrDefault(h => h.OriginalUrl == url);
+
+                                    // Remove the hyperlink element
+                                    openXmlHyperlink.Remove();
+
+                                    // Remove the relationship (only if it exists)
+                                    try
+                                    {
+                                        mainPart.DeleteReferenceRelationship(relId);
+                                    }
+                                    catch (System.Collections.Generic.KeyNotFoundException)
+                                    {
+                                        // Relationship already deleted or doesn't exist
+                                        _logger.LogDebug("Relationship {RelId} already deleted or doesn't exist", relId);
+                                    }
+
+                                    invisibleLinksRemoved++;
+
+                                    // Log the deletion with position info if available
+                                    document.ChangeLog.Changes.Add(new ChangeEntry
+                                    {
+                                        Type = ChangeType.HyperlinkRemoved,
+                                        Description = "Deleted Invisible Hyperlink",
+                                        OldValue = url,
+                                        NewValue = string.Empty,
+                                        ElementId = hyperlinkToRemove?.Id ?? Guid.NewGuid().ToString(),
+                                        Details = "Hyperlink had empty display text"
+                                    });
+
+                                    _logger.LogInformation("Deleted invisible hyperlink: {Url}", url);
+
+                                    // Remove from document.Hyperlinks collection
+                                    if (hyperlinkToRemove != null)
+                                    {
+                                        document.Hyperlinks.Remove(hyperlinkToRemove);
+                                    }
+                                }
+                            }
+                            catch (System.Collections.Generic.KeyNotFoundException)
+                            {
+                                // Hyperlink has invalid relationship ID - remove the element but skip relationship deletion
+                                var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
+
+                                if (string.IsNullOrEmpty(displayText))
+                                {
+                                    // Remove the broken hyperlink element
+                                    openXmlHyperlink.Remove();
+                                    invisibleLinksRemoved++;
+
+                                    document.ChangeLog.Changes.Add(new ChangeEntry
+                                    {
+                                        Type = ChangeType.HyperlinkRemoved,
+                                        Description = "Deleted Invisible Hyperlink",
+                                        OldValue = "Broken hyperlink",
+                                        NewValue = string.Empty,
+                                        ElementId = Guid.NewGuid().ToString(),
+                                        Details = "Hyperlink had invalid relationship ID and empty display text"
+                                    });
+
+                                    _logger.LogInformation("Deleted broken invisible hyperlink with invalid relationship ID: {RelId}", relId);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("Skipping hyperlink with invalid relationship ID but non-empty display text: {RelId}", relId);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning("Error processing hyperlink during invisible link removal: {Error}", ex.Message);
+                        }
+                    }
+
+                    // Save the document if any changes were made
+                    if (invisibleLinksRemoved > 0)
+                    {
+                        mainPart.Document.Save();
+                        _logger.LogInformation("Removed {Count} invisible hyperlinks from document: {FileName}",
+                            invisibleLinksRemoved, document.FileName);
+                    }
+                }
+
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing invisible hyperlinks from document: {FileName}", document.FileName);
+
+                document.ChangeLog.Changes.Add(new ChangeEntry
+                {
+                    Type = ChangeType.Error,
+                    Description = "Error removing invisible hyperlinks",
                     Details = ex.Message
                 });
             }
