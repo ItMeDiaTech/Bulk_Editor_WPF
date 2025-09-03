@@ -21,9 +21,16 @@ $outputDir = Join-Path $rootDir "Output"
 
 Write-Host "Deploying BulkEditor Release $Version" -ForegroundColor Green
 
+# Load GitHub token from secure file if not provided
+if ([string]::IsNullOrEmpty($GitHubToken)) {
+    Write-Host "Loading GitHub token from secure file..." -ForegroundColor Yellow
+    & "$PSScriptRoot\set-github-token.ps1"
+    $GitHubToken = $env:GITHUB_TOKEN
+}
+
 # Validate inputs
 if ([string]::IsNullOrEmpty($GitHubToken)) {
-    throw "GitHub token is required. Set GITHUB_TOKEN environment variable or pass -GitHubToken parameter."
+    throw "GitHub token is required. Set GITHUB_TOKEN environment variable, pass -GitHubToken parameter, or ensure .github_token file exists with valid token."
 }
 
 if (-not ($Version -match '^\d+\.\d+\.\d+(\.\d+)?$')) {
