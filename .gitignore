@@ -367,3 +367,12 @@ TempFiles/
 *.user
 *.userosscache
 *.sln.docstates
+
+# Environment variables and secrets
+.env
+.env.*
+*.env
+.secrets
+*token*
+github_token
+GITHUB_TOKEN
