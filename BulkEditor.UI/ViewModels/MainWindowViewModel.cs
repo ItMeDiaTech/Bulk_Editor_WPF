@@ -1,0 +1,514 @@
+using BulkEditor.Application.Services;
+using BulkEditor.Core.Configuration;
+using BulkEditor.Core.Entities;
+using BulkEditor.Core.Interfaces;
+using BulkEditor.UI.Services;
+using BulkEditor.UI.Views;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
+using System;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Media;
+
+namespace BulkEditor.UI.ViewModels
+{
+    /// <summary>
+    /// Main window ViewModel for the Bulk Editor application
+    /// </summary>
+    public partial class MainWindowViewModel : ViewModelBase
+    {
+        private readonly IApplicationService _applicationService;
+        private readonly ILoggingService _logger;
+        private readonly INotificationService _notificationService;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly AppSettings _appSettings;
+        private CancellationTokenSource? _cancellationTokenSource;
+
+        [ObservableProperty]
+        private ObservableCollection<DocumentViewModel> _documents = new();
+
+        [ObservableProperty]
+        private DocumentViewModel? _selectedDocument;
+
+        [ObservableProperty]
+        private string _statusMessage = "Ready";
+
+        [ObservableProperty]
+        private double _progressValue;
+
+        [ObservableProperty]
+        private string _progressMessage = string.Empty;
+
+        [ObservableProperty]
+        private bool _isProcessing;
+
+        [ObservableProperty]
+        private string _statusIcon = "ℹ";
+
+        [ObservableProperty]
+        private bool _showStatusIcon = true;
+
+        [ObservableProperty]
+        private SolidColorBrush _statusBackgroundColor = new(Color.FromRgb(0x21, 0x96, 0xF3));
+
+        [ObservableProperty]
+        private SolidColorBrush _statusIconColor = new(Color.FromRgb(0x21, 0x96, 0xF3));
+
+        [ObservableProperty]
+        private SolidColorBrush _statusTextColor = new(Colors.White);
+
+        [ObservableProperty]
+        private ProcessingStatistics? _processingStatistics;
+
+        [ObservableProperty]
+        private int _totalDocuments;
+
+        [ObservableProperty]
+        private int _processedDocuments;
+
+        [ObservableProperty]
+        private int _failedDocuments;
+
+        public INotificationService NotificationService => _notificationService;
+
+        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings)
+        {
+            _applicationService = applicationService ?? throw new ArgumentNullException(nameof(applicationService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _appSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
+
+            Title = "Bulk Document Editor";
+            SetStatusReady();
+
+            // Subscribe to collection changes to update command states
+            Documents.CollectionChanged += (s, e) =>
+            {
+                ProcessDocumentsCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(Documents));
+            };
+        }
+
+        private void SetStatusReady()
+        {
+            StatusMessage = "Ready - Select Word documents to process";
+            StatusIcon = "ℹ";
+            StatusBackgroundColor = new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3));
+            StatusIconColor = new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3));
+            StatusTextColor = new SolidColorBrush(Colors.White);
+            ShowStatusIcon = true;
+        }
+
+        private void SetStatusSuccess(string message)
+        {
+            StatusMessage = message;
+            StatusIcon = "✓";
+            StatusBackgroundColor = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+            StatusIconColor = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+            StatusTextColor = new SolidColorBrush(Colors.White);
+            ShowStatusIcon = true;
+        }
+
+        private void SetStatusWarning(string message)
+        {
+            StatusMessage = message;
+            StatusIcon = "⚠";
+            StatusBackgroundColor = new SolidColorBrush(Color.FromRgb(0xFF, 0x98, 0x00));
+            StatusIconColor = new SolidColorBrush(Color.FromRgb(0xFF, 0x98, 0x00));
+            StatusTextColor = new SolidColorBrush(Colors.White);
+            ShowStatusIcon = true;
+        }
+
+        private void SetStatusError(string message)
+        {
+            StatusMessage = message;
+            StatusIcon = "✕";
+            StatusBackgroundColor = new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36));
+            StatusIconColor = new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36));
+            StatusTextColor = new SolidColorBrush(Colors.White);
+            ShowStatusIcon = true;
+        }
+
+        private void SetStatusProcessing(string message)
+        {
+            StatusMessage = message;
+            StatusIcon = "⚙";
+            StatusBackgroundColor = new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3));
+            StatusIconColor = new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3));
+            StatusTextColor = new SolidColorBrush(Colors.White);
+            ShowStatusIcon = true;
+        }
+
+        [RelayCommand]
+        private async Task SelectFilesAsync()
+        {
+            try
+            {
+                var openFileDialog = new OpenFileDialog
+                {
+                    Title = "Select Word Documents",
+                    Filter = "Word Documents (*.docx;*.docm)|*.docx;*.docm|All Files (*.*)|*.*",
+                    Multiselect = true,
+                    CheckFileExists = true
+                };
+
+                if (openFileDialog.ShowDialog() == true)
+                {
+                    await AddFilesAsync(openFileDialog.FileNames);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error selecting files");
+                _notificationService.ShowError("File Selection Error", "Failed to select files for processing.", ex);
+                SetStatusError($"Error selecting files: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private async Task AddFilesAsync(string[] filePaths)
+        {
+            try
+            {
+                SetStatusProcessing("Validating selected files...");
+
+                var validation = await _applicationService.ValidateFilesAsync(filePaths);
+
+                foreach (var filePath in validation.ValidFiles)
+                {
+                    if (!Documents.Any(d => d.FilePath == filePath))
+                    {
+                        Documents.Add(new DocumentViewModel
+                        {
+                            FilePath = filePath,
+                            FileName = Path.GetFileName(filePath),
+                            Status = DocumentStatus.Pending
+                        });
+                    }
+                }
+
+                if (validation.InvalidFiles.Any())
+                {
+                    var invalidFiles = string.Join(", ", validation.InvalidFiles.Take(3));
+                    if (validation.InvalidFiles.Count > 3)
+                        invalidFiles += $" and {validation.InvalidFiles.Count - 3} more";
+
+                    _notificationService.ShowWarning("Invalid Files Detected",
+                        $"Some files were skipped: {invalidFiles}");
+
+                    SetStatusWarning($"Some files skipped - {Documents.Count} documents ready for processing");
+                }
+                else
+                {
+                    var newFilesCount = Documents.Count;
+                    TotalDocuments = newFilesCount;
+
+                    if (newFilesCount > 0)
+                    {
+                        _notificationService.ShowSuccess("Files Added",
+                            $"Successfully added {newFilesCount} document(s) for processing.");
+                        SetStatusSuccess($"Ready - {newFilesCount} documents selected for processing");
+                    }
+                    else
+                    {
+                        SetStatusReady();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding files");
+                _notificationService.ShowError("File Validation Error", "Failed to validate selected files.", ex);
+                SetStatusError($"Error adding files: {ex.Message}");
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanProcess))]
+        private async Task ProcessDocumentsAsync()
+        {
+            if (IsProcessing) return;
+
+            _cancellationTokenSource = new CancellationTokenSource();
+
+            try
+            {
+                IsProcessing = true;
+                ProcessedDocuments = 0;
+                FailedDocuments = 0;
+                ProgressValue = 0;
+                SetStatusProcessing("Starting document processing...");
+
+                var filePaths = Documents.Select(d => d.FilePath).ToList();
+
+                var progress = new Progress<BatchProcessingProgress>(OnBatchProgressChanged);
+
+                var results = await _applicationService.ProcessDocumentsBatchAsync(
+                    filePaths,
+                    progress,
+                    _cancellationTokenSource.Token);
+
+                // Update document ViewModels with results
+                foreach (var result in results)
+                {
+                    var documentVM = Documents.FirstOrDefault(d => d.FilePath == result.FilePath);
+                    if (documentVM != null)
+                    {
+                        UpdateDocumentViewModel(documentVM, result);
+                    }
+                }
+
+                ProcessingStatistics = _applicationService.GetProcessingStatistics(results);
+
+                ProgressValue = 100;
+
+                // Show completion notification and status
+                if (ProcessingStatistics.FailedDocuments == 0)
+                {
+                    _notificationService.ShowSuccess("Processing Complete",
+                        $"Successfully processed all {ProcessingStatistics.SuccessfulDocuments} documents.");
+                    SetStatusSuccess($"Processing completed - All {ProcessingStatistics.SuccessfulDocuments} documents processed successfully");
+                }
+                else
+                {
+                    _notificationService.ShowWarning("Processing Complete with Errors",
+                        $"Processed {ProcessingStatistics.SuccessfulDocuments} documents successfully, {ProcessingStatistics.FailedDocuments} failed.");
+                    SetStatusWarning($"Processing completed - {ProcessingStatistics.SuccessfulDocuments} successful, {ProcessingStatistics.FailedDocuments} failed");
+                }
+
+                _logger.LogInformation("Batch processing completed successfully");
+            }
+            catch (OperationCanceledException)
+            {
+                SetStatusWarning("Processing cancelled by user");
+                _logger.LogInformation("Batch processing cancelled by user");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during batch processing");
+                _notificationService.ShowError("Processing Failed", "An error occurred during document processing.", ex);
+                SetStatusError($"Processing failed: {ex.Message}");
+            }
+            finally
+            {
+                IsProcessing = false;
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
+            }
+        }
+
+        private bool CanProcess() => Documents.Any() && !IsProcessing;
+
+        [RelayCommand(CanExecute = nameof(CanCancel))]
+        private void CancelProcessing()
+        {
+            _cancellationTokenSource?.Cancel();
+            SetStatusWarning("Cancelling processing...");
+        }
+
+        private bool CanCancel() => IsProcessing && _cancellationTokenSource != null;
+
+        [RelayCommand]
+        private void ClearDocuments()
+        {
+            if (IsProcessing)
+            {
+                MessageBox.Show("Cannot clear documents while processing is in progress.", "Operation Not Allowed",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            Documents.Clear();
+            SelectedDocument = null;
+            TotalDocuments = 0;
+            ProcessedDocuments = 0;
+            FailedDocuments = 0;
+            ProgressValue = 0;
+            ProcessingStatistics = null;
+            SetStatusReady();
+        }
+
+        [RelayCommand]
+        private async Task ExportResultsAsync()
+        {
+            try
+            {
+                if (ProcessingStatistics == null || !Documents.Any())
+                {
+                    MessageBox.Show("No processing results to export.", "Export Results",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var saveFileDialog = new SaveFileDialog
+                {
+                    Title = "Export Processing Results",
+                    Filter = "JSON Files (*.json)|*.json|CSV Files (*.csv)|*.csv",
+                    DefaultExt = "json",
+                    FileName = $"BulkEditor_Results_{DateTime.Now:yyyyMMdd_HHmmss}"
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    var format = Path.GetExtension(saveFileDialog.FileName).ToLower() switch
+                    {
+                        ".csv" => ExportFormat.Csv,
+                        ".json" => ExportFormat.Json,
+                        _ => ExportFormat.Json
+                    };
+
+                    var documents = Documents.Where(d => d.Document != null).Select(d => d.Document!).ToList();
+
+                    var success = await _applicationService.ExportResultsAsync(
+                        documents,
+                        saveFileDialog.FileName,
+                        format);
+
+                    if (success)
+                    {
+                        _notificationService.ShowSuccess("Export Complete",
+                            $"Results successfully exported to {Path.GetFileName(saveFileDialog.FileName)}");
+                        SetStatusSuccess($"Results exported to {Path.GetFileName(saveFileDialog.FileName)}");
+                    }
+                    else
+                    {
+                        _notificationService.ShowError("Export Failed",
+                            "Failed to export results. Check the application logs for details.");
+                        SetStatusError("Export failed - Check logs for details");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting results");
+                _notificationService.ShowError("Export Error", "Failed to export processing results.", ex);
+                SetStatusError($"Export error: {ex.Message}");
+            }
+        }
+
+        private void OnBatchProgressChanged(BatchProcessingProgress progress)
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                TotalDocuments = progress.TotalDocuments;
+                ProcessedDocuments = progress.ProcessedDocuments;
+                FailedDocuments = progress.FailedDocuments;
+                ProgressValue = progress.PercentageComplete;
+                ProgressMessage = $"Processing: {progress.CurrentDocument}";
+                SetStatusProcessing($"Processing {progress.ProcessedDocuments}/{progress.TotalDocuments} documents...");
+            });
+        }
+
+        private void UpdateDocumentViewModel(DocumentViewModel documentVM, Document result)
+        {
+            documentVM.Document = result;
+            documentVM.Status = result.Status;
+            documentVM.ProcessedAt = result.ProcessedAt;
+            documentVM.HyperlinkCount = result.Hyperlinks.Count;
+            documentVM.UpdatedHyperlinks = result.Hyperlinks.Count(h => h.ActionTaken == HyperlinkAction.Updated);
+            documentVM.ErrorCount = result.ProcessingErrors.Count;
+            documentVM.HasErrors = result.ProcessingErrors.Any();
+        }
+
+        partial void OnSelectedDocumentChanged(DocumentViewModel? value)
+        {
+            // Handle selection changes if needed
+        }
+
+        public override async Task InitializeAsync()
+        {
+            await base.InitializeAsync();
+            _logger.LogInformation("MainWindowViewModel initialized");
+            _notificationService.ShowInfo("Application Ready", "Bulk Document Editor is ready for use.");
+        }
+
+        public override void Cleanup()
+        {
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            base.Cleanup();
+        }
+
+        [RelayCommand]
+        private void CloseNotification(object parameter)
+        {
+            if (parameter is BulkEditor.UI.Models.NotificationModel notification)
+            {
+                _notificationService.RemoveNotification(notification);
+            }
+        }
+
+        [RelayCommand]
+        private void OpenSettings()
+        {
+            try
+            {
+                var settingsWindow = _serviceProvider.GetRequiredService<SettingsWindow>();
+                var settingsViewModel = _serviceProvider.GetRequiredService<SettingsViewModel>();
+
+                settingsWindow.DataContext = settingsViewModel;
+                settingsWindow.Owner = System.Windows.Application.Current.MainWindow;
+
+                var result = settingsWindow.ShowDialog();
+
+                if (result == true)
+                {
+                    _notificationService.ShowSuccess("Settings Saved", "Application settings have been updated successfully.");
+                    SetStatusSuccess("Settings updated successfully");
+                    _logger.LogInformation("Settings updated by user");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error opening settings window");
+                _notificationService.ShowError("Settings Error", "Failed to open settings window.", ex);
+                SetStatusError("Failed to open settings");
+            }
+        }
+    }
+
+    /// <summary>
+    /// ViewModel for individual documents in the list
+    /// </summary>
+    public partial class DocumentViewModel : ObservableObject
+    {
+        [ObservableProperty]
+        private string _filePath = string.Empty;
+
+        [ObservableProperty]
+        private string _fileName = string.Empty;
+
+        [ObservableProperty]
+        private DocumentStatus _status = DocumentStatus.Pending;
+
+        [ObservableProperty]
+        private DateTime? _processedAt;
+
+        [ObservableProperty]
+        private int _hyperlinkCount;
+
+        [ObservableProperty]
+        private int _updatedHyperlinks;
+
+        [ObservableProperty]
+        private int _errorCount;
+
+        [ObservableProperty]
+        private bool _hasErrors;
+
+        public Document? Document { get; set; }
+
+        public string StatusDisplay => Status.ToString();
+
+        public string ProcessedAtDisplay => ProcessedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "Not processed";
+
+        public string SummaryDisplay => Document?.ChangeLog.Summary ?? "No changes";
+    }
+}

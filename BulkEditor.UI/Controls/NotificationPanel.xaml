@@ -1,0 +1,104 @@
+<UserControl x:Class="BulkEditor.UI.Controls.NotificationPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d">
+    <Grid>
+        <ItemsControl ItemsSource="{Binding Notifications}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{Binding BackgroundColor}"
+                            BorderBrush="{Binding BorderColor}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Margin="4"
+                            Padding="12,8">
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black" Opacity="0.1" ShadowDepth="2" BlurRadius="4"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Icon -->
+                            <Border Grid.Column="0"
+                                    Background="{Binding IconColor}"
+                                    Width="24" Height="24"
+                                    CornerRadius="12"
+                                    VerticalAlignment="Top"
+                                    Margin="0,0,8,0">
+                                <TextBlock Text="{Binding Icon}"
+                                           Foreground="White"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontSize="12"/>
+                            </Border>
+
+                            <!-- Content -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}"
+                                           FontWeight="SemiBold"
+                                           FontSize="14"
+                                           Foreground="{Binding TitleColor}"
+                                           Margin="0,0,0,2"/>
+                                <TextBlock Text="{Binding Message}"
+                                           FontSize="12"
+                                           Foreground="{Binding MessageColor}"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="300"/>
+                                <TextBlock Text="{Binding Timestamp, StringFormat='HH:mm:ss'}"
+                                           FontSize="10"
+                                           Foreground="#999999"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+
+                            <!-- Close Button -->
+                            <Button Grid.Column="2"
+                                    Content="×"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    FontSize="16"
+                                    FontWeight="Bold"
+                                    Foreground="#666666"
+                                    Width="20" Height="20"
+                                    VerticalAlignment="Top"
+                                    Command="{Binding DataContext.CloseNotificationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            CornerRadius="10">
+                                                        <ContentPresenter HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#E0E0E0"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>
