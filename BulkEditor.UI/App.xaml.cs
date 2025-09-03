@@ -25,10 +25,7 @@ namespace BulkEditor.UI
         {
             try
             {
-                // Configure basic Serilog first for ConfigurationService
-                ConfigureSerilog();
-
-                // Create temporary logger for ConfigurationService
+                // Create temporary logger for ConfigurationService (minimal configuration)
                 var tempLogger = new BulkEditor.Infrastructure.Services.SerilogService();
 
                 // Initialize configuration service early to avoid double registration
@@ -37,7 +34,7 @@ namespace BulkEditor.UI
                 await configService.MigrateSettingsAsync();
                 var appSettings = await configService.LoadSettingsAsync();
 
-                // Reconfigure Serilog with proper settings
+                // CRITICAL FIX: Configure Serilog only ONCE with proper settings
                 ConfigureSerilog(appSettings);
 
                 // Configure services
@@ -101,9 +98,6 @@ namespace BulkEditor.UI
                 // Build service provider
                 _serviceProvider = services.BuildServiceProvider();
 
-                // Initialize Serilog with proper paths
-                ConfigureSerilog(appSettings);
-
                 // Initialize update manager
                 _updateManager = _serviceProvider.GetRequiredService<UpdateManager>();
                 await _updateManager.StartAsync();
@@ -120,6 +114,9 @@ namespace BulkEditor.UI
                 mainWindow.Show();
 
                 base.OnStartup(e);
+
+                // Log successful startup
+                Log.Information("Application started successfully");
             }
             catch (Exception ex)
             {

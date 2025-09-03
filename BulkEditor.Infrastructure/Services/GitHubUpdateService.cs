@@ -48,28 +48,99 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                // Get the UI assembly version since that's the main application
+                // Try to get version from the UI assembly (main application)
                 var entryAssembly = Assembly.GetEntryAssembly();
                 if (entryAssembly != null)
                 {
                     var version = entryAssembly.GetName().Version;
-                    if (version != null)
+                    if (version != null && version.Major > 0)
                     {
                         _logger.LogDebug("Current version from entry assembly: {Version}", version);
                         return version;
                     }
                 }
 
+                // Try to get version from assembly file version attribute
+                try
+                {
+                    var fileAssembly = entryAssembly ?? Assembly.GetExecutingAssembly();
+                    var fileVersionAttr = fileAssembly.GetCustomAttribute<System.Reflection.AssemblyFileVersionAttribute>();
+                    if (fileVersionAttr != null && !string.IsNullOrEmpty(fileVersionAttr.Version))
+                    {
+                        if (Version.TryParse(fileVersionAttr.Version, out var fileVersion))
+                        {
+                            _logger.LogDebug("Current version from file version attribute: {Version}", fileVersion);
+                            return fileVersion;
+                        }
+                    }
+                }
+                catch (Exception attrEx)
+                {
+                    _logger.LogWarning("Failed to get version from file version attribute: {Error}", attrEx.Message);
+                }
+
+                // Try to get version from assembly informational version
+                try
+                {
+                    var infoAssembly = entryAssembly ?? Assembly.GetExecutingAssembly();
+                    var infoVersionAttr = infoAssembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>();
+                    if (infoVersionAttr != null && !string.IsNullOrEmpty(infoVersionAttr.InformationalVersion))
+                    {
+                        // Parse version from informational version (may contain additional info like "1.2.3-beta")
+                        var versionString = infoVersionAttr.InformationalVersion.Split('-')[0];
+                        if (Version.TryParse(versionString, out var infoVersion))
+                        {
+                            _logger.LogDebug("Current version from informational version attribute: {Version}", infoVersion);
+                            return infoVersion;
+                        }
+                    }
+                }
+                catch (Exception infoEx)
+                {
+                    _logger.LogWarning("Failed to get version from informational version attribute: {Error}", infoEx.Message);
+                }
+
+                // Try reading version from version.json file if it exists
+                try
+                {
+                    var versionFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "version.json");
+                    if (File.Exists(versionFilePath))
+                    {
+                        var versionJson = File.ReadAllText(versionFilePath);
+                        using var doc = JsonDocument.Parse(versionJson);
+                        if (doc.RootElement.TryGetProperty("version", out var versionProperty))
+                        {
+                            var versionString = versionProperty.GetString();
+                            if (Version.TryParse(versionString, out var jsonVersion))
+                            {
+                                _logger.LogDebug("Current version from version.json: {Version}", jsonVersion);
+                                return jsonVersion;
+                            }
+                        }
+                    }
+                }
+                catch (Exception jsonEx)
+                {
+                    _logger.LogWarning("Failed to read version from version.json: {Error}", jsonEx.Message);
+                }
+
                 // Fallback to executing assembly
-                var assembly = Assembly.GetExecutingAssembly();
-                var fallbackVersion = assembly.GetName().Version;
-                _logger.LogDebug("Current version from executing assembly: {Version}", fallbackVersion);
-                return fallbackVersion ?? new Version(1, 0, 10, 0); // Match current release
+                var fallbackAssembly = Assembly.GetExecutingAssembly();
+                var fallbackVersion = fallbackAssembly.GetName().Version;
+                if (fallbackVersion != null && fallbackVersion.Major > 0)
+                {
+                    _logger.LogDebug("Current version from executing assembly: {Version}", fallbackVersion);
+                    return fallbackVersion;
+                }
+
+                // Final fallback - try to determine version from current release
+                _logger.LogWarning("Unable to determine current version from any source, using fallback version 1.1.1");
+                return new Version(1, 1, 1, 0);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get current version");
-                return new Version(1, 0, 10, 0); // Match current release
+                return new Version(1, 1, 1, 0);
             }
         }
 
@@ -340,35 +411,101 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                // Create a batch script to handle the installation after this process exits
-                var batchPath = Path.Combine(_appDataPath, "update_installer.bat");
+                // Create a PowerShell script to handle the installation after this process exits
+                var scriptPath = Path.Combine(_appDataPath, "update_installer.ps1");
                 var currentExePath = Process.GetCurrentProcess().MainModule?.FileName;
+                var currentExeDir = Path.GetDirectoryName(currentExePath);
+                var appName = "BulkEditor";
 
-                var batchContent = $@"
-@echo off
-echo Installing BulkEditor update...
-timeout /t 3 /nobreak > nul
+                var scriptContent = $@"
+# BulkEditor Update Installation Script
+Write-Host ""Installing BulkEditor update..."" -ForegroundColor Green
 
-""{installerPath}"" /S /D=""{Path.GetDirectoryName(currentExePath)}""
+# Wait for main application to close
+Start-Sleep -Seconds 3
 
-echo Update installation completed.
-del ""{installerPath}""
-del ""%~f0""
+try {{
+    # Install the update
+    Write-Host ""Running installer: {Path.GetFileName(installerPath)}"" -ForegroundColor Yellow
+
+    if (Test-Path ""{installerPath}"") {{
+        # Run installer silently with installation directory
+        $installProcess = Start-Process -FilePath ""{installerPath}"" -ArgumentList ""/S"", ""/D={currentExeDir}"" -Wait -PassThru
+
+        if ($installProcess.ExitCode -eq 0) {{
+            Write-Host ""Installation completed successfully"" -ForegroundColor Green
+
+            # Check if application should be pinned to taskbar
+            $newExePath = ""{currentExePath}""
+            if (Test-Path $newExePath) {{
+                Write-Host ""Attempting to pin application to taskbar..."" -ForegroundColor Yellow
+
+                # Try to pin to taskbar using Shell COM object
+                try {{
+                    $shell = New-Object -ComObject Shell.Application
+                    $folder = $shell.Namespace((Split-Path $newExePath))
+                    $item = $folder.ParseName((Split-Path $newExePath -Leaf))
+
+                    # Get the Pin to taskbar verb (varies by Windows version)
+                    $pinVerb = $item.Verbs() | Where-Object {{ $_.Name -match ""Pin.*taskbar|Pin.*start"" }} | Select-Object -First 1
+                    if ($pinVerb) {{
+                        $pinVerb.DoIt()
+                        Write-Host ""Application pinned to taskbar"" -ForegroundColor Green
+                    }} else {{
+                        Write-Host ""Pin to taskbar option not available"" -ForegroundColor Yellow
+                    }}
+                }} catch {{
+                    Write-Host ""Could not pin to taskbar: $($_.Exception.Message)"" -ForegroundColor Yellow
+                }}
+
+                # Start the updated application
+                Write-Host ""Starting updated application..."" -ForegroundColor Green
+                Start-Process -FilePath $newExePath
+
+                Write-Host ""Update process completed successfully!"" -ForegroundColor Green
+            }} else {{
+                Write-Host ""Updated application not found at: $newExePath"" -ForegroundColor Red
+            }}
+        }} else {{
+            Write-Host ""Installation failed with exit code: $($installProcess.ExitCode)"" -ForegroundColor Red
+        }}
+    }} else {{
+        Write-Host ""Installer file not found: {installerPath}"" -ForegroundColor Red
+    }}
+}} catch {{
+    Write-Host ""Error during installation: $($_.Exception.Message)"" -ForegroundColor Red
+}} finally {{
+    # Cleanup
+    if (Test-Path ""{installerPath}"") {{
+        Remove-Item ""{installerPath}"" -Force -ErrorAction SilentlyContinue
+    }}
+
+    # Self-delete script after a delay
+    Start-Job -ScriptBlock {{
+        Start-Sleep -Seconds 5
+        Remove-Item ""{scriptPath}"" -Force -ErrorAction SilentlyContinue
+    }} | Out-Null
+}}
+
+Write-Host ""Press any key to close this window..."" -ForegroundColor Cyan
+$null = $Host.UI.RawUI.ReadKey(""NoEcho,IncludeKeyDown"")
 ";
 
-                await File.WriteAllTextAsync(batchPath, batchContent);
+                await File.WriteAllTextAsync(scriptPath, scriptContent);
 
-                // Start the batch file and exit the current application
+                // Start the PowerShell script and exit the current application
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = batchPath,
+                    FileName = "powershell.exe",
+                    Arguments = $"-ExecutionPolicy Bypass -File \"{scriptPath}\"",
                     UseShellExecute = true,
-                    CreateNoWindow = false
+                    CreateNoWindow = false,
+                    WindowStyle = ProcessWindowStyle.Normal
                 };
 
                 Process.Start(startInfo);
 
-                _logger.LogInformation("Update installer started, application will now exit");
+                _logger.LogInformation("Update installer PowerShell script started, application will now exit");
 
                 // Signal the application to shut down
                 UpdateRequiresRestart?.Invoke(this, EventArgs.Empty);

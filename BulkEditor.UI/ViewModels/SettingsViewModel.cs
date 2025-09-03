@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace BulkEditor.UI.ViewModels
@@ -812,33 +813,106 @@ namespace BulkEditor.UI.ViewModels
                 if (string.IsNullOrWhiteSpace(ApiBaseUrl))
                 {
                     _logger.LogWarning("API Base URL is required for connection test");
+                    System.Windows.MessageBox.Show(
+                        "API Base URL is required for connection test. Please enter a valid URL.",
+                        "API Test Failed",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
                     return;
                 }
 
                 if (ApiBaseUrl.ToLower() == "test")
                 {
                     _logger.LogInformation("API connection test successful (Test mode)");
+                    System.Windows.MessageBox.Show(
+                        "API connection test successful!\n\nTest mode is active - using mock API responses.",
+                        "API Test Successful",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
                     return;
                 }
 
                 // Test actual API connection
                 using var httpClient = new System.Net.Http.HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(ApiTimeoutSeconds);
+                httpClient.Timeout = TimeSpan.FromSeconds(Math.Max(ApiTimeoutSeconds, 5)); // Minimum 5 seconds
 
+                // Add API key if provided
+                if (!string.IsNullOrWhiteSpace(ApiKey))
+                {
+                    httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKey}");
+                }
+
+                _logger.LogInformation("Testing API connection to: {ApiUrl}", ApiBaseUrl);
                 var response = await httpClient.GetAsync(ApiBaseUrl);
 
                 if (response.IsSuccessStatusCode)
                 {
+                    var responseTime = httpClient.Timeout.TotalSeconds;
                     _logger.LogInformation("API connection test successful - Status: {StatusCode}", response.StatusCode);
+
+                    System.Windows.MessageBox.Show(
+                        $"API connection test successful!\n\n" +
+                        $"URL: {ApiBaseUrl}\n" +
+                        $"Status: {response.StatusCode} {response.ReasonPhrase}\n" +
+                        $"Response Time: < {ApiTimeoutSeconds}s\n" +
+                        $"API Key: {(string.IsNullOrWhiteSpace(ApiKey) ? "Not provided" : "Configured")}",
+                        "API Test Successful",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
                 }
                 else
                 {
-                    _logger.LogWarning("API connection test failed - Status: {StatusCode}", response.StatusCode);
+                    _logger.LogWarning("API connection test failed - Status: {StatusCode} {ReasonPhrase}", response.StatusCode, response.ReasonPhrase);
+
+                    System.Windows.MessageBox.Show(
+                        $"API connection test failed!\n\n" +
+                        $"URL: {ApiBaseUrl}\n" +
+                        $"Status: {response.StatusCode} {response.ReasonPhrase}\n" +
+                        $"Please check the URL and your internet connection.\n\n" +
+                        $"If this is a private API, ensure your API key is correct.",
+                        "API Test Failed",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
                 }
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            {
+                _logger.LogWarning("API connection test timed out after {TimeoutSeconds} seconds", ApiTimeoutSeconds);
+
+                System.Windows.MessageBox.Show(
+                    $"API connection test timed out!\n\n" +
+                    $"URL: {ApiBaseUrl}\n" +
+                    $"Timeout: {ApiTimeoutSeconds} seconds\n\n" +
+                    $"The API may be slow or unreachable. Try increasing the timeout value or check your internet connection.",
+                    "API Test Timeout",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "API connection test failed with HTTP error");
+
+                System.Windows.MessageBox.Show(
+                    $"API connection test failed!\n\n" +
+                    $"URL: {ApiBaseUrl}\n" +
+                    $"Error: {ex.Message}\n\n" +
+                    $"Please check the URL format and your internet connection.",
+                    "API Test Failed",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "API connection test failed");
+                _logger.LogError(ex, "API connection test failed with unexpected error");
+
+                System.Windows.MessageBox.Show(
+                    $"API connection test failed!\n\n" +
+                    $"URL: {ApiBaseUrl}\n" +
+                    $"Error: {ex.Message}\n\n" +
+                    $"Please check the settings and try again.",
+                    "API Test Failed",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
             }
             finally
             {
