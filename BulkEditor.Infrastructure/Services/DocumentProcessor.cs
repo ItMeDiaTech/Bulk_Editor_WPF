@@ -520,7 +520,7 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Extracts Lookup_ID using EXACT same logic as VBA ExtractLookupID function
-        /// This ensures consistent behavior between VBA and C# implementations
+        /// CRITICAL FIX: Now includes proper docid fallback and URL encoding handling
         /// </summary>
         /// <param name="address">Hyperlink address</param>
         /// <param name="subAddress">Hyperlink sub-address</param>
@@ -532,7 +532,7 @@ namespace BulkEditor.Infrastructure.Services
                 // Combine address and subAddress like VBA: addr & IIf(Len(subAddr) > 0, "#" & subAddr, "")
                 var fullUrl = address + (!string.IsNullOrEmpty(subAddress) ? "#" + subAddress : "");
 
-                // First, try exact VBA regex pattern: (TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})
+                // CRITICAL FIX: First, try exact VBA regex pattern with case-insensitive matching
                 var regexMatch = LookupIdRegex.Match(fullUrl);
                 if (regexMatch.Success)
                 {
@@ -541,13 +541,21 @@ namespace BulkEditor.Infrastructure.Services
                     return lookupId;
                 }
 
-                // Fallback: Check for docid= parameter (like VBA)
-                var docIdMatch = DocIdRegex.Match(fullUrl);
-                if (docIdMatch.Success)
+                // CRITICAL FIX: Fallback docid extraction exactly like VBA (Issue #3)
+                // VBA: ElseIf InStr(1, full, "docid=", vbTextCompare) > 0 Then
+                if (fullUrl.IndexOf("docid=", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    var docId = docIdMatch.Groups[1].Value.Trim();
-                    _logger.LogDebug("Extracted docid from URL: {DocId} from URL: {Url}", docId, fullUrl);
-                    return docId;
+                    // VBA: ExtractLookupID = Trim$(Split(Split(full, "docid=")(1), "&")(0))
+                    var parts = fullUrl.Split(new[] { "docid=" }, StringSplitOptions.None);
+                    if (parts.Length > 1)
+                    {
+                        var docId = parts[1].Split('&')[0].Trim();
+                        // CRITICAL FIX: Handle URL encoding (Issue #3)
+                        var decodedDocId = Uri.UnescapeDataString(docId);
+                        _logger.LogDebug("Extracted docid fallback from URL: {DocId} (decoded: {DecodedDocId}) from URL: {Url}",
+                            docId, decodedDocId, fullUrl);
+                        return decodedDocId;
+                    }
                 }
 
                 _logger.LogDebug("No Lookup_ID found in URL: {Url}", fullUrl);

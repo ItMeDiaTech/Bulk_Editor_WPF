@@ -2,6 +2,7 @@ using BulkEditor.Core.Interfaces;
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -51,11 +52,26 @@ namespace BulkEditor.Infrastructure.Services
                     return CreateTestApiResponse();
                 }
 
-                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                // CRITICAL FIX: Ensure JSON matches VBA API expectations (Issue #4)
+                var json = System.Text.Json.JsonSerializer.Serialize(data, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = null, // Keep exact property names like "Lookup_ID"
+                    WriteIndented = false
+                });
+
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
                 var response = await _httpClient.PostAsync(url, content, cancellationToken);
                 _logger.LogDebug("Received response {StatusCode} from POST: {Url}", response.StatusCode, url);
+
+                // Log request/response for debugging VBA compatibility
+                _logger.LogDebug("Request JSON: {RequestJson}", json);
+                if (response.Content != null)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogDebug("Response JSON: {ResponseJson}", responseContent);
+                }
+
                 return response;
             }
             catch (Exception ex)
@@ -245,3 +261,4 @@ namespace BulkEditor.Infrastructure.Services
         }
     }
 }
+

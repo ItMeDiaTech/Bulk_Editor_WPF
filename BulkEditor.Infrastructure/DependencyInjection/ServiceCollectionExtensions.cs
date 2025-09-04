@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.IO;
+using System.Net.Http;
 
 namespace BulkEditor.Infrastructure.DependencyInjection
 {
@@ -26,7 +27,32 @@ namespace BulkEditor.Infrastructure.DependencyInjection
             // Core Services
             services.AddSingleton<ILoggingService, SerilogService>();
             services.AddSingleton<IFileService, FileService>();
-            services.AddSingleton<HttpClient>();
+
+            // CRITICAL FIX: HTTP Services with proper configuration (Issues #22-23)
+            services.AddSingleton<HttpClient>(provider =>
+            {
+                var handler = new HttpClientHandler()
+                {
+                    // CRITICAL FIX: Connection pooling configuration (Issue #22)
+                    MaxConnectionsPerServer = 10,
+                    UseProxy = false, // Disable proxy for corporate networks if needed
+                    UseCookies = false // Disable cookies for stateless API calls
+                };
+
+                var client = new HttpClient(handler);
+
+                // CRITICAL FIX: Proper timeout configuration (Issue #23)
+                client.Timeout = TimeSpan.FromMinutes(5); // 5 minute timeout for API calls
+
+                // CRITICAL FIX: Proper User-Agent for API compatibility
+                client.DefaultRequestHeaders.Add("User-Agent", "BulkEditor-WPF/1.0");
+
+                // CRITICAL FIX: Accept headers for API compatibility
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.DefaultRequestHeaders.Add("Accept-Charset", "utf-8");
+
+                return client;
+            });
             services.AddSingleton<IHttpService, HttpService>();
 
             // Document Processing Services
