@@ -747,9 +747,16 @@ namespace BulkEditor.Infrastructure.Services
                     progress?.Report("Validating after replacements...");
                     await ValidateOpenDocumentAsync(wordDocument, "post-replacements", cancellationToken);
 
-                    // STEP 13: Optimize text in the same session
-                    progress?.Report("Optimizing document text...");
-                    await _textOptimizer.OptimizeDocumentTextInSessionAsync(wordDocument, document, cancellationToken);
+                    // STEP 13: Optimize text in the same session (only if enabled)
+                    if (_appSettings.Processing.OptimizeText)
+                    {
+                        progress?.Report("Optimizing document text...");
+                        await _textOptimizer.OptimizeDocumentTextInSessionAsync(wordDocument, document, cancellationToken);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Text optimization skipped - disabled in settings for document: {FileName}", document.FileName);
+                    }
 
                     // STEP 14: Final validation before save
                     progress?.Report("Final validation before save...");

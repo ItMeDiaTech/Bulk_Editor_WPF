@@ -184,11 +184,18 @@ namespace BulkEditor.Tests.Infrastructure.Services
             {
                 // Should have at least one expired document for testing
                 apiResponse.Results.Should().Contain(r => r.Status == "Expired");
+                // Verify the expected status is present when looking for expired
+                apiResponse.Results.Should().Contain(r => r.Status == expectedStatus);
             }
             else
             {
                 // Should have non-expired documents
                 apiResponse.Results.Should().Contain(r => r.Status == "Released");
+                // For non-expired cases, verify expectedStatus exists if it's "Released"
+                if (expectedStatus == "Released")
+                {
+                    apiResponse.Results.Should().Contain(r => r.Status == expectedStatus);
+                }
             }
         }
 

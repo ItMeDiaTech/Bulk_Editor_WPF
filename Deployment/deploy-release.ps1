@@ -61,7 +61,7 @@ if (Test-Path $uiProjectFile) {
 
 # Run tests first
 Write-Host "Running tests..." -ForegroundColor Yellow
-dotnet test "$rootDir\BulkEditor.Tests\BulkEditor.Tests.csproj" --configuration Release --no-build
+dotnet test "$rootDir\BulkEditor.Tests\BulkEditor.Tests.csproj" --configuration Release
 if ($LASTEXITCODE -ne 0) {
     throw "Tests failed. Deployment aborted."
 }

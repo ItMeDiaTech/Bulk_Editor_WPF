@@ -5,7 +5,137 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="True"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16">
 
-    </Grid>
+            <!-- General Settings -->
+            <GroupBox Header="Replacement Settings">
+                <StackPanel>
+                    <CheckBox Content="Enable hyperlink replacement"
+                              IsChecked="{Binding EnableHyperlinkReplacement}"
+                              Margin="0,0,0,8"/>
+                    <CheckBox Content="Enable text replacement"
+                              IsChecked="{Binding EnableTextReplacement}"
+                              Margin="0,0,0,8"/>
+                    <CheckBox Content="Validate content IDs"
+                              IsChecked="{Binding ValidateContentIds}"
+                              Margin="0,0,0,8"/>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Maximum replacement rules:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding MaxReplacementRules}"
+                                 HorizontalAlignment="Stretch"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Hyperlink Replacement Rules -->
+            <GroupBox Header="Hyperlink Replacement Rules"
+                      IsEnabled="{Binding EnableHyperlinkReplacement}">
+                <StackPanel>
+                    <TextBlock Text="Define rules to replace hyperlink titles with specific content IDs."
+                               FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Hyperlink Rules:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Add Rule" Padding="12,4" Margin="0,0,8,0"
+                                    Command="{Binding AddHyperlinkRuleCommand}"/>
+                            <Button Content="Remove Selected" Padding="12,4"
+                                    Command="{Binding RemoveHyperlinkRuleCommand}"
+                                    CommandParameter="{Binding SelectedItem, ElementName=HyperlinkRulesGrid}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <DataGrid Name="HyperlinkRulesGrid" ItemsSource="{Binding HyperlinkRules}"
+                              Height="200" Margin="0,0,0,8">
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="60"/>
+                            <DataGridTextColumn Header="Title to Match" Binding="{Binding TitleToMatch}" Width="200"/>
+                            <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="150"/>
+                            <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="100" IsReadOnly="True"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <TextBlock Text="Example: Title='User Guide' → Content ID='CMS-DOC-123456'"
+                               FontSize="11" FontStyle="Italic" Foreground="Gray"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Text Replacement Rules -->
+            <GroupBox Header="Text Replacement Rules"
+                      IsEnabled="{Binding EnableTextReplacement}">
+                <StackPanel>
+                    <TextBlock Text="Define rules to replace specific text patterns in documents."
+                               FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Text Rules:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Add Rule" Padding="12,4" Margin="0,0,8,0"
+                                    Command="{Binding AddTextRuleCommand}"/>
+                            <Button Content="Remove Selected" Padding="12,4"
+                                    Command="{Binding RemoveTextRuleCommand}"
+                                    CommandParameter="{Binding SelectedItem, ElementName=TextRulesGrid}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <DataGrid Name="TextRulesGrid" ItemsSource="{Binding TextRules}"
+                              Height="200" Margin="0,0,0,8">
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="60"/>
+                            <DataGridTextColumn Header="Source Text" Binding="{Binding SourceText}" Width="250"/>
+                            <DataGridTextColumn Header="Replacement Text" Binding="{Binding ReplacementText}" Width="250"/>
+                            <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="100" IsReadOnly="True"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <TextBlock Text="Example: Source='Old Company Name' → Replacement='New Company Name'"
+                               FontSize="11" FontStyle="Italic" Foreground="Gray"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Import/Export -->
+            <GroupBox Header="Import/Export Rules">
+                <StackPanel>
+                    <TextBlock Text="Backup and restore your replacement rules."
+                               FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Export Rules" Padding="16,8" Margin="0,0,8,0"
+                                Command="{Binding ExportRulesCommand}"/>
+                        <Button Content="Import Rules" Padding="16,8" Margin="0,0,8,0"
+                                Command="{Binding ImportRulesCommand}"/>
+                        <Button Content="Clear All Rules" Padding="16,8"
+                                Command="{Binding ClearAllRulesCommand}"
+                                Background="#FF6B6B" Foreground="White"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>
