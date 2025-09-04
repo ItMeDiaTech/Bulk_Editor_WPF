@@ -1,0 +1,138 @@
+<UserControl x:Class="BulkEditor.UI.Views.Settings.ValidationSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16">
+
+            <GroupBox Header="HTTP Settings">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="HTTP Timeout (seconds):" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding HttpTimeoutSeconds}"
+                                 HorizontalAlignment="Stretch"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Max Retry Attempts:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding MaxRetryAttempts}"
+                                 HorizontalAlignment="Stretch"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Retry Delay (seconds):" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding RetryDelaySeconds}"
+                                 HorizontalAlignment="Stretch"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="User Agent:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding UserAgent}"
+                                 HorizontalAlignment="Stretch"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- API Configuration -->
+            <GroupBox Header="API Configuration">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="300"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="API Base URL:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding ApiBaseUrl}"
+                                 HorizontalAlignment="Stretch" Margin="0,0,8,0"
+                                 ToolTip="Enter API URL or 'Test' for test mode"/>
+                        <Button Grid.Column="2" Content="Test Connection"
+                                Command="{Binding TestApiConnectionCommand}"
+                                Padding="12,4"/>
+                    </Grid>
+
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="API Timeout (seconds):" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding ApiTimeoutSeconds}"
+                                 HorizontalAlignment="Stretch"/>
+                    </Grid>
+
+                    <CheckBox Content="Enable API response caching"
+                              IsChecked="{Binding EnableApiCaching}"
+                              Margin="0,0,0,8"/>
+
+                    <Grid Margin="0,0,0,8" IsEnabled="{Binding EnableApiCaching}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Cache expiry (hours):" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding ApiCacheExpiryHours}"
+                                 HorizontalAlignment="Stretch"/>
+                    </Grid>
+
+                    <TextBlock Text="Note: Enter 'Test' as API URL to use test mode with mock data."
+                               FontStyle="Italic"
+                               Foreground="Gray"
+                               FontSize="11"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Validation Options">
+                <StackPanel>
+                    <CheckBox Content="Check for expired content"
+                              IsChecked="{Binding CheckExpiredContent}"
+                              Margin="0,0,0,8"/>
+                    <CheckBox Content="Follow redirects"
+                              IsChecked="{Binding FollowRedirects}"
+                              Margin="0,0,0,8"/>
+                    <CheckBox Content="Auto-replace titles with API response"
+                              IsChecked="{Binding AutoReplaceTitles}"
+                              Margin="0,0,0,8"/>
+                    <CheckBox Content="Report title differences in changelog"
+                              IsChecked="{Binding ReportTitleDifferences}"
+                              Margin="0,0,0,8"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Lookup Pattern">
+                <StackPanel>
+                    <TextBlock Text="Lookup ID Pattern (Regex):" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding LookupIdPattern}"
+                             FontFamily="Consolas"
+                             Margin="0,0,0,8"/>
+                    <TextBlock Text="Example: (TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})"
+                               FontStyle="Italic"
+                               Foreground="Gray"
+                               FontSize="12"/>
+                </StackPanel>
+            </GroupBox>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

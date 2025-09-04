@@ -2,6 +2,7 @@ using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
 using DocumentFormat.OpenXml.Packaging;
+using BulkEditor.Infrastructure.Utilities;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -282,7 +283,14 @@ namespace BulkEditor.Infrastructure.Services
                 var documentRecord = await LookupDocumentByContentIdAsync(rule.ContentId, cancellationToken);
                 if (documentRecord == null || string.IsNullOrEmpty(documentRecord.Title))
                 {
-                    result.ErrorMessage = $"Could not lookup document for Content ID: {rule.ContentId}";
+                    var errorMessage = $"Could not lookup document for Content ID: {rule.ContentId}";
+                    result.ErrorMessage = errorMessage;
+                    document.ProcessingErrors.Add(new ProcessingError
+                    {
+                        RuleId = rule.Id,
+                        Message = errorMessage,
+                        Severity = ErrorSeverity.Warning
+                    });
                     return result;
                 }
 
@@ -296,8 +304,7 @@ namespace BulkEditor.Infrastructure.Services
                 var newUrl = BuildUrlFromDocumentId(documentRecord.Document_ID);
 
                 // Update the hyperlink display text
-                openXmlHyperlink.RemoveAllChildren();
-                openXmlHyperlink.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Text(newDisplayText));
+                OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
 
                 // Update the URL if hyperlink has a relationship ID
                 var relId = openXmlHyperlink.Id?.Value;
@@ -353,6 +360,12 @@ namespace BulkEditor.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error processing hyperlink replacement for rule: {RuleId}", rule.Id);
                 result.ErrorMessage = ex.Message;
+                document.ProcessingErrors.Add(new ProcessingError
+                {
+                    RuleId = rule.Id,
+                    Message = $"An unexpected error occurred: {ex.Message}",
+                    Severity = ErrorSeverity.Error
+                });
                 return result;
             }
         }

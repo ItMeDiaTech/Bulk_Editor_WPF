@@ -74,6 +74,11 @@ namespace BulkEditor.UI
                 // Register application services
                 services.AddScoped<IApplicationService, BulkEditor.Application.Services.ApplicationService>();
 
+                // Register undo/revert services
+                services.AddSingleton<ISessionManager, SessionManager>();
+                services.AddSingleton<IBackupService, BackupService>();
+                services.AddSingleton<IUndoService, UndoService>();
+
                 // Register update services
                 services.AddSingleton<IUpdateService, GitHubUpdateService>(provider =>
                 {
@@ -132,8 +137,11 @@ namespace BulkEditor.UI
         {
             try
             {
-                _updateManager?.Stop();
-                _updateManager?.Dispose();
+                if (_updateManager != null)
+                {
+                    _updateManager.Stop();
+                    _updateManager.Dispose();
+                }
                 _serviceProvider?.Dispose();
                 Log.CloseAndFlush();
             }

@@ -29,6 +29,9 @@ namespace BulkEditor.UI.ViewModels
         private readonly INotificationService _notificationService;
         private readonly IServiceProvider _serviceProvider;
         private readonly AppSettings _appSettings;
+        private readonly IUndoService _undoService;
+        private readonly ISessionManager _sessionManager;
+        private readonly IBackupService _backupService;
         private CancellationTokenSource? _cancellationTokenSource;
 
         [ObservableProperty]
@@ -76,15 +79,21 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private int _failedDocuments;
 
+        [ObservableProperty]
+        private bool _isRevertEnabled;
+
         public INotificationService NotificationService => _notificationService;
 
-        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings)
+        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService)
         {
             _applicationService = applicationService ?? throw new ArgumentNullException(nameof(applicationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _appSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
+            _undoService = undoService;
+            _sessionManager = sessionManager;
+            _backupService = backupService;
 
             Title = "Bulk Document Editor";
             SetStatusReady();
@@ -244,9 +253,23 @@ namespace BulkEditor.UI.ViewModels
                 ProcessedDocuments = 0;
                 FailedDocuments = 0;
                 ProgressValue = 0;
-                SetStatusProcessing("Starting document processing...");
 
+                // Start a new session for this processing job
+                var session = _sessionManager.StartSession();
+                _logger.LogInformation("Processing session {SessionId} started.", session.SessionId);
+                IsRevertEnabled = false; // Disable revert until processing is complete
+
+                SetStatusProcessing("Backing up files before processing...");
                 var filePaths = Documents.Select(d => d.FilePath).ToList();
+
+                // Create backups before processing
+                foreach (var filePath in filePaths)
+                {
+                    var backupPath = await _backupService.CreateBackupAsync(filePath, session);
+                    _sessionManager.AddFileToSession(filePath, backupPath);
+                }
+
+                SetStatusProcessing("Starting document processing...");
 
                 var progress = new Progress<BatchProcessingProgress>(OnBatchProgressChanged);
 
@@ -284,6 +307,7 @@ namespace BulkEditor.UI.ViewModels
                 }
 
                 _logger.LogInformation("Batch processing completed successfully");
+                IsRevertEnabled = _undoService.CanUndo();
             }
             catch (OperationCanceledException)
             {
@@ -301,6 +325,7 @@ namespace BulkEditor.UI.ViewModels
                 IsProcessing = false;
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
+                IsRevertEnabled = _undoService.CanUndo();
             }
         }
 
@@ -333,7 +358,38 @@ namespace BulkEditor.UI.ViewModels
             ProgressValue = 0;
             ProcessingStatistics = null;
             SetStatusReady();
+            IsRevertEnabled = _undoService.CanUndo();
         }
+
+        [RelayCommand(CanExecute = nameof(CanRevert))]
+        private async Task RevertLastSessionAsync()
+        {
+            if (MessageBox.Show("Are you sure you want to revert the last processing session? This will restore all processed files to their original state and cannot be undone.", "Confirm Revert", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            SetStatusProcessing("Reverting last session...");
+
+            var success = await _undoService.UndoLastSessionAsync();
+
+            if (success)
+            {
+                _notificationService.ShowSuccess("Revert Complete", "Successfully reverted the last processing session.");
+                SetStatusSuccess("Last processing session reverted successfully.");
+                // Reset UI to a clean state
+                ClearDocuments();
+            }
+            else
+            {
+                _notificationService.ShowError("Revert Failed", "Failed to revert one or more files. Please check the logs for more details.");
+                SetStatusError("Revert failed. Check logs for details.");
+            }
+
+            IsRevertEnabled = _undoService.CanUndo();
+        }
+
+        private bool CanRevert() => IsRevertEnabled && !IsProcessing;
 
         [RelayCommand]
         private async Task ExportResultsAsync()

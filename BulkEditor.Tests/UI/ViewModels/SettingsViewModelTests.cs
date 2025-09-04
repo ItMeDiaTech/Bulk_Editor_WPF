@@ -17,6 +17,7 @@ namespace BulkEditor.Tests.UI.ViewModels
         private readonly Mock<ILoggingService> _mockLogger;
         private readonly Mock<IConfigurationService> _mockConfigurationService;
         private readonly Mock<IUpdateService> _mockUpdateService;
+        private readonly Mock<IHttpService> _mockHttpService;
         private readonly AppSettings _appSettings;
         private readonly SettingsViewModel _viewModel;
 
@@ -25,19 +26,20 @@ namespace BulkEditor.Tests.UI.ViewModels
             _mockLogger = new Mock<ILoggingService>();
             _mockConfigurationService = new Mock<IConfigurationService>();
             _mockUpdateService = new Mock<IUpdateService>();
+            _mockHttpService = new Mock<IHttpService>();
             _appSettings = CreateTestAppSettings();
-            _viewModel = new SettingsViewModel(_appSettings, _mockLogger.Object, _mockConfigurationService.Object, _mockUpdateService.Object);
+            _viewModel = new SettingsViewModel(_appSettings, _mockLogger.Object, _mockConfigurationService.Object, _mockUpdateService.Object, _mockHttpService.Object);
         }
 
         [Fact]
         public void Constructor_ShouldInitializePropertiesFromAppSettings()
         {
             // Assert
-            _viewModel.MaxConcurrentDocuments.Should().Be(_appSettings.Processing.MaxConcurrentDocuments);
-            _viewModel.ApiBaseUrl.Should().Be(_appSettings.Api.BaseUrl);
-            _viewModel.ApiTimeoutSeconds.Should().Be((int)_appSettings.Api.Timeout.TotalSeconds);
-            _viewModel.EnableApiCaching.Should().Be(_appSettings.Api.EnableCaching);
-            _viewModel.ApiCacheExpiryHours.Should().Be((int)_appSettings.Api.CacheExpiry.TotalHours);
+            _viewModel.ProcessingSettings.MaxConcurrentDocuments.Should().Be(_appSettings.Processing.MaxConcurrentDocuments);
+            _viewModel.ValidationSettings.ApiBaseUrl.Should().Be(_appSettings.Api.BaseUrl);
+            _viewModel.ValidationSettings.ApiTimeoutSeconds.Should().Be((int)_appSettings.Api.Timeout.TotalSeconds);
+            _viewModel.ValidationSettings.EnableApiCaching.Should().Be(_appSettings.Api.EnableCaching);
+            _viewModel.ValidationSettings.ApiCacheExpiryHours.Should().Be((int)_appSettings.Api.CacheExpiry.TotalHours);
         }
 
         [Fact]
@@ -50,27 +52,27 @@ namespace BulkEditor.Tests.UI.ViewModels
             var newCacheExpiry = 4;
 
             // Act
-            _viewModel.ApiBaseUrl = newApiUrl;
-            _viewModel.ApiKey = newApiKey;
-            _viewModel.ApiTimeoutSeconds = newTimeout;
-            _viewModel.EnableApiCaching = false;
-            _viewModel.ApiCacheExpiryHours = newCacheExpiry;
+            _viewModel.ValidationSettings.ApiBaseUrl = newApiUrl;
+            _viewModel.ValidationSettings.ApiKey = newApiKey;
+            _viewModel.ValidationSettings.ApiTimeoutSeconds = newTimeout;
+            _viewModel.ValidationSettings.EnableApiCaching = false;
+            _viewModel.ValidationSettings.ApiCacheExpiryHours = newCacheExpiry;
 
             // Assert
-            _viewModel.ApiBaseUrl.Should().Be(newApiUrl);
-            _viewModel.ApiKey.Should().Be(newApiKey);
-            _viewModel.ApiTimeoutSeconds.Should().Be(newTimeout);
-            _viewModel.EnableApiCaching.Should().BeFalse();
-            _viewModel.ApiCacheExpiryHours.Should().Be(newCacheExpiry);
+            _viewModel.ValidationSettings.ApiBaseUrl.Should().Be(newApiUrl);
+            _viewModel.ValidationSettings.ApiKey.Should().Be(newApiKey);
+            _viewModel.ValidationSettings.ApiTimeoutSeconds.Should().Be(newTimeout);
+            _viewModel.ValidationSettings.EnableApiCaching.Should().BeFalse();
+            _viewModel.ValidationSettings.ApiCacheExpiryHours.Should().Be(newCacheExpiry);
         }
 
         [Fact]
         public void ValidateSettings_WithValidApiUrl_ShouldReturnTrue()
         {
             // Arrange
-            _viewModel.ApiBaseUrl = "https://api.example.com";
-            _viewModel.ApiTimeoutSeconds = 30;
-            _viewModel.ApiCacheExpiryHours = 2;
+            _viewModel.ValidationSettings.ApiBaseUrl = "https://api.example.com";
+            _viewModel.ValidationSettings.ApiTimeoutSeconds = 30;
+            _viewModel.ValidationSettings.ApiCacheExpiryHours = 2;
 
             // Act
             var result = InvokeValidateSettings();
@@ -83,9 +85,9 @@ namespace BulkEditor.Tests.UI.ViewModels
         public void ValidateSettings_WithTestApiUrl_ShouldReturnTrue()
         {
             // Arrange
-            _viewModel.ApiBaseUrl = "Test";
-            _viewModel.ApiTimeoutSeconds = 30;
-            _viewModel.ApiCacheExpiryHours = 2;
+            _viewModel.ValidationSettings.ApiBaseUrl = "Test";
+            _viewModel.ValidationSettings.ApiTimeoutSeconds = 30;
+            _viewModel.ValidationSettings.ApiCacheExpiryHours = 2;
 
             // Act
             var result = InvokeValidateSettings();
@@ -101,9 +103,9 @@ namespace BulkEditor.Tests.UI.ViewModels
         public void ValidateSettings_WithInvalidApiUrl_ShouldReturnFalse(string invalidUrl)
         {
             // Arrange
-            _viewModel.ApiBaseUrl = invalidUrl;
-            _viewModel.ApiTimeoutSeconds = 30;
-            _viewModel.ApiCacheExpiryHours = 2;
+            _viewModel.ValidationSettings.ApiBaseUrl = invalidUrl;
+            _viewModel.ValidationSettings.ApiTimeoutSeconds = 30;
+            _viewModel.ValidationSettings.ApiCacheExpiryHours = 2;
 
             // Act
             var result = InvokeValidateSettings();
@@ -119,9 +121,9 @@ namespace BulkEditor.Tests.UI.ViewModels
         public void ValidateSettings_WithInvalidApiTimeout_ShouldReturnFalse(int invalidTimeout)
         {
             // Arrange
-            _viewModel.ApiBaseUrl = "https://api.example.com";
-            _viewModel.ApiTimeoutSeconds = invalidTimeout;
-            _viewModel.ApiCacheExpiryHours = 2;
+            _viewModel.ValidationSettings.ApiBaseUrl = "https://api.example.com";
+            _viewModel.ValidationSettings.ApiTimeoutSeconds = invalidTimeout;
+            _viewModel.ValidationSettings.ApiCacheExpiryHours = 2;
 
             // Act
             var result = InvokeValidateSettings();
@@ -137,9 +139,9 @@ namespace BulkEditor.Tests.UI.ViewModels
         public void ValidateSettings_WithInvalidCacheExpiry_ShouldReturnFalse(int invalidCacheExpiry)
         {
             // Arrange
-            _viewModel.ApiBaseUrl = "https://api.example.com";
-            _viewModel.ApiTimeoutSeconds = 30;
-            _viewModel.ApiCacheExpiryHours = invalidCacheExpiry;
+            _viewModel.ValidationSettings.ApiBaseUrl = "https://api.example.com";
+            _viewModel.ValidationSettings.ApiTimeoutSeconds = 30;
+            _viewModel.ValidationSettings.ApiCacheExpiryHours = invalidCacheExpiry;
 
             // Act
             var result = InvokeValidateSettings();
@@ -152,10 +154,10 @@ namespace BulkEditor.Tests.UI.ViewModels
         public async Task TestApiConnection_WithTestUrl_ShouldSucceed()
         {
             // Arrange
-            _viewModel.ApiBaseUrl = "Test";
+            _viewModel.ValidationSettings.ApiBaseUrl = "Test";
 
             // Act
-            await _viewModel.TestApiConnectionCommand.ExecuteAsync(null);
+            await _viewModel.ValidationSettings.TestApiConnectionCommand.ExecuteAsync(null);
 
             // Assert
             _mockLogger.Verify(
@@ -167,10 +169,10 @@ namespace BulkEditor.Tests.UI.ViewModels
         public async Task TestApiConnection_WithEmptyUrl_ShouldLogWarning()
         {
             // Arrange
-            _viewModel.ApiBaseUrl = "";
+            _viewModel.ValidationSettings.ApiBaseUrl = "";
 
             // Act
-            await _viewModel.TestApiConnectionCommand.ExecuteAsync(null);
+            await _viewModel.ValidationSettings.TestApiConnectionCommand.ExecuteAsync(null);
 
             // Assert
             _mockLogger.Verify(

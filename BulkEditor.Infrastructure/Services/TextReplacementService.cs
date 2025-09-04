@@ -204,30 +204,18 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                if (string.IsNullOrEmpty(sourceText) || string.IsNullOrWhiteSpace(searchText) || string.IsNullOrWhiteSpace(replacementText))
+                if (string.IsNullOrEmpty(sourceText) || string.IsNullOrWhiteSpace(searchText))
                     return sourceText;
 
-                // Trim trailing whitespace from search text for comparison
-                var trimmedSearchText = searchText.TrimEnd();
-                var trimmedSourceText = sourceText.TrimEnd();
+                // Use a more robust regex that handles various word boundary scenarios
+                var escapedSearchText = Regex.Escape(searchText);
+                var pattern = $@"(?i)\b{escapedSearchText}\b";
 
-                // Create regex pattern for case-insensitive matching
-                var escapedSearchText = Regex.Escape(trimmedSearchText);
-                var pattern = $@"\b{escapedSearchText}\b";
-                var regex = new Regex(pattern, RegexOptions.IgnoreCase);
-
-                // Find matches and replace while preserving capitalization context
-                var result = regex.Replace(trimmedSourceText, match =>
+                var result = Regex.Replace(sourceText, pattern, match =>
                 {
+                    // Preserve capitalization based on the original match
                     return PreserveCapitalization(match.Value, replacementText);
                 });
-
-                // Preserve any trailing whitespace from original source text
-                if (sourceText.Length > trimmedSourceText.Length)
-                {
-                    var trailingWhitespace = sourceText.Substring(trimmedSourceText.Length);
-                    result += trailingWhitespace;
-                }
 
                 return result;
             }

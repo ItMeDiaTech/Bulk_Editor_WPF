@@ -49,5 +49,10 @@ namespace BulkEditor.Core.Interfaces
         /// Sets user agent for HTTP requests
         /// </summary>
         void SetUserAgent(string userAgent);
+
+        /// <summary>
+        /// Tests the connection to a URL.
+        /// </summary>
+        Task<bool> TestConnectionAsync(string url, string apiKey = "");
     }
 }

@@ -1,5 +1,6 @@
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Infrastructure.Utilities;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using System;
@@ -34,6 +35,18 @@ namespace BulkEditor.Infrastructure.Services
 
         // OpenXML validator for document integrity checks
         private readonly OpenXmlValidator _validator = new OpenXmlValidator();
+
+        // Add a HashSet to store ignorable validation error descriptions for performance
+        private static readonly HashSet<string> IgnorableValidationErrorDescriptions = new HashSet<string>
+        {
+            "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:firstRow' attribute is not declared.",
+            "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:lastRow' attribute is not declared.",
+            "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:firstColumn' attribute is not declared.",
+            "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:lastColumn' attribute is not declared.",
+            "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:noHBand' attribute is not declared.",
+            "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:noVBand' attribute is not declared.",
+            "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:tr'."
+        };
 
         public DocumentProcessor(IFileService fileService, IHyperlinkValidator hyperlinkValidator, ITextOptimizer textOptimizer, IReplacementService replacementService, ILoggingService logger, Core.Configuration.AppSettings appSettings)
         {
@@ -99,7 +112,7 @@ namespace BulkEditor.Infrastructure.Services
             catch (Exception ex)
             {
                 document.Status = DocumentStatus.Failed;
-                document.ProcessingErrors.Add(ex.Message);
+                document.ProcessingErrors.Add(new ProcessingError { Message = ex.Message, Severity = ErrorSeverity.Error });
 
                 _logger.LogError(ex, "Error processing document: {FilePath}", filePath);
                 progress?.Report($"Error processing document: {ex.Message}");
@@ -245,14 +258,6 @@ namespace BulkEditor.Infrastructure.Services
                 _logger.LogError(ex, "Error validating hyperlinks for document: {FileName}", document.FileName);
                 throw;
             }
-        }
-
-        public async Task<BulkEditor.Core.Entities.Document> UpdateHyperlinksAsync(BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken = default)
-        {
-            // This method is now handled within ProcessDocumentInSingleSessionAsync to prevent corruption
-            // Individual hyperlink updates should not open the document separately
-            _logger.LogDebug("UpdateHyperlinksAsync called - operations handled in single session to prevent corruption");
-            return document;
         }
 
         public async Task<string> CreateBackupAsync(string filePath, CancellationToken cancellationToken = default)
@@ -552,71 +557,6 @@ namespace BulkEditor.Infrastructure.Services
             {
                 _logger.LogWarning("Error extracting Lookup_ID from URL: {Url}. Error: {Error}", address, ex.Message);
                 return string.Empty;
-            }
-        }
-
-        private async Task UpdateHyperlinkInDocument(MainDocumentPart mainPart, string relationshipId, Hyperlink hyperlinkToUpdate, BulkEditor.Core.Entities.Document document)
-        {
-            try
-            {
-                // Update the relationship target
-                var relationship = mainPart.GetReferenceRelationship(relationshipId);
-
-                // Create new URL using Document_ID for docid parameter (correct approach)
-                // Fallback to Content_ID if Document_ID is not available
-                var docIdForUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId)
-                    ? hyperlinkToUpdate.DocumentId
-                    : hyperlinkToUpdate.ContentId;
-
-                var newUrl = !string.IsNullOrEmpty(docIdForUrl)
-                    ? $"https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid={docIdForUrl}"
-                    : hyperlinkToUpdate.OriginalUrl;
-
-                // CRITICAL FIX: Use safer relationship update method
-                // Create new relationship first, then delete old one to prevent corruption
-                var newRelationship = mainPart.AddHyperlinkRelationship(new Uri(newUrl), true);
-
-                // Find the hyperlink element that uses this relationship and update its ID
-                var hyperlinkElement = mainPart.Document.Body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>()
-                    .FirstOrDefault(h => h.Id?.Value == relationshipId);
-
-                if (hyperlinkElement != null)
-                {
-                    hyperlinkElement.Id = newRelationship.Id;
-                }
-
-                // Now safely delete the old relationship
-                try
-                {
-                    mainPart.DeleteReferenceRelationship(relationshipId);
-                }
-                catch (System.Collections.Generic.KeyNotFoundException)
-                {
-                    _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relationshipId);
-                }
-
-                _logger.LogDebug("Updated hyperlink relationship safely: {OldRelId} -> {NewRelId}", relationshipId, newRelationship.Id);
-
-                // Update hyperlink object
-                hyperlinkToUpdate.UpdatedUrl = newUrl;
-                hyperlinkToUpdate.ActionTaken = HyperlinkAction.Updated;
-
-                // Log the change
-                document.ChangeLog.Changes.Add(new ChangeEntry
-                {
-                    Type = ChangeType.HyperlinkUpdated,
-                    Description = "Hyperlink updated",
-                    OldValue = hyperlinkToUpdate.OriginalUrl,
-                    NewValue = newUrl,
-                    ElementId = hyperlinkToUpdate.Id
-                });
-
-                await Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating hyperlink in document");
-                throw;
             }
         }
 
@@ -1279,8 +1219,7 @@ namespace BulkEditor.Infrastructure.Services
                     {
                         try
                         {
-                            openXmlHyperlink.RemoveAllChildren();
-                            openXmlHyperlink.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Text(newDisplayText));
+                            OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
 
                             document.ChangeLog.Changes.Add(new ChangeEntry
                             {
@@ -1317,8 +1256,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     try
                     {
-                        openXmlHyperlink.RemoveAllChildren();
-                        openXmlHyperlink.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Text(newDisplayText));
+                        OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
 
                         var statusType = hyperlinkToUpdate.Status == HyperlinkStatus.Expired ? "Expired" : "Not Found";
                         document.ChangeLog.Changes.Add(new ChangeEntry
@@ -1471,7 +1409,9 @@ namespace BulkEditor.Infrastructure.Services
                     }
 
                     using var wordDocument = WordprocessingDocument.Open(filePath, false);
-                    var validationErrors = _validator.Validate(wordDocument).ToList();
+                    var validationErrors = _validator.Validate(wordDocument)
+                        .Where(e => !IgnorableValidationErrorDescriptions.Contains(e.Description))
+                        .ToList();
 
                     if (validationErrors.Any())
                     {
@@ -1516,7 +1456,9 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                var validationErrors = _validator.Validate(wordDocument).ToList();
+                var validationErrors = _validator.Validate(wordDocument)
+                    .Where(e => !IgnorableValidationErrorDescriptions.Contains(e.Description))
+                    .ToList();
 
                 if (validationErrors.Any())
                 {
@@ -1615,20 +1557,20 @@ namespace BulkEditor.Infrastructure.Services
 
                     // Update document status
                     document.Status = DocumentStatus.Recovered;
-                    document.ProcessingErrors.Add($"Recovered from error: {originalException.Message}");
+                    document.ProcessingErrors.Add(new ProcessingError { Message = $"Recovered from error: {originalException.Message}", Severity = ErrorSeverity.Warning });
                 }
                 else
                 {
                     _logger.LogError("Cannot recover document - no valid backup found: {FilePath}", document.FilePath);
                     document.Status = DocumentStatus.Failed;
-                    document.ProcessingErrors.Add($"No backup available for recovery: {originalException.Message}");
+                    document.ProcessingErrors.Add(new ProcessingError { Message = $"No backup available for recovery: {originalException.Message}", Severity = ErrorSeverity.Error });
                 }
             }
             catch (Exception recoveryEx)
             {
                 _logger.LogError(recoveryEx, "Document recovery failed: {FilePath}", document.FilePath);
                 document.Status = DocumentStatus.Failed;
-                document.ProcessingErrors.Add($"Recovery failed: {recoveryEx.Message}");
+                document.ProcessingErrors.Add(new ProcessingError { Message = $"Recovery failed: {recoveryEx.Message}", Severity = ErrorSeverity.Error });
             }
         }
 
@@ -1643,5 +1585,6 @@ namespace BulkEditor.Infrastructure.Services
                 disposableReplacement.Dispose();
             }
         }
+
     }
 }

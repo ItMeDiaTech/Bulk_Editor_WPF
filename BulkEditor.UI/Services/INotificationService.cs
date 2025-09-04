@@ -40,6 +40,11 @@ namespace BulkEditor.UI.Services
         void AddNotification(NotificationModel notification);
 
         /// <summary>
+        /// Show a notification with a clickable action.
+        /// </summary>
+        void ShowActionableNotification(string title, string message, string actionText, Action action);
+
+        /// <summary>
         /// Remove a specific notification
         /// </summary>
         void RemoveNotification(NotificationModel notification);

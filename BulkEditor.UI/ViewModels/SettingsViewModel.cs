@@ -1,6 +1,7 @@
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Core.Services;
+using BulkEditor.UI.ViewModels.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -24,334 +25,179 @@ namespace BulkEditor.UI.ViewModels
         private readonly IUpdateService _updateService;
         private readonly AppSettings _originalSettings;
         private readonly AppSettings _currentSettings;
+        private readonly IHttpService _httpService;
 
         public event EventHandler<bool?>? RequestClose;
 
-        // Processing Settings
-        [ObservableProperty]
-        private int _maxConcurrentDocuments;
+        public ProcessingSettingsViewModel ProcessingSettings { get; }
+        public ValidationSettingsViewModel ValidationSettings { get; }
+        public BackupSettingsViewModel BackupSettings { get; }
+        public LoggingSettingsViewModel LoggingSettings { get; }
+        public ReplacementSettingsViewModel ReplacementSettings { get; }
+        public UpdateSettingsViewModel UpdateSettings { get; }
 
-        [ObservableProperty]
-        private int _batchSize;
-
-        [ObservableProperty]
-        private bool _createBackupBeforeProcessing;
-
-        [ObservableProperty]
-        private bool _validateHyperlinks;
-
-        [ObservableProperty]
-        private bool _updateHyperlinks;
-
-        [ObservableProperty]
-        private bool _addContentIds;
-
-        [ObservableProperty]
-        private bool _optimizeText;
-
-        [ObservableProperty]
-        private int _timeoutPerDocumentMinutes;
-
-        // Validation Settings
-        [ObservableProperty]
-        private int _httpTimeoutSeconds;
-
-        [ObservableProperty]
-        private int _maxRetryAttempts;
-
-        [ObservableProperty]
-        private int _retryDelaySeconds;
-
-        [ObservableProperty]
-        private string _userAgent = string.Empty;
-
-        [ObservableProperty]
-        private bool _checkExpiredContent;
-
-        [ObservableProperty]
-        private bool _followRedirects;
-
-        [ObservableProperty]
-        private string _lookupIdPattern = string.Empty;
-
-        [ObservableProperty]
-        private bool _autoReplaceTitles;
-
-        [ObservableProperty]
-        private bool _reportTitleDifferences;
-
-        // API Settings
-        [ObservableProperty]
-        private string _apiBaseUrl = string.Empty;
-
-        [ObservableProperty]
-        private string _apiKey = string.Empty;
-
-        [ObservableProperty]
-        private int _apiTimeoutSeconds;
-
-        [ObservableProperty]
-        private bool _enableApiCaching;
-
-        [ObservableProperty]
-        private int _apiCacheExpiryHours;
-
-        // Backup Settings
-        [ObservableProperty]
-        private string _backupDirectory = string.Empty;
-
-        [ObservableProperty]
-        private bool _createTimestampedBackups;
-
-        [ObservableProperty]
-        private bool _compressBackups;
-
-        [ObservableProperty]
-        private bool _autoCleanupOldBackups;
-
-        [ObservableProperty]
-        private int _maxBackupAge;
-
-        // Logging Settings
-        [ObservableProperty]
-        private string _logLevel = string.Empty;
-
-        [ObservableProperty]
-        private string _logDirectory = string.Empty;
-
-        [ObservableProperty]
-        private bool _enableFileLogging;
-
-        [ObservableProperty]
-        private bool _enableConsoleLogging;
-
-        [ObservableProperty]
-        private int _maxLogFileSizeMB;
-
-        [ObservableProperty]
-        private int _maxLogFiles;
-
-        // Replacement Settings
-        [ObservableProperty]
-        private bool _enableHyperlinkReplacement;
-
-        [ObservableProperty]
-        private bool _enableTextReplacement;
-
-        [ObservableProperty]
-        private int _maxReplacementRules;
-
-        [ObservableProperty]
-        private bool _validateContentIds;
-
-        // Update Settings
-        [ObservableProperty]
-        private bool _autoUpdateEnabled;
-
-        [ObservableProperty]
-        private int _checkIntervalHours;
-
-        [ObservableProperty]
-        private bool _installSecurityUpdatesAutomatically;
-
-        [ObservableProperty]
-        private bool _notifyOnUpdatesAvailable;
-
-        [ObservableProperty]
-        private bool _createBackupBeforeUpdate;
-
-        [ObservableProperty]
-        private bool _includePrerelease;
-
-        [ObservableProperty]
-        private string _gitHubOwner = string.Empty;
-
-        [ObservableProperty]
-        private string _gitHubRepository = string.Empty;
-
-        // Version Information
-        [ObservableProperty]
-        private string _currentVersion = string.Empty;
-
-        [ObservableProperty]
-        private string _latestVersion = string.Empty;
-
-        [ObservableProperty]
-        private bool _updateAvailable = false;
-
-        [ObservableProperty]
-        private string _updateCheckStatus = "Click 'Check for Updates' to check for the latest version";
-
-        [ObservableProperty]
-        private string _releaseNotes = string.Empty;
-
-        // Replacement Rules Collections
-        public ObservableCollection<HyperlinkReplacementRule> HyperlinkRules { get; set; } = new();
-        public ObservableCollection<TextReplacementRule> TextRules { get; set; } = new();
-
-        public SettingsViewModel(AppSettings appSettings, ILoggingService logger, IConfigurationService configurationService, IUpdateService updateService)
+        public SettingsViewModel(AppSettings appSettings, ILoggingService logger, IConfigurationService configurationService, IUpdateService updateService, IHttpService httpService)
         {
             _originalSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
             _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
+            _httpService = httpService ?? throw new ArgumentNullException(nameof(httpService));
 
             // Create a copy of the settings to work with
             _currentSettings = CloneSettings(appSettings);
 
+            ProcessingSettings = new ProcessingSettingsViewModel();
+            ValidationSettings = new ValidationSettingsViewModel(logger, httpService);
+            BackupSettings = new BackupSettingsViewModel();
+            LoggingSettings = new LoggingSettingsViewModel();
+            ReplacementSettings = new ReplacementSettingsViewModel();
+            UpdateSettings = new UpdateSettingsViewModel(logger, updateService);
+
             Title = "Settings";
-            LoadSettingsIntoProperties();
-            LoadVersionInformation();
+            LoadSettingsIntoViewModels();
         }
 
-        private void LoadSettingsIntoProperties()
+        private void LoadSettingsIntoViewModels()
         {
             // Processing Settings
-            MaxConcurrentDocuments = _currentSettings.Processing.MaxConcurrentDocuments;
-            BatchSize = _currentSettings.Processing.BatchSize;
-            CreateBackupBeforeProcessing = _currentSettings.Processing.CreateBackupBeforeProcessing;
-            ValidateHyperlinks = _currentSettings.Processing.ValidateHyperlinks;
-            UpdateHyperlinks = _currentSettings.Processing.UpdateHyperlinks;
-            AddContentIds = _currentSettings.Processing.AddContentIds;
-            OptimizeText = _currentSettings.Processing.OptimizeText;
-            TimeoutPerDocumentMinutes = (int)_currentSettings.Processing.TimeoutPerDocument.TotalMinutes;
+            ProcessingSettings.MaxConcurrentDocuments = _currentSettings.Processing.MaxConcurrentDocuments;
+            ProcessingSettings.BatchSize = _currentSettings.Processing.BatchSize;
+            ProcessingSettings.CreateBackupBeforeProcessing = _currentSettings.Processing.CreateBackupBeforeProcessing;
+            ProcessingSettings.ValidateHyperlinks = _currentSettings.Processing.ValidateHyperlinks;
+            ProcessingSettings.UpdateHyperlinks = _currentSettings.Processing.UpdateHyperlinks;
+            ProcessingSettings.AddContentIds = _currentSettings.Processing.AddContentIds;
+            ProcessingSettings.OptimizeText = _currentSettings.Processing.OptimizeText;
+            ProcessingSettings.TimeoutPerDocumentMinutes = (int)_currentSettings.Processing.TimeoutPerDocument.TotalMinutes;
 
             // Validation Settings
-            HttpTimeoutSeconds = (int)_currentSettings.Validation.HttpTimeout.TotalSeconds;
-            MaxRetryAttempts = _currentSettings.Validation.MaxRetryAttempts;
-            RetryDelaySeconds = (int)_currentSettings.Validation.RetryDelay.TotalSeconds;
-            UserAgent = _currentSettings.Validation.UserAgent;
-            CheckExpiredContent = _currentSettings.Validation.CheckExpiredContent;
-            FollowRedirects = _currentSettings.Validation.FollowRedirects;
-            LookupIdPattern = _currentSettings.Processing.LookupIdPattern;
+            ValidationSettings.HttpTimeoutSeconds = (int)_currentSettings.Validation.HttpTimeout.TotalSeconds;
+            ValidationSettings.MaxRetryAttempts = _currentSettings.Validation.MaxRetryAttempts;
+            ValidationSettings.RetryDelaySeconds = (int)_currentSettings.Validation.RetryDelay.TotalSeconds;
+            ValidationSettings.UserAgent = _currentSettings.Validation.UserAgent;
+            ValidationSettings.CheckExpiredContent = _currentSettings.Validation.CheckExpiredContent;
+            ValidationSettings.FollowRedirects = _currentSettings.Validation.FollowRedirects;
+            ValidationSettings.LookupIdPattern = _currentSettings.Processing.LookupIdPattern;
+            ValidationSettings.AutoReplaceTitles = _currentSettings.Validation.AutoReplaceTitles;
+            ValidationSettings.ReportTitleDifferences = _currentSettings.Validation.ReportTitleDifferences;
+            ValidationSettings.ApiBaseUrl = _currentSettings.Api.BaseUrl;
+            ValidationSettings.ApiKey = _currentSettings.Api.ApiKey;
+            ValidationSettings.ApiTimeoutSeconds = (int)_currentSettings.Api.Timeout.TotalSeconds;
+            ValidationSettings.EnableApiCaching = _currentSettings.Api.EnableCaching;
+            ValidationSettings.ApiCacheExpiryHours = (int)_currentSettings.Api.CacheExpiry.TotalHours;
 
             // Backup Settings
-            BackupDirectory = _currentSettings.Backup.BackupDirectory;
-            CreateTimestampedBackups = _currentSettings.Backup.CreateTimestampedBackups;
-            CompressBackups = _currentSettings.Backup.CompressBackups;
-            AutoCleanupOldBackups = _currentSettings.Backup.AutoCleanupOldBackups;
-            MaxBackupAge = _currentSettings.Backup.MaxBackupAge;
+            BackupSettings.BackupDirectory = _currentSettings.Backup.BackupDirectory;
+            BackupSettings.CreateTimestampedBackups = _currentSettings.Backup.CreateTimestampedBackups;
+            BackupSettings.CompressBackups = _currentSettings.Backup.CompressBackups;
+            BackupSettings.AutoCleanupOldBackups = _currentSettings.Backup.AutoCleanupOldBackups;
+            BackupSettings.MaxBackupAge = _currentSettings.Backup.MaxBackupAge;
 
             // Logging Settings
-            LogLevel = _currentSettings.Logging.LogLevel;
-            LogDirectory = _currentSettings.Logging.LogDirectory;
-            EnableFileLogging = _currentSettings.Logging.EnableFileLogging;
-            EnableConsoleLogging = _currentSettings.Logging.EnableConsoleLogging;
-            MaxLogFileSizeMB = _currentSettings.Logging.MaxLogFileSizeMB;
-            MaxLogFiles = _currentSettings.Logging.MaxLogFiles;
+            LoggingSettings.LogLevel = _currentSettings.Logging.LogLevel;
+            LoggingSettings.LogDirectory = _currentSettings.Logging.LogDirectory;
+            LoggingSettings.EnableFileLogging = _currentSettings.Logging.EnableFileLogging;
+            LoggingSettings.EnableConsoleLogging = _currentSettings.Logging.EnableConsoleLogging;
+            LoggingSettings.MaxLogFileSizeMB = _currentSettings.Logging.MaxLogFileSizeMB;
+            LoggingSettings.MaxLogFiles = _currentSettings.Logging.MaxLogFiles;
 
             // Replacement Settings
-            EnableHyperlinkReplacement = _currentSettings.Replacement.EnableHyperlinkReplacement;
-            EnableTextReplacement = _currentSettings.Replacement.EnableTextReplacement;
-            MaxReplacementRules = _currentSettings.Replacement.MaxReplacementRules;
-            ValidateContentIds = _currentSettings.Replacement.ValidateContentIds;
-
-            // Title replacement settings
-            AutoReplaceTitles = _currentSettings.Validation.AutoReplaceTitles;
-            ReportTitleDifferences = _currentSettings.Validation.ReportTitleDifferences;
-
-            // API Settings
-            ApiBaseUrl = _currentSettings.Api.BaseUrl;
-            ApiKey = _currentSettings.Api.ApiKey;
-            ApiTimeoutSeconds = (int)_currentSettings.Api.Timeout.TotalSeconds;
-            EnableApiCaching = _currentSettings.Api.EnableCaching;
-            ApiCacheExpiryHours = (int)_currentSettings.Api.CacheExpiry.TotalHours;
+            ReplacementSettings.EnableHyperlinkReplacement = _currentSettings.Replacement.EnableHyperlinkReplacement;
+            ReplacementSettings.EnableTextReplacement = _currentSettings.Replacement.EnableTextReplacement;
+            ReplacementSettings.MaxReplacementRules = _currentSettings.Replacement.MaxReplacementRules;
+            ReplacementSettings.ValidateContentIds = _currentSettings.Replacement.ValidateContentIds;
 
             // Update Settings
-            AutoUpdateEnabled = _currentSettings.Update.AutoUpdateEnabled;
-            CheckIntervalHours = _currentSettings.Update.CheckIntervalHours;
-            InstallSecurityUpdatesAutomatically = _currentSettings.Update.InstallSecurityUpdatesAutomatically;
-            NotifyOnUpdatesAvailable = _currentSettings.Update.NotifyOnUpdatesAvailable;
-            CreateBackupBeforeUpdate = _currentSettings.Update.CreateBackupBeforeUpdate;
-            IncludePrerelease = _currentSettings.Update.IncludePrerelease;
-            GitHubOwner = _currentSettings.Update.GitHubOwner;
-            GitHubRepository = _currentSettings.Update.GitHubRepository;
+            UpdateSettings.AutoUpdateEnabled = _currentSettings.Update.AutoUpdateEnabled;
+            UpdateSettings.CheckIntervalHours = _currentSettings.Update.CheckIntervalHours;
+            UpdateSettings.InstallSecurityUpdatesAutomatically = _currentSettings.Update.InstallSecurityUpdatesAutomatically;
+            UpdateSettings.NotifyOnUpdatesAvailable = _currentSettings.Update.NotifyOnUpdatesAvailable;
+            UpdateSettings.CreateBackupBeforeUpdate = _currentSettings.Update.CreateBackupBeforeUpdate;
+            UpdateSettings.IncludePrerelease = _currentSettings.Update.IncludePrerelease;
+            UpdateSettings.GitHubOwner = _currentSettings.Update.GitHubOwner;
+            UpdateSettings.GitHubRepository = _currentSettings.Update.GitHubRepository;
 
             // Load replacement rules into collections
-            HyperlinkRules.Clear();
+            ReplacementSettings.HyperlinkRules.Clear();
             foreach (var rule in _currentSettings.Replacement.HyperlinkRules)
             {
-                HyperlinkRules.Add(rule);
+                ReplacementSettings.HyperlinkRules.Add(rule);
             }
 
-            TextRules.Clear();
+            ReplacementSettings.TextRules.Clear();
             foreach (var rule in _currentSettings.Replacement.TextRules)
             {
-                TextRules.Add(rule);
+                ReplacementSettings.TextRules.Add(rule);
             }
         }
 
-        private void UpdateSettingsFromProperties()
+        private void UpdateSettingsFromViewModels()
         {
             // Processing Settings
-            _currentSettings.Processing.MaxConcurrentDocuments = MaxConcurrentDocuments;
-            _currentSettings.Processing.BatchSize = BatchSize;
-            _currentSettings.Processing.CreateBackupBeforeProcessing = CreateBackupBeforeProcessing;
-            _currentSettings.Processing.ValidateHyperlinks = ValidateHyperlinks;
-            _currentSettings.Processing.UpdateHyperlinks = UpdateHyperlinks;
-            _currentSettings.Processing.AddContentIds = AddContentIds;
-            _currentSettings.Processing.OptimizeText = OptimizeText;
-            _currentSettings.Processing.TimeoutPerDocument = TimeSpan.FromMinutes(TimeoutPerDocumentMinutes);
+            _currentSettings.Processing.MaxConcurrentDocuments = ProcessingSettings.MaxConcurrentDocuments;
+            _currentSettings.Processing.BatchSize = ProcessingSettings.BatchSize;
+            _currentSettings.Processing.CreateBackupBeforeProcessing = ProcessingSettings.CreateBackupBeforeProcessing;
+            _currentSettings.Processing.ValidateHyperlinks = ProcessingSettings.ValidateHyperlinks;
+            _currentSettings.Processing.UpdateHyperlinks = ProcessingSettings.UpdateHyperlinks;
+            _currentSettings.Processing.AddContentIds = ProcessingSettings.AddContentIds;
+            _currentSettings.Processing.OptimizeText = ProcessingSettings.OptimizeText;
+            _currentSettings.Processing.TimeoutPerDocument = TimeSpan.FromMinutes(ProcessingSettings.TimeoutPerDocumentMinutes);
 
             // Validation Settings
-            _currentSettings.Validation.HttpTimeout = TimeSpan.FromSeconds(HttpTimeoutSeconds);
-            _currentSettings.Validation.MaxRetryAttempts = MaxRetryAttempts;
-            _currentSettings.Validation.RetryDelay = TimeSpan.FromSeconds(RetryDelaySeconds);
-            _currentSettings.Validation.UserAgent = UserAgent;
-            _currentSettings.Validation.CheckExpiredContent = CheckExpiredContent;
-            _currentSettings.Validation.FollowRedirects = FollowRedirects;
-            _currentSettings.Validation.AutoReplaceTitles = AutoReplaceTitles;
-            _currentSettings.Validation.ReportTitleDifferences = ReportTitleDifferences;
-            _currentSettings.Processing.LookupIdPattern = LookupIdPattern;
+            _currentSettings.Validation.HttpTimeout = TimeSpan.FromSeconds(ValidationSettings.HttpTimeoutSeconds);
+            _currentSettings.Validation.MaxRetryAttempts = ValidationSettings.MaxRetryAttempts;
+            _currentSettings.Validation.RetryDelay = TimeSpan.FromSeconds(ValidationSettings.RetryDelaySeconds);
+            _currentSettings.Validation.UserAgent = ValidationSettings.UserAgent;
+            _currentSettings.Validation.CheckExpiredContent = ValidationSettings.CheckExpiredContent;
+            _currentSettings.Validation.FollowRedirects = ValidationSettings.FollowRedirects;
+            _currentSettings.Validation.AutoReplaceTitles = ValidationSettings.AutoReplaceTitles;
+            _currentSettings.Validation.ReportTitleDifferences = ValidationSettings.ReportTitleDifferences;
+            _currentSettings.Processing.LookupIdPattern = ValidationSettings.LookupIdPattern;
 
             // Backup Settings
-            _currentSettings.Backup.BackupDirectory = BackupDirectory;
-            _currentSettings.Backup.CreateTimestampedBackups = CreateTimestampedBackups;
-            _currentSettings.Backup.CompressBackups = CompressBackups;
-            _currentSettings.Backup.AutoCleanupOldBackups = AutoCleanupOldBackups;
-            _currentSettings.Backup.MaxBackupAge = MaxBackupAge;
+            _currentSettings.Backup.BackupDirectory = BackupSettings.BackupDirectory;
+            _currentSettings.Backup.CreateTimestampedBackups = BackupSettings.CreateTimestampedBackups;
+            _currentSettings.Backup.CompressBackups = BackupSettings.CompressBackups;
+            _currentSettings.Backup.AutoCleanupOldBackups = BackupSettings.AutoCleanupOldBackups;
+            _currentSettings.Backup.MaxBackupAge = BackupSettings.MaxBackupAge;
 
             // Logging Settings
-            _currentSettings.Logging.LogLevel = LogLevel;
-            _currentSettings.Logging.LogDirectory = LogDirectory;
-            _currentSettings.Logging.EnableFileLogging = EnableFileLogging;
-            _currentSettings.Logging.EnableConsoleLogging = EnableConsoleLogging;
-            _currentSettings.Logging.MaxLogFileSizeMB = MaxLogFileSizeMB;
-            _currentSettings.Logging.MaxLogFiles = MaxLogFiles;
+            _currentSettings.Logging.LogLevel = LoggingSettings.LogLevel;
+            _currentSettings.Logging.LogDirectory = LoggingSettings.LogDirectory;
+            _currentSettings.Logging.EnableFileLogging = LoggingSettings.EnableFileLogging;
+            _currentSettings.Logging.EnableConsoleLogging = LoggingSettings.EnableConsoleLogging;
+            _currentSettings.Logging.MaxLogFileSizeMB = LoggingSettings.MaxLogFileSizeMB;
+            _currentSettings.Logging.MaxLogFiles = LoggingSettings.MaxLogFiles;
 
             // Replacement Settings
-            _currentSettings.Replacement.EnableHyperlinkReplacement = EnableHyperlinkReplacement;
-            _currentSettings.Replacement.EnableTextReplacement = EnableTextReplacement;
-            _currentSettings.Replacement.MaxReplacementRules = MaxReplacementRules;
-            _currentSettings.Replacement.ValidateContentIds = ValidateContentIds;
-
-            // Title replacement settings
-            _currentSettings.Validation.AutoReplaceTitles = AutoReplaceTitles;
-            _currentSettings.Validation.ReportTitleDifferences = ReportTitleDifferences;
+            _currentSettings.Replacement.EnableHyperlinkReplacement = ReplacementSettings.EnableHyperlinkReplacement;
+            _currentSettings.Replacement.EnableTextReplacement = ReplacementSettings.EnableTextReplacement;
+            _currentSettings.Replacement.MaxReplacementRules = ReplacementSettings.MaxReplacementRules;
+            _currentSettings.Replacement.ValidateContentIds = ReplacementSettings.ValidateContentIds;
 
             // API Settings
-            _currentSettings.Api.BaseUrl = ApiBaseUrl;
-            _currentSettings.Api.ApiKey = ApiKey;
-            _currentSettings.Api.Timeout = TimeSpan.FromSeconds(ApiTimeoutSeconds);
-            _currentSettings.Api.EnableCaching = EnableApiCaching;
-            _currentSettings.Api.CacheExpiry = TimeSpan.FromHours(ApiCacheExpiryHours);
+            _currentSettings.Api.BaseUrl = ValidationSettings.ApiBaseUrl;
+            _currentSettings.Api.ApiKey = ValidationSettings.ApiKey;
+            _currentSettings.Api.Timeout = TimeSpan.FromSeconds(ValidationSettings.ApiTimeoutSeconds);
+            _currentSettings.Api.EnableCaching = ValidationSettings.EnableApiCaching;
+            _currentSettings.Api.CacheExpiry = TimeSpan.FromHours(ValidationSettings.ApiCacheExpiryHours);
 
             // Update Settings
-            _currentSettings.Update.AutoUpdateEnabled = AutoUpdateEnabled;
-            _currentSettings.Update.CheckIntervalHours = CheckIntervalHours;
-            _currentSettings.Update.InstallSecurityUpdatesAutomatically = InstallSecurityUpdatesAutomatically;
-            _currentSettings.Update.NotifyOnUpdatesAvailable = NotifyOnUpdatesAvailable;
-            _currentSettings.Update.CreateBackupBeforeUpdate = CreateBackupBeforeUpdate;
-            _currentSettings.Update.IncludePrerelease = IncludePrerelease;
-            _currentSettings.Update.GitHubOwner = GitHubOwner;
-            _currentSettings.Update.GitHubRepository = GitHubRepository;
+            _currentSettings.Update.AutoUpdateEnabled = UpdateSettings.AutoUpdateEnabled;
+            _currentSettings.Update.CheckIntervalHours = UpdateSettings.CheckIntervalHours;
+            _currentSettings.Update.InstallSecurityUpdatesAutomatically = UpdateSettings.InstallSecurityUpdatesAutomatically;
+            _currentSettings.Update.NotifyOnUpdatesAvailable = UpdateSettings.NotifyOnUpdatesAvailable;
+            _currentSettings.Update.CreateBackupBeforeUpdate = UpdateSettings.CreateBackupBeforeUpdate;
+            _currentSettings.Update.IncludePrerelease = UpdateSettings.IncludePrerelease;
+            _currentSettings.Update.GitHubOwner = UpdateSettings.GitHubOwner;
+            _currentSettings.Update.GitHubRepository = UpdateSettings.GitHubRepository;
 
             // Update replacement rules from collections
             _currentSettings.Replacement.HyperlinkRules.Clear();
-            _currentSettings.Replacement.HyperlinkRules.AddRange(HyperlinkRules);
+            _currentSettings.Replacement.HyperlinkRules.AddRange(ReplacementSettings.HyperlinkRules);
 
             _currentSettings.Replacement.TextRules.Clear();
-            _currentSettings.Replacement.TextRules.AddRange(TextRules);
+            _currentSettings.Replacement.TextRules.AddRange(ReplacementSettings.TextRules);
         }
 
         [RelayCommand]
@@ -368,7 +214,7 @@ namespace BulkEditor.UI.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                BackupDirectory = Path.GetDirectoryName(dialog.FileName) ?? "";
+                BackupSettings.BackupDirectory = Path.GetDirectoryName(dialog.FileName) ?? "";
             }
         }
 
@@ -386,7 +232,7 @@ namespace BulkEditor.UI.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                LogDirectory = Path.GetDirectoryName(dialog.FileName) ?? "";
+                LoggingSettings.LogDirectory = Path.GetDirectoryName(dialog.FileName) ?? "";
             }
         }
 
@@ -407,7 +253,7 @@ namespace BulkEditor.UI.ViewModels
                 _currentSettings.Update = defaultSettings.Update;
 
                 // Reload properties from updated settings - this will trigger PropertyChanged
-                LoadSettingsIntoProperties();
+                LoadSettingsIntoViewModels();
 
                 _logger.LogInformation("Settings reset to defaults");
             }
@@ -435,7 +281,7 @@ namespace BulkEditor.UI.ViewModels
                 _logger.LogInformation("Starting save settings process");
 
                 // Update current settings from UI properties
-                UpdateSettingsFromProperties();
+                UpdateSettingsFromViewModels();
                 _logger.LogInformation("Settings updated from properties");
 
                 // Validate settings
@@ -476,81 +322,81 @@ namespace BulkEditor.UI.ViewModels
         private bool ValidateSettings()
         {
             // Validate processing settings
-            if (MaxConcurrentDocuments < 1 || MaxConcurrentDocuments > 100)
+            if (ProcessingSettings.MaxConcurrentDocuments < 1 || ProcessingSettings.MaxConcurrentDocuments > 100)
             {
                 _logger.LogWarning("Max concurrent documents must be between 1 and 100");
                 return false;
             }
 
-            if (BatchSize < 1 || BatchSize > 1000)
+            if (ProcessingSettings.BatchSize < 1 || ProcessingSettings.BatchSize > 1000)
             {
                 _logger.LogWarning("Batch size must be between 1 and 1000");
                 return false;
             }
 
-            if (TimeoutPerDocumentMinutes < 1 || TimeoutPerDocumentMinutes > 60)
+            if (ProcessingSettings.TimeoutPerDocumentMinutes < 1 || ProcessingSettings.TimeoutPerDocumentMinutes > 60)
             {
                 _logger.LogWarning("Timeout per document must be between 1 and 60 minutes");
                 return false;
             }
 
             // Validate validation settings
-            if (HttpTimeoutSeconds < 1 || HttpTimeoutSeconds > 300)
+            if (ValidationSettings.HttpTimeoutSeconds < 1 || ValidationSettings.HttpTimeoutSeconds > 300)
             {
                 _logger.LogWarning("HTTP timeout must be between 1 and 300 seconds");
                 return false;
             }
 
-            if (MaxRetryAttempts < 0 || MaxRetryAttempts > 10)
+            if (ValidationSettings.MaxRetryAttempts < 0 || ValidationSettings.MaxRetryAttempts > 10)
             {
                 _logger.LogWarning("Max retry attempts must be between 0 and 10");
                 return false;
             }
 
             // Validate backup settings
-            if (MaxBackupAge < 1 || MaxBackupAge > 365)
+            if (BackupSettings.MaxBackupAge < 1 || BackupSettings.MaxBackupAge > 365)
             {
                 _logger.LogWarning("Max backup age must be between 1 and 365 days");
                 return false;
             }
 
             // Validate logging settings
-            if (MaxLogFileSizeMB < 1 || MaxLogFileSizeMB > 1000)
+            if (LoggingSettings.MaxLogFileSizeMB < 1 || LoggingSettings.MaxLogFileSizeMB > 1000)
             {
                 _logger.LogWarning("Max log file size must be between 1 and 1000 MB");
                 return false;
             }
 
-            if (MaxLogFiles < 1 || MaxLogFiles > 100)
+            if (LoggingSettings.MaxLogFiles < 1 || LoggingSettings.MaxLogFiles > 100)
             {
                 _logger.LogWarning("Max log files must be between 1 and 100");
                 return false;
             }
 
             // Validate replacement settings
-            if (MaxReplacementRules < 1 || MaxReplacementRules > 1000)
+            if (ReplacementSettings.MaxReplacementRules < 1 || ReplacementSettings.MaxReplacementRules > 1000)
             {
                 _logger.LogWarning("Max replacement rules must be between 1 and 1000");
                 return false;
             }
 
             // Validate API settings
-            if (ApiTimeoutSeconds < 1 || ApiTimeoutSeconds > 300)
+            if (ValidationSettings.ApiTimeoutSeconds < 1 || ValidationSettings.ApiTimeoutSeconds > 300)
             {
                 _logger.LogWarning("API timeout must be between 1 and 300 seconds");
                 return false;
             }
 
-            if (ApiCacheExpiryHours < 1 || ApiCacheExpiryHours > 24)
+            if (ValidationSettings.ApiCacheExpiryHours < 1 || ValidationSettings.ApiCacheExpiryHours > 24)
             {
                 _logger.LogWarning("API cache expiry must be between 1 and 24 hours");
                 return false;
             }
 
             // Validate API URL format if provided
-            if (!string.IsNullOrWhiteSpace(ApiBaseUrl) && ApiBaseUrl.ToLower() != "test")
+            if (!string.IsNullOrWhiteSpace(ValidationSettings.ApiBaseUrl) && ValidationSettings.ApiBaseUrl.ToLower() != "test")
             {
-                if (!Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out var uri) ||
+                if (!Uri.TryCreate(ValidationSettings.ApiBaseUrl, UriKind.Absolute, out var uri) ||
                     (uri.Scheme != "http" && uri.Scheme != "https"))
                 {
                     _logger.LogWarning("API Base URL must be a valid HTTP or HTTPS URL");
@@ -559,9 +405,9 @@ namespace BulkEditor.UI.ViewModels
             }
 
             // Validate hyperlink replacement rules if enabled
-            if (EnableHyperlinkReplacement)
+            if (ReplacementSettings.EnableHyperlinkReplacement)
             {
-                var validHyperlinkRules = HyperlinkRules.Where(r =>
+                var validHyperlinkRules = ReplacementSettings.HyperlinkRules.Where(r =>
                     !string.IsNullOrWhiteSpace(r.TitleToMatch) &&
                     !string.IsNullOrWhiteSpace(r.ContentId)).ToList();
 
@@ -577,9 +423,9 @@ namespace BulkEditor.UI.ViewModels
             }
 
             // Validate text replacement rules if enabled
-            if (EnableTextReplacement)
+            if (ReplacementSettings.EnableTextReplacement)
             {
-                var validTextRules = TextRules.Where(r =>
+                var validTextRules = ReplacementSettings.TextRules.Where(r =>
                     !string.IsNullOrWhiteSpace(r.SourceText) &&
                     !string.IsNullOrWhiteSpace(r.ReplacementText)).ToList();
 
@@ -595,22 +441,22 @@ namespace BulkEditor.UI.ViewModels
             }
 
             // Validate update settings
-            if (CheckIntervalHours < 1 || CheckIntervalHours > 168) // 1 hour to 1 week
+            if (UpdateSettings.CheckIntervalHours < 1 || UpdateSettings.CheckIntervalHours > 168) // 1 hour to 1 week
             {
                 _logger.LogWarning("Check interval hours must be between 1 and 168 (1 week)");
                 return false;
             }
 
             // Validate GitHub repository settings if auto-update is enabled
-            if (AutoUpdateEnabled)
+            if (UpdateSettings.AutoUpdateEnabled)
             {
-                if (string.IsNullOrWhiteSpace(GitHubOwner))
+                if (string.IsNullOrWhiteSpace(UpdateSettings.GitHubOwner))
                 {
                     _logger.LogWarning("GitHub owner is required when auto-update is enabled");
                     return false;
                 }
 
-                if (string.IsNullOrWhiteSpace(GitHubRepository))
+                if (string.IsNullOrWhiteSpace(UpdateSettings.GitHubRepository))
                 {
                     _logger.LogWarning("GitHub repository is required when auto-update is enabled");
                     return false;
@@ -725,272 +571,7 @@ namespace BulkEditor.UI.ViewModels
             };
         }
 
-        // Replacement Rule Management Commands
-        [RelayCommand]
-        private void AddHyperlinkRule()
-        {
-            if (HyperlinkRules.Count >= MaxReplacementRules)
-            {
-                _logger.LogWarning("Maximum number of hyperlink replacement rules reached: {MaxRules}", MaxReplacementRules);
-                return;
-            }
 
-            HyperlinkRules.Add(new HyperlinkReplacementRule());
-            _logger.LogInformation("Added new hyperlink replacement rule");
-        }
-
-        [RelayCommand]
-        private void RemoveHyperlinkRule(HyperlinkReplacementRule rule)
-        {
-            if (rule != null)
-            {
-                HyperlinkRules.Remove(rule);
-                _logger.LogInformation("Removed hyperlink replacement rule: {RuleId}", rule.Id);
-            }
-        }
-
-        [RelayCommand]
-        private void AddTextRule()
-        {
-            if (TextRules.Count >= MaxReplacementRules)
-            {
-                _logger.LogWarning("Maximum number of text replacement rules reached: {MaxRules}", MaxReplacementRules);
-                return;
-            }
-
-            TextRules.Add(new TextReplacementRule());
-            _logger.LogInformation("Added new text replacement rule");
-        }
-
-        [RelayCommand]
-        private void RemoveTextRule(TextReplacementRule rule)
-        {
-            if (rule != null)
-            {
-                TextRules.Remove(rule);
-                _logger.LogInformation("Removed text replacement rule: {RuleId}", rule.Id);
-            }
-        }
-
-        [RelayCommand]
-        private void ClearInvalidRules()
-        {
-            // Remove hyperlink rules with blank fields
-            var invalidHyperlinkRules = HyperlinkRules.Where(r =>
-                string.IsNullOrWhiteSpace(r.TitleToMatch) ||
-                string.IsNullOrWhiteSpace(r.ContentId)).ToList();
-
-            foreach (var rule in invalidHyperlinkRules)
-            {
-                HyperlinkRules.Remove(rule);
-            }
-
-            // Remove text rules with blank fields
-            var invalidTextRules = TextRules.Where(r =>
-                string.IsNullOrWhiteSpace(r.SourceText) ||
-                string.IsNullOrWhiteSpace(r.ReplacementText)).ToList();
-
-            foreach (var rule in invalidTextRules)
-            {
-                TextRules.Remove(rule);
-            }
-
-            if (invalidHyperlinkRules.Any() || invalidTextRules.Any())
-            {
-                _logger.LogInformation("Cleared {HyperlinkCount} invalid hyperlink rules and {TextCount} invalid text rules",
-                    invalidHyperlinkRules.Count, invalidTextRules.Count);
-            }
-        }
-
-        [RelayCommand]
-        private async Task TestApiConnection()
-        {
-            try
-            {
-                IsBusy = true;
-                BusyMessage = "Testing API connection...";
-
-                if (string.IsNullOrWhiteSpace(ApiBaseUrl))
-                {
-                    _logger.LogWarning("API Base URL is required for connection test");
-                    System.Windows.MessageBox.Show(
-                        "API Base URL is required for connection test. Please enter a valid URL.",
-                        "API Test Failed",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Warning);
-                    return;
-                }
-
-                if (ApiBaseUrl.ToLower() == "test")
-                {
-                    _logger.LogInformation("API connection test successful (Test mode)");
-                    System.Windows.MessageBox.Show(
-                        "API connection test successful!\n\nTest mode is active - using mock API responses.",
-                        "API Test Successful",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Information);
-                    return;
-                }
-
-                // Test actual API connection
-                using var httpClient = new System.Net.Http.HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(Math.Max(ApiTimeoutSeconds, 5)); // Minimum 5 seconds
-
-                // Add API key if provided
-                if (!string.IsNullOrWhiteSpace(ApiKey))
-                {
-                    httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKey}");
-                }
-
-                _logger.LogInformation("Testing API connection to: {ApiUrl}", ApiBaseUrl);
-                var response = await httpClient.GetAsync(ApiBaseUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseTime = httpClient.Timeout.TotalSeconds;
-                    _logger.LogInformation("API connection test successful - Status: {StatusCode}", response.StatusCode);
-
-                    System.Windows.MessageBox.Show(
-                        $"API connection test successful!\n\n" +
-                        $"URL: {ApiBaseUrl}\n" +
-                        $"Status: {response.StatusCode} {response.ReasonPhrase}\n" +
-                        $"Response Time: < {ApiTimeoutSeconds}s\n" +
-                        $"API Key: {(string.IsNullOrWhiteSpace(ApiKey) ? "Not provided" : "Configured")}",
-                        "API Test Successful",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Information);
-                }
-                else
-                {
-                    _logger.LogWarning("API connection test failed - Status: {StatusCode} {ReasonPhrase}", response.StatusCode, response.ReasonPhrase);
-
-                    System.Windows.MessageBox.Show(
-                        $"API connection test failed!\n\n" +
-                        $"URL: {ApiBaseUrl}\n" +
-                        $"Status: {response.StatusCode} {response.ReasonPhrase}\n" +
-                        $"Please check the URL and your internet connection.\n\n" +
-                        $"If this is a private API, ensure your API key is correct.",
-                        "API Test Failed",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Error);
-                }
-            }
-            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
-            {
-                _logger.LogWarning("API connection test timed out after {TimeoutSeconds} seconds", ApiTimeoutSeconds);
-
-                System.Windows.MessageBox.Show(
-                    $"API connection test timed out!\n\n" +
-                    $"URL: {ApiBaseUrl}\n" +
-                    $"Timeout: {ApiTimeoutSeconds} seconds\n\n" +
-                    $"The API may be slow or unreachable. Try increasing the timeout value or check your internet connection.",
-                    "API Test Timeout",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "API connection test failed with HTTP error");
-
-                System.Windows.MessageBox.Show(
-                    $"API connection test failed!\n\n" +
-                    $"URL: {ApiBaseUrl}\n" +
-                    $"Error: {ex.Message}\n\n" +
-                    $"Please check the URL format and your internet connection.",
-                    "API Test Failed",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Error);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "API connection test failed with unexpected error");
-
-                System.Windows.MessageBox.Show(
-                    $"API connection test failed!\n\n" +
-                    $"URL: {ApiBaseUrl}\n" +
-                    $"Error: {ex.Message}\n\n" +
-                    $"Please check the settings and try again.",
-                    "API Test Failed",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        [RelayCommand]
-        private async Task CheckForUpdates()
-        {
-            try
-            {
-                IsBusy = true;
-                BusyMessage = "Checking for updates...";
-                UpdateCheckStatus = "Checking for updates...";
-
-                _logger.LogInformation("Manual update check initiated");
-
-                var updateInfo = await _updateService.CheckForUpdatesAsync();
-                if (updateInfo != null)
-                {
-                    // Update available
-                    LatestVersion = updateInfo.Version.ToString();
-                    UpdateAvailable = true;
-                    UpdateCheckStatus = $"Update available! Version {updateInfo.Version} is ready to download.";
-                    ReleaseNotes = updateInfo.ReleaseNotes ?? "No release notes available.";
-
-                    _logger.LogInformation("Update available: Version {Version}", updateInfo.Version);
-                    _logger.LogInformation("Release notes: {ReleaseNotes}", updateInfo.ReleaseNotes);
-
-                    // Prompt user for installation
-                    await PromptUserForUpdateInstallationAsync(updateInfo);
-                }
-                else
-                {
-                    // No updates available
-                    var currentVer = _updateService.GetCurrentVersion();
-                    LatestVersion = currentVer.ToString();
-                    UpdateAvailable = false;
-                    UpdateCheckStatus = $"You have the latest version ({currentVer}). No updates available.";
-                    ReleaseNotes = string.Empty;
-
-                    _logger.LogInformation("No updates available");
-                }
-
-                _logger.LogInformation("Update check completed");
-            }
-            catch (Exception ex)
-            {
-                UpdateCheckStatus = "Failed to check for updates. Please check your internet connection.";
-                UpdateAvailable = false;
-                ReleaseNotes = string.Empty;
-                _logger.LogError(ex, "Failed to check for updates");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        private void LoadVersionInformation()
-        {
-            try
-            {
-                var currentVer = _updateService.GetCurrentVersion();
-                CurrentVersion = currentVer.ToString();
-                LatestVersion = "Unknown - check for updates";
-                UpdateAvailable = false;
-                _logger.LogDebug("Loaded version information - Current: {Version}", currentVer);
-            }
-            catch (Exception ex)
-            {
-                CurrentVersion = "Unknown";
-                LatestVersion = "Unknown";
-                UpdateAvailable = false;
-                _logger.LogError(ex, "Failed to load version information");
-            }
-        }
 
         [RelayCommand]
         private void OpenLogsFolder()
@@ -1022,58 +603,5 @@ namespace BulkEditor.UI.ViewModels
             }
         }
 
-        private async Task PromptUserForUpdateInstallationAsync(UpdateInfo updateInfo)
-        {
-            try
-            {
-                var message = $"Update Available!\n\nA new version ({updateInfo.Version}) is available for download.\n\nWould you like to install it now?\n\nRelease Notes:\n{updateInfo.ReleaseNotes}";
-                var result = System.Windows.MessageBox.Show(
-                    message,
-                    "Update Available",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Information);
-
-                if (result == System.Windows.MessageBoxResult.Yes)
-                {
-                    _logger.LogInformation("User accepted update installation for version {Version}", updateInfo.Version);
-
-                    BusyMessage = "Installing update...";
-                    IsBusy = true;
-
-                    try
-                    {
-                        var installSuccess = await _updateService.DownloadAndInstallUpdateAsync(updateInfo, null);
-                        if (installSuccess)
-                        {
-                            _logger.LogInformation("Update installation initiated successfully");
-                            UpdateCheckStatus = "Update installation started. The application will restart to complete the update.";
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Update installation failed");
-                            UpdateCheckStatus = "Update installation failed. Please try again later.";
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error during update installation");
-                        UpdateCheckStatus = "Update installation failed. Please check the logs for details.";
-                    }
-                    finally
-                    {
-                        IsBusy = false;
-                    }
-                }
-                else
-                {
-                    _logger.LogInformation("User declined update installation for version {Version}", updateInfo.Version);
-                    UpdateCheckStatus = $"Update available but not installed. Version {updateInfo.Version} can be installed later.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error prompting user for update installation");
-            }
-        }
     }
 }

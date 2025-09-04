@@ -1,4 +1,7 @@
 using System.Windows.Controls;
+using System.Windows.Input;
+using BulkEditor.UI.Models;
+using CommunityToolkit.Mvvm.Input;
 
 namespace BulkEditor.UI.Controls
 {
@@ -11,5 +14,6 @@ namespace BulkEditor.UI.Controls
         {
             InitializeComponent();
         }
+
     }
 }

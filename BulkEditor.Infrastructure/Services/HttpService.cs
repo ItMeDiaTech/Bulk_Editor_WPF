@@ -223,5 +223,25 @@ namespace BulkEditor.Infrastructure.Services
             // Note: User-Agent modification disabled to prevent "Properties can only be modified before sending the first request" error
             _logger.LogDebug("HTTP client user agent change requested: {UserAgent} (not applied to avoid HttpClient configuration errors)", userAgent);
         }
+
+        public async Task<bool> TestConnectionAsync(string url, string apiKey = "")
+        {
+            try
+            {
+                var request = new HttpRequestMessage(HttpMethod.Head, url);
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                {
+                    request.Headers.Add("Authorization", $"Bearer {apiKey}");
+                }
+
+                var response = await _httpClient.SendAsync(request);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to test connection to {Url}", url);
+                return false;
+            }
+        }
     }
 }

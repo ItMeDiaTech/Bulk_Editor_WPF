@@ -97,7 +97,7 @@ namespace BulkEditor.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error during text optimization in session for document: {FileName}", document.FileName);
 
-                document.ProcessingErrors.Add($"Text optimization failed: {ex.Message}");
+                document.ProcessingErrors.Add(new ProcessingError { Message = $"Text optimization failed: {ex.Message}", Severity = ErrorSeverity.Error });
 
                 document.ChangeLog.Changes.Add(new ChangeEntry
                 {
@@ -185,7 +185,7 @@ namespace BulkEditor.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error during text optimization for document: {FileName}", document.FileName);
 
-                document.ProcessingErrors.Add($"Text optimization failed: {ex.Message}");
+                document.ProcessingErrors.Add(new ProcessingError { Message = $"Text optimization failed: {ex.Message}", Severity = ErrorSeverity.Error });
 
                 document.ChangeLog.Changes.Add(new ChangeEntry
                 {

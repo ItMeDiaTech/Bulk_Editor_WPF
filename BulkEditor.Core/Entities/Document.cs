@@ -15,7 +15,7 @@ namespace BulkEditor.Core.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ProcessedAt { get; set; }
         public List<Hyperlink> Hyperlinks { get; set; } = new();
-        public List<string> ProcessingErrors { get; set; } = new();
+        public List<ProcessingError> ProcessingErrors { get; set; } = new();
         public string BackupPath { get; set; } = string.Empty;
         public DocumentMetadata Metadata { get; set; } = new();
         public ChangeLog ChangeLog { get; set; } = new();
