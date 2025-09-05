@@ -26,10 +26,19 @@ namespace BulkEditor.Infrastructure.Services
         private readonly Regex _fiveDigitRegex;
         private readonly Regex _sixDigitRegex;
 
+        // CRITICAL FIX: Add missing primary lookup ID regex pattern like VBA (Issue #1)
+        private readonly Regex _lookupIdRegex;
+
         public HyperlinkReplacementService(IHttpService httpService, ILoggingService logger)
         {
             _httpService = httpService ?? throw new ArgumentNullException(nameof(httpService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            // CRITICAL FIX: Primary regex pattern exactly like VBA with IgnoreCase (Issue #1)
+            // VBA: .Pattern = "(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})"
+            // VBA: .IgnoreCase = True
+            _lookupIdRegex = new Regex(@"(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
             // Regex for extracting 6-digit content IDs from Content ID field
             _contentIdRegex = new Regex(@"[0-9]{6}", RegexOptions.Compiled);
@@ -102,6 +111,78 @@ namespace BulkEditor.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error processing hyperlink replacements in session for document: {FileName}", document.FileName);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// CRITICAL FIX: Clean up empty hyperlinks using backward iteration like VBA (Issue #18, #19)
+        /// VBA: For i = links.Count To 1 Step -1
+        /// </summary>
+        public int CleanupEmptyHyperlinksInSession(WordprocessingDocument wordDocument, CoreDocument document)
+        {
+            try
+            {
+                var mainPart = wordDocument.MainDocumentPart;
+                if (mainPart?.Document?.Body == null)
+                {
+                    _logger.LogWarning("No document body found for hyperlink cleanup: {FileName}", document.FileName);
+                    return 0;
+                }
+
+                var hyperlinks = mainPart.Document.Body.Descendants<OpenXmlHyperlink>().ToList();
+                var deletedCount = 0;
+
+                // CRITICAL FIX: Backward iteration to prevent index shifting during deletion (Issue #18)
+                // VBA: For i = links.Count To 1 Step -1
+                for (int i = hyperlinks.Count - 1; i >= 0; i--)
+                {
+                    var hyperlink = hyperlinks[i];
+                    var displayText = hyperlink.InnerText?.Trim() ?? string.Empty;
+                    var hasAddress = !string.IsNullOrEmpty(hyperlink.Id?.Value);
+
+                    // CRITICAL FIX: VBA logic - delete if empty text but has address (Issue #18)
+                    // VBA: If Trim$(links(i).TextToDisplay) = "" And Len(links(i).Address) > 0 Then
+                    if (string.IsNullOrEmpty(displayText) && hasAddress)
+                    {
+                        try
+                        {
+                            // Log before deletion
+                            _logger.LogDebug("Deleting empty hyperlink at index {Index} with relationship ID: {RelId}",
+                                i, hyperlink.Id?.Value ?? "unknown");
+
+                            // Delete the hyperlink element
+                            hyperlink.Remove();
+                            deletedCount++;
+
+                            // Add to change log
+                            document.ChangeLog.Changes.Add(new ChangeEntry
+                            {
+                                Type = ChangeType.HyperlinkRemoved,
+                                Description = "Deleted empty hyperlink using VBA backward iteration methodology",
+                                OldValue = $"Empty hyperlink with RelId: {hyperlink.Id?.Value}",
+                                NewValue = "Deleted",
+                                ElementId = hyperlink.Id?.Value ?? $"hyperlink-{i}"
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning("Failed to delete empty hyperlink at index {Index}: {Error}", i, ex.Message);
+                        }
+                    }
+                }
+
+                if (deletedCount > 0)
+                {
+                    _logger.LogInformation("Cleaned up {Count} empty hyperlinks using VBA methodology in: {FileName}",
+                        deletedCount, document.FileName);
+                }
+
+                return deletedCount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during hyperlink cleanup for document: {FileName}", document.FileName);
+                return 0;
             }
         }
 
@@ -181,7 +262,7 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                var documentRecord = await LookupDocumentByContentIdAsync(contentId, cancellationToken);
+                var documentRecord = await LookupDocumentByContentIdAsync(contentId, cancellationToken).ConfigureAwait(false);
                 return documentRecord?.Title ?? $"Document {contentId}";
             }
             catch (Exception ex)
@@ -214,13 +295,13 @@ namespace BulkEditor.Infrastructure.Services
                 string jsonResponse;
                 try
                 {
-                    jsonResponse = await CallRealApiAsync(lookupIds, cancellationToken);
+                    jsonResponse = await CallRealApiAsync(lookupIds, cancellationToken).ConfigureAwait(false);
                     _logger.LogInformation("Successfully called real API for {Count} lookup identifiers", lookupIds.Count());
                 }
                 catch (Exception apiEx)
                 {
                     _logger.LogWarning("Real API call failed, falling back to simulation: {Error}", apiEx.Message);
-                    jsonResponse = await SimulateApiCallAsync(lookupIds, cancellationToken);
+                    jsonResponse = await SimulateApiCallAsync(lookupIds, cancellationToken).ConfigureAwait(false);
                 }
 
                 // Parse JSON response with flexible matching following Base_File.vba methodology
@@ -249,27 +330,39 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 // CRITICAL FIX: Build exact VBA JSON structure (Issue #4)
+                // VBA: jsonBody = "{""Lookup_ID"": [" & Join(arrIDs, ",") & "]}"
                 var requestBody = new
                 {
-                    Lookup_ID = lookupIds.ToArray() // Exact property name like VBA
+                    Lookup_ID = lookupIds.ToArray() // Exact property name like VBA - case sensitive!
                 };
 
                 _logger.LogDebug("Calling real API with {Count} lookup identifiers: {LookupIds}",
                     lookupIds.Count(), string.Join(", ", lookupIds));
 
+                // CRITICAL FIX: Use proper JSON serialization options (Issue #7)
+                var jsonOptions = new System.Text.Json.JsonSerializerOptions
+                {
+                    // IMPORTANT: Do NOT use PropertyNameCaseInsensitive for REQUEST
+                    // VBA expects exact property names
+                    WriteIndented = false
+                };
+
+                var jsonString = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
+                _logger.LogDebug("API request JSON: {JsonRequest}", jsonString);
+
                 // TODO: Replace with actual CVS Health API endpoint
                 // For now, this demonstrates the correct structure
                 var apiEndpoint = "https://api.cvshealthdocs.com/lookup-documents"; // Example endpoint
 
-                var response = await _httpService.PostJsonAsync(apiEndpoint, requestBody, cancellationToken);
+                var response = await _httpService.PostJsonAsync(apiEndpoint, requestBody, cancellationToken).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                     throw new InvalidOperationException($"API call failed with status {response.StatusCode}: {errorContent}");
                 }
 
-                var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
+                var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Real API response received: {Response}", jsonResponse);
 
                 return jsonResponse;
@@ -286,7 +379,7 @@ namespace BulkEditor.Infrastructure.Services
         /// </summary>
         private async Task<string> SimulateApiCallAsync(IEnumerable<string> lookupIds, CancellationToken cancellationToken)
         {
-            await Task.Delay(100, cancellationToken); // Simulate network delay
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false); // Simulate network delay
 
             var responseBuilder = new System.Text.StringBuilder();
             responseBuilder.AppendLine("{");
@@ -332,27 +425,52 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
-        /// Extracts Content ID from Lookup ID following VBA pattern matching
+        /// CRITICAL FIX: Extracts Content ID from Lookup ID following VBA pattern matching (Issue #1)
+        /// Also handles URL-encoded values and case-insensitive matching
         /// </summary>
         private string ExtractContentIdFromLookupId(string lookupId)
         {
             if (string.IsNullOrEmpty(lookupId))
                 return lookupId;
 
-            // Extract the numeric part from TSRC-xxx-123456 or CMS-xxx-123456 format
-            var match = System.Text.RegularExpressions.Regex.Match(lookupId, @"(?:TSRC|CMS)-[^-]+-(\d{6})");
-            if (match.Success)
+            try
             {
-                return match.Groups[1].Value;
-            }
+                // CRITICAL FIX: Handle URL encoding first (Issue #3)
+                var decodedLookupId = Uri.UnescapeDataString(lookupId);
 
-            return lookupId;
+                // Extract the numeric part from TSRC-xxx-123456 or CMS-xxx-123456 format
+                // CRITICAL FIX: Use case-insensitive matching like VBA (Issue #1)
+                var match = System.Text.RegularExpressions.Regex.Match(decodedLookupId,
+                    @"(?:TSRC|CMS)-[^-]+-(\d{6})",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (match.Success)
+                {
+                    return match.Groups[1].Value;
+                }
+
+                // If no pattern match, check if the input itself is just digits
+                var digitMatch = System.Text.RegularExpressions.Regex.Match(decodedLookupId, @"^\d{5,6}$");
+                if (digitMatch.Success)
+                {
+                    // Pad 5-digit to 6-digit with leading zero
+                    return digitMatch.Value.PadLeft(6, '0');
+                }
+
+                return decodedLookupId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error extracting Content ID from Lookup ID: {LookupId}. Error: {Error}", lookupId, ex.Message);
+                return lookupId;
+            }
         }
 
         /// <summary>
-        /// Parses JSON response with flexible matching following Base_File.vba methodology
-        /// CRITICAL FIX: Now includes proper case-insensitive JSON property handling (Issue #6)
-        /// Matches original lookup identifiers against Document_ID, Content_ID, or Lookup_ID fields
+        /// CRITICAL FIX: Parses JSON response following EXACT Base_File.vba methodology (Issue #7)
+        /// VBA: For Each itm In json("Results")
+        /// VBA:     If Not recDict.Exists(itm("Document_ID")) Then recDict.Add itm("Document_ID"), itm
+        /// VBA:     If Not recDict.Exists(itm("Content_ID")) Then recDict.Add itm("Content_ID"), itm
+        /// VBA: Next itm
         /// </summary>
         private ApiProcessingResult ParseJsonResponseWithFlexibleMatching(string jsonResponse, IEnumerable<string> originalLookupIds)
         {
@@ -360,14 +478,30 @@ namespace BulkEditor.Infrastructure.Services
 
             try
             {
-                using var document = System.Text.Json.JsonDocument.Parse(jsonResponse);
+                // CRITICAL FIX: Use proper JSON deserialization options (Issue #6, #7)
+                var jsonOptions = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true, // Handle case variations in RESPONSE
+                    AllowTrailingCommas = true,
+                    ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip
+                };
+
+                using var document = System.Text.Json.JsonDocument.Parse(jsonResponse, new System.Text.Json.JsonDocumentOptions
+                {
+                    AllowTrailingCommas = true,
+                    CommentHandling = System.Text.Json.JsonCommentHandling.Skip
+                });
                 var root = document.RootElement;
 
-                // Track which original lookup identifiers were found in response
-                var foundIdentifiers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                // CRITICAL FIX: Build dictionary exactly like VBA with BOTH Document_ID and Content_ID as keys (Issue #7)
+                // VBA: Dim recDict As Object: Set recDict = CreateObject("Scripting.Dictionary")
+                // VBA: recDict.CompareMode = vbTextCompare
+                var recDict = new Dictionary<string, DocumentRecord>(StringComparer.OrdinalIgnoreCase);
 
                 if (root.TryGetProperty("Results", out var resultsElement))
                 {
+                    // CRITICAL FIX: Exact VBA dictionary building methodology (Issue #7)
+                    // VBA: For Each itm In json("Results")
                     foreach (var resultElement in resultsElement.EnumerateArray())
                     {
                         // CRITICAL FIX: Safe property extraction with case-insensitive fallback (Issue #6)
@@ -380,101 +514,67 @@ namespace BulkEditor.Infrastructure.Services
                             Status = GetJsonPropertySafely(resultElement, "Status") ?? "Unknown"
                         };
 
-                        // CRITICAL: Flexible matching - check if any of our original lookup IDs
-                        // match against Document_ID, Content_ID, or Lookup_ID fields
-                        var matchedIdentifiers = new List<string>();
-
-                        foreach (var originalId in originalLookupIds)
+                        // CRITICAL FIX: VBA methodology - add BOTH keys to dictionary (Issue #7)
+                        // VBA: If Not recDict.Exists(itm("Document_ID")) Then recDict.Add itm("Document_ID"), itm
+                        if (!string.IsNullOrEmpty(documentRecord.Document_ID) && !recDict.ContainsKey(documentRecord.Document_ID))
                         {
-                            if (string.IsNullOrEmpty(originalId))
-                                continue;
-
-                            // Check for match against any field (Base_File.vba methodology)
-                            bool isMatch = false;
-
-                            // Match against Document_ID
-                            if (!string.IsNullOrEmpty(documentRecord.Document_ID) &&
-                                documentRecord.Document_ID.Equals(originalId, StringComparison.OrdinalIgnoreCase))
-                            {
-                                isMatch = true;
-                                _logger.LogDebug("Matched original ID '{OriginalId}' against Document_ID '{DocumentId}'", originalId, documentRecord.Document_ID);
-                            }
-
-                            // Match against Content_ID
-                            if (!isMatch && !string.IsNullOrEmpty(documentRecord.Content_ID) &&
-                                documentRecord.Content_ID.Equals(originalId, StringComparison.OrdinalIgnoreCase))
-                            {
-                                isMatch = true;
-                                _logger.LogDebug("Matched original ID '{OriginalId}' against Content_ID '{ContentId}'", originalId, documentRecord.Content_ID);
-                            }
-
-                            // Match against Lookup_ID
-                            if (!isMatch && !string.IsNullOrEmpty(documentRecord.Lookup_ID) &&
-                                documentRecord.Lookup_ID.Equals(originalId, StringComparison.OrdinalIgnoreCase))
-                            {
-                                isMatch = true;
-                                _logger.LogDebug("Matched original ID '{OriginalId}' against Lookup_ID '{LookupId}'", originalId, documentRecord.Lookup_ID);
-                            }
-
-                            // Also try partial matching for embedded IDs (e.g., extract from docid parameter)
-                            if (!isMatch)
-                            {
-                                // Extract docid from URL-like identifiers
-                                var extractedId = ExtractDocIdFromUrl(originalId);
-                                if (!string.IsNullOrEmpty(extractedId))
-                                {
-                                    if (documentRecord.Document_ID.Equals(extractedId, StringComparison.OrdinalIgnoreCase) ||
-                                        documentRecord.Content_ID.Equals(extractedId, StringComparison.OrdinalIgnoreCase) ||
-                                        documentRecord.Lookup_ID.Equals(extractedId, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        isMatch = true;
-                                        _logger.LogDebug("Matched extracted ID '{ExtractedId}' from '{OriginalId}' against document record", extractedId, originalId);
-                                    }
-                                }
-                            }
-
-                            if (isMatch)
-                            {
-                                matchedIdentifiers.Add(originalId);
-                                foundIdentifiers.Add(originalId);
-                            }
+                            recDict[documentRecord.Document_ID] = documentRecord;
+                            _logger.LogDebug("Added Document_ID key to dictionary: {DocumentId}", documentRecord.Document_ID);
                         }
 
-                        // Only add document record if we found at least one match
-                        if (matchedIdentifiers.Any())
+                        // VBA: If Not recDict.Exists(itm("Content_ID")) Then recDict.Add itm("Content_ID"), itm
+                        if (!string.IsNullOrEmpty(documentRecord.Content_ID) && !recDict.ContainsKey(documentRecord.Content_ID))
                         {
-                            // CRITICAL: Detect expired status from JSON response
-                            if (!string.IsNullOrEmpty(documentRecord.Status) &&
-                                documentRecord.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase))
-                            {
-                                result.ExpiredDocuments.Add(documentRecord);
-                                _logger.LogDebug("Detected expired status for matched identifiers: {MatchedIds}", string.Join(", ", matchedIdentifiers));
-                            }
-                            else
-                            {
-                                result.FoundDocuments.Add(documentRecord);
-                                _logger.LogDebug("Found active document for matched identifiers: {MatchedIds}", string.Join(", ", matchedIdentifiers));
-                            }
+                            recDict[documentRecord.Content_ID] = documentRecord;
+                            _logger.LogDebug("Added Content_ID key to dictionary: {ContentId}", documentRecord.Content_ID);
                         }
                     }
                 }
 
-                // CRITICAL: Identify missing lookup IDs (no response returned or no match found)
+                // CRITICAL FIX: Now lookup against dictionary using original IDs exactly like VBA (Issue #7)
+                // VBA: If recDict.Exists(lookupID) Then Set rec = recDict(lookupID)
                 foreach (var originalId in originalLookupIds)
                 {
-                    if (!foundIdentifiers.Contains(originalId))
+                    if (string.IsNullOrEmpty(originalId))
+                        continue;
+
+                    if (recDict.ContainsKey(originalId))
                     {
+                        var documentRecord = recDict[originalId];
+
+                        // CRITICAL: Detect expired status from JSON response exactly like VBA
+                        // VBA: If rec("Status") = "Expired" And Not alreadyExpired Then
+                        if (!string.IsNullOrEmpty(documentRecord.Status) &&
+                            documentRecord.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.ExpiredDocuments.Add(documentRecord);
+                            _logger.LogDebug("Found expired document in dictionary for ID: {LookupId}", originalId);
+                        }
+                        else
+                        {
+                            result.FoundDocuments.Add(documentRecord);
+                            _logger.LogDebug("Found active document in dictionary for ID: {LookupId}", originalId);
+                        }
+                    }
+                    else
+                    {
+                        // CRITICAL: Track missing IDs exactly like VBA logic
+                        // VBA: ElseIf Not alreadyNotFound And Not alreadyExpired Then
+                        // VBA:     hl.TextToDisplay = hl.TextToDisplay & " - Not Found"
                         result.MissingLookupIds.Add(originalId);
-                        _logger.LogDebug("No response match found for lookup identifier: {LookupId}", originalId);
+                        _logger.LogDebug("No dictionary entry found for lookup identifier: {LookupId}", originalId);
                     }
                 }
 
                 result.IsSuccess = true;
+                _logger.LogInformation("Dictionary built with {Count} entries, found {FoundCount} active, {ExpiredCount} expired, {MissingCount} missing",
+                    recDict.Count, result.FoundDocuments.Count, result.ExpiredDocuments.Count, result.MissingLookupIds.Count);
+
                 return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error parsing JSON response with flexible matching");
+                _logger.LogError(ex, "Error parsing JSON response with VBA dictionary methodology");
                 result.HasError = true;
                 result.ErrorMessage = ex.Message;
                 return result;
@@ -525,6 +625,52 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
+        /// CRITICAL FIX: Extract lookup ID from hyperlink following VBA methodology (Issues #1, #2, #3)
+        /// VBA: ElseIf InStr(1, full, "docid=", vbTextCompare) > 0 Then
+        /// </summary>
+        private string ExtractLookupID(string address, string subAddress)
+        {
+            string full = address + (!string.IsNullOrEmpty(subAddress) ? "#" + subAddress : "");
+
+            try
+            {
+                // CRITICAL FIX: Primary regex pattern exactly like VBA (Issue #1)
+                var match = _lookupIdRegex.Match(full);
+                if (match.Success)
+                {
+                    var result = match.Value.ToUpper(); // VBA normalizes to uppercase
+                    _logger.LogDebug("Extracted lookup ID via primary regex: {LookupId} from {Full}", result, full);
+                    return result;
+                }
+
+                // CRITICAL FIX: Fallback docid extraction like VBA (Issue #2)
+                // VBA: ElseIf InStr(1, full, "docid=", vbTextCompare) > 0 Then
+                // VBA: ExtractLookupID = Trim$(Split(Split(full, "docid=")(1), "&")(0))
+                if (full.IndexOf("docid=", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    var parts = full.Split(new[] { "docid=" }, StringSplitOptions.None);
+                    if (parts.Length > 1)
+                    {
+                        var docId = parts[1].Split('&')[0].Trim();
+
+                        // CRITICAL FIX: Handle URL encoding like VBA expects (Issue #3)
+                        var decodedDocId = Uri.UnescapeDataString(docId);
+                        _logger.LogDebug("Extracted lookup ID via docid fallback: {LookupId} from {Full}", decodedDocId, full);
+                        return decodedDocId;
+                    }
+                }
+
+                _logger.LogDebug("No lookup ID found in: {Full}", full);
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error extracting lookup ID from: {Full}. Error: {Error}", full, ex.Message);
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
         /// Extracts docid parameter from URLs following Base_File.vba methodology
         /// </summary>
         private string ExtractDocIdFromUrl(string input)
@@ -538,7 +684,9 @@ namespace BulkEditor.Infrastructure.Services
                 var docIdMatch = System.Text.RegularExpressions.Regex.Match(input, @"docid=([^&\s]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 if (docIdMatch.Success)
                 {
-                    return docIdMatch.Groups[1].Value.Trim();
+                    // CRITICAL FIX: Handle URL encoding (Issue #3)
+                    var rawDocId = docIdMatch.Groups[1].Value.Trim();
+                    return Uri.UnescapeDataString(rawDocId);
                 }
 
                 // Return empty if no docid found
@@ -594,7 +742,7 @@ namespace BulkEditor.Infrastructure.Services
                 _logger.LogDebug("Looking up document by identifier: {Identifier}", identifier);
 
                 // Use flexible API lookup with single identifier
-                var apiResult = await ProcessApiResponseAsync(new[] { identifier }, cancellationToken);
+                var apiResult = await ProcessApiResponseAsync(new[] { identifier }, cancellationToken).ConfigureAwait(false);
 
                 if (apiResult.HasError)
                 {
@@ -625,7 +773,7 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 // Fallback to simulation for testing
-                var documentRecord = await SimulateDocumentLookupAsync(identifier, cancellationToken);
+                var documentRecord = await SimulateDocumentLookupAsync(identifier, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Used simulation fallback for identifier: {Identifier}", identifier);
                 return documentRecord;
             }
@@ -682,7 +830,7 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 // CRITICAL FIX: Use flexible lookup - rule.ContentId can be Document_ID or Content_ID
-                var documentRecord = await LookupDocumentByContentIdAsync(rule.ContentId, cancellationToken);
+                var documentRecord = await LookupDocumentByContentIdAsync(rule.ContentId, cancellationToken).ConfigureAwait(false);
 
                 // Handle missing lookup identifier response (when server returns no response)
                 if (documentRecord == null)
@@ -711,11 +859,27 @@ namespace BulkEditor.Infrastructure.Services
                         ? documentRecord.Content_ID
                         : rule.ContentId;
 
-                    if (!string.IsNullOrEmpty(expiredContentId) && expiredContentId.Length >= 6)
+                    // CRITICAL FIX: Add proper bounds checking to prevent IndexOutOfRangeException (Issue #12)
+                    if (!string.IsNullOrEmpty(expiredContentId))
                     {
-                        var last6 = expiredContentId.Substring(expiredContentId.Length - 6);
-                        var pattern6 = $" ({last6})";
+                        string contentIdToAppend;
+                        if (expiredContentId.Length >= 6)
+                        {
+                            // Extract last 6 digits safely
+                            contentIdToAppend = expiredContentId.Substring(expiredContentId.Length - 6);
+                        }
+                        else if (expiredContentId.Length == 5)
+                        {
+                            // Pad 5-digit with leading zero like VBA methodology
+                            contentIdToAppend = "0" + expiredContentId;
+                        }
+                        else
+                        {
+                            // Use as-is for shorter content IDs
+                            contentIdToAppend = expiredContentId.PadLeft(6, '0');
+                        }
 
+                        var pattern6 = $" ({contentIdToAppend})";
                         if (!expiredDisplayText.Contains(pattern6, StringComparison.OrdinalIgnoreCase))
                         {
                             expiredDisplayText = expiredDisplayText.Trim() + pattern6;
@@ -778,27 +942,30 @@ namespace BulkEditor.Infrastructure.Services
 
                 if (!string.IsNullOrEmpty(apiContentId))
                 {
-                    // CRITICAL FIX: Exact VBA Content_ID digit extraction (Issue #11-12)
+                    // CRITICAL FIX: Exact VBA Content_ID digit extraction with proper bounds checking (Issues #11-13)
                     if (apiContentId.Length >= 6)
                     {
                         // Extract exactly like VBA: Right$(rec("Content_ID"), 6)
                         var last6 = apiContentId.Substring(apiContentId.Length - 6);
-                        // Extract exactly like VBA: Right$(last6, 5)
-                        var last5 = last6.Substring(1); // Skip first digit (0-based indexing correction)
+                        // Extract exactly like VBA: Right$(last6, 5) - but with bounds checking
+                        var last5 = last6.Length > 1 ? last6.Substring(1) : last6; // Safe substring
 
                         var pattern5 = $" ({last5})";
                         var pattern6 = $" ({last6})";
 
-                        // CRITICAL FIX: Exact VBA parentheses detection (Issue #13)
+                        // CRITICAL FIX: Exact VBA parentheses detection with safe substring (Issue #13)
                         // VBA: If Right$(dispText, Len(" (" & last5 & ")")) = " (" & last5 & ")" And Right$(dispText, Len(" (" & last6 & ")")) <> " (" & last6 & ")" Then
                         if (newDisplayText.EndsWith(pattern5, StringComparison.OrdinalIgnoreCase) &&
                             !newDisplayText.EndsWith(pattern6, StringComparison.OrdinalIgnoreCase))
                         {
-                            // Replace last 5 with last 6 exactly like VBA
+                            // Replace last 5 with last 6 exactly like VBA - with safe substring
                             // VBA: dispText = Left$(dispText, Len(dispText) - Len(" (" & last5 & ")")) & " (" & last6 & ")"
-                            newDisplayText = newDisplayText.Substring(0, newDisplayText.Length - pattern5.Length) + pattern6;
-                            displayContentId = last6; // Update for result tracking
-                            _logger.LogInformation("Upgraded 5-digit Content_ID to 6-digit: {Old} -> {New}", pattern5, pattern6);
+                            if (newDisplayText.Length >= pattern5.Length)
+                            {
+                                newDisplayText = newDisplayText.Substring(0, newDisplayText.Length - pattern5.Length) + pattern6;
+                                displayContentId = last6; // Update for result tracking
+                                _logger.LogInformation("Upgraded 5-digit Content_ID to 6-digit: {Old} -> {New}", pattern5, pattern6);
+                            }
                         }
                         // VBA: ElseIf InStr(1, dispText, " (" & last6 & ")", vbTextCompare) = 0 Then
                         else if (!newDisplayText.Contains(pattern6, StringComparison.OrdinalIgnoreCase))
@@ -808,6 +975,19 @@ namespace BulkEditor.Infrastructure.Services
                             newDisplayText = newDisplayText.Trim() + pattern6;
                             displayContentId = last6; // Update for result tracking
                             _logger.LogInformation("Appended Content_ID to hyperlink: {ContentId}", last6);
+                        }
+                    }
+                    else if (apiContentId.Length == 5)
+                    {
+                        // CRITICAL FIX: Handle 5-digit Content IDs with proper padding (Issue #11)
+                        var paddedContentId = "0" + apiContentId; // VBA methodology: pad with leading zero
+                        var pattern6 = $" ({paddedContentId})";
+
+                        if (!newDisplayText.Contains(pattern6, StringComparison.OrdinalIgnoreCase))
+                        {
+                            newDisplayText = newDisplayText.Trim() + pattern6;
+                            displayContentId = paddedContentId; // Update for result tracking
+                            _logger.LogInformation("Appended padded 5-digit Content_ID: {ContentId}", paddedContentId);
                         }
                     }
                     else
@@ -838,7 +1018,8 @@ namespace BulkEditor.Infrastructure.Services
                 var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
                 var targetSubAddress = $"!/view?docid={cleanDocumentId}";
 
-                // Build complete URL for validation and logging
+                // Build complete URL for validation and logging only
+                // NOTE: This is for logging/validation - actual relationship uses separate Address/SubAddress
                 var newUrl = targetAddress + "#" + targetSubAddress;
 
                 // Update the hyperlink display text
@@ -856,10 +1037,11 @@ namespace BulkEditor.Infrastructure.Services
                             throw new InvalidOperationException($"Generated base address is invalid: {targetAddress}");
                         }
 
-                        // CRITICAL FIX: Create relationship with proper URI structure like VBA
-                        // VBA updates both Address and SubAddress separately
-                        var relationshipUri = new Uri(targetAddress + "#" + targetSubAddress);
-                        var newRelationship = mainPart.AddHyperlinkRelationship(relationshipUri, true);
+                        // CRITICAL FIX: Create relationship with proper URI structure like VBA (Issue #8)
+                        // VBA keeps Address and SubAddress SEPARATE - do NOT concatenate!
+                        // VBA: .Address = targetAddress, .SubAddress = targetSub
+                        var relationshipUri = new Uri(targetAddress);
+                        var newRelationship = mainPart.AddHyperlinkRelationship(relationshipUri, true, targetSubAddress);
 
                         // Update the hyperlink element to use the new relationship ID
                         openXmlHyperlink.Id = newRelationship.Id;
@@ -1014,7 +1196,7 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 // Simulate API call delay
-                await Task.Delay(50, cancellationToken);
+                await Task.Delay(50, cancellationToken).ConfigureAwait(false);
 
                 // More predictable simulation for testing - only simulate missing for specific patterns
                 var shouldBeMissing = contentId.Contains("999999") || contentId.Contains("000001");
@@ -1187,3 +1369,4 @@ namespace BulkEditor.Infrastructure.Services
         }
     }
 }
+

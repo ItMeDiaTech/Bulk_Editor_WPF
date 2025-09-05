@@ -132,6 +132,7 @@ namespace BulkEditor.Infrastructure.Services
             {
                 var result = new ReplacementValidationResult { IsValid = true };
 
+                // CRITICAL FIX: Use ConfigureAwait(false) for proper async patterns (Issue #24-25)
                 await Task.Run(() =>
                 {
                     foreach (var rule in rules)
@@ -152,7 +153,7 @@ namespace BulkEditor.Infrastructure.Services
                                 break;
                         }
                     }
-                }, cancellationToken);
+                }, cancellationToken).ConfigureAwait(false);
 
                 result.IsValid = !result.ValidationErrors.Any();
 

@@ -49,12 +49,12 @@ namespace BulkEditor.Infrastructure.Services
                 result.LookupId = ExtractLookupId(hyperlink.OriginalUrl);
 
                 // Check if URL is accessible
-                var isAccessible = await _httpService.IsUrlAccessibleAsync(hyperlink.OriginalUrl, cancellationToken);
+                var isAccessible = await _httpService.IsUrlAccessibleAsync(hyperlink.OriginalUrl, cancellationToken).ConfigureAwait(false);
 
                 if (isAccessible)
                 {
                     // Check if content indicates expiration
-                    var isExpired = await IsUrlExpiredAsync(hyperlink.OriginalUrl, cancellationToken);
+                    var isExpired = await IsUrlExpiredAsync(hyperlink.OriginalUrl, cancellationToken).ConfigureAwait(false);
 
                     if (isExpired)
                     {
@@ -71,7 +71,7 @@ namespace BulkEditor.Infrastructure.Services
                 else
                 {
                     // Check specific error types
-                    var statusCheck404 = await _httpService.CheckUrlStatusAsync(hyperlink.OriginalUrl, HttpStatusCode.NotFound, cancellationToken);
+                    var statusCheck404 = await _httpService.CheckUrlStatusAsync(hyperlink.OriginalUrl, HttpStatusCode.NotFound, cancellationToken).ConfigureAwait(false);
 
                     if (statusCheck404)
                     {
@@ -90,17 +90,17 @@ namespace BulkEditor.Infrastructure.Services
                 // Generate Content ID and get Document ID if lookup ID is found
                 if (!string.IsNullOrEmpty(result.LookupId))
                 {
-                    result.ContentId = await GenerateContentIdAsync(result.LookupId, cancellationToken);
+                    result.ContentId = await GenerateContentIdAsync(result.LookupId, cancellationToken).ConfigureAwait(false);
 
                     // Get document record to extract Document_ID for URL generation
-                    var documentRecord = await SimulateApiLookupAsync(result.LookupId, cancellationToken);
+                    var documentRecord = await SimulateApiLookupAsync(result.LookupId, cancellationToken).ConfigureAwait(false);
                     if (documentRecord != null)
                     {
                         result.DocumentId = documentRecord.Document_ID;
                     }
 
                     // Check for title differences and handle replacement/reporting
-                    var titleComparison = await CheckTitleDifferenceAsync(hyperlink, result.LookupId, result.ContentId, cancellationToken);
+                    var titleComparison = await CheckTitleDifferenceAsync(hyperlink, result.LookupId, result.ContentId, cancellationToken).ConfigureAwait(false);
                     if (titleComparison.TitlesDiffer)
                     {
                         result.TitleComparison = titleComparison;
@@ -164,15 +164,57 @@ namespace BulkEditor.Infrastructure.Services
                 if (string.IsNullOrEmpty(url))
                     return string.Empty;
 
-                var match = _lookupIdRegex.Match(url);
-                var lookupId = match.Success ? match.Value : string.Empty;
-
-                _logger.LogDebug("Extracted lookup ID '{LookupId}' from URL: {Url}", lookupId, url);
-                return lookupId;
+                // CRITICAL FIX: Use EXACT VBA ExtractLookupID logic with docid fallback
+                return ExtractLookupIdUsingVbaLogic(url, "");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error extracting lookup ID from URL: {Url}", url);
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// CRITICAL FIX: Exact VBA ExtractLookupID function logic
+        /// VBA: Private Function ExtractLookupID(addr As String, subAddr As String, rx As Object) As String
+        /// </summary>
+        private string ExtractLookupIdUsingVbaLogic(string address, string subAddress)
+        {
+            try
+            {
+                // VBA: Dim full As String: full = addr & IIf(Len(subAddr) > 0, "#" & subAddr, "")
+                var full = address + (!string.IsNullOrEmpty(subAddress) ? "#" + subAddress : "");
+
+                // VBA: If rx.Test(full) Then ExtractLookupID = UCase$(rx.Execute(full)(0).value)
+                var match = _lookupIdRegex.Match(full);
+                if (match.Success)
+                {
+                    var result = match.Value.ToUpperInvariant(); // VBA: UCase$
+                    _logger.LogDebug("Extracted lookup ID via primary regex: {LookupId} from {Full}", result, full);
+                    return result;
+                }
+
+                // VBA: ElseIf InStr(1, full, "docid=", vbTextCompare) > 0 Then
+                if (full.IndexOf("docid=", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    // VBA: ExtractLookupID = Trim$(Split(Split(full, "docid=")(1), "&")(0))
+                    var parts = full.Split(new[] { "docid=" }, StringSplitOptions.None);
+                    if (parts.Length > 1)
+                    {
+                        var docId = parts[1].Split('&')[0].Trim();
+                        // CRITICAL FIX: Handle URL encoding (Issue #3)
+                        var decodedDocId = Uri.UnescapeDataString(docId);
+                        _logger.LogDebug("Extracted lookup ID via docid fallback: {LookupId} from {Full}", decodedDocId, full);
+                        return decodedDocId;
+                    }
+                }
+
+                _logger.LogDebug("No lookup ID found in: {Full}", full);
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error extracting lookup ID from: {Full}. Error: {Error}", address, ex.Message);
                 return string.Empty;
             }
         }
@@ -231,7 +273,7 @@ namespace BulkEditor.Infrastructure.Services
                     _logger.LogDebug("Generated Content ID '{ContentId}' for lookup ID: {LookupId}", contentId, lookupId);
 
                     // Simulate async operation
-                    await Task.Delay(10, cancellationToken);
+                    await Task.Delay(10, cancellationToken).ConfigureAwait(false);
                     return contentId;
                 }, TimeSpan.FromHours(24), cancellationToken);
 

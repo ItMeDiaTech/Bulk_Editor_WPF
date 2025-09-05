@@ -75,7 +75,8 @@ namespace BulkEditor.Infrastructure.Services
                     CreateDirectory(destinationDir);
                 }
 
-                await Task.Run(() => File.Copy(sourcePath, destinationPath, overwrite: true), cancellationToken);
+                // CRITICAL FIX: Use Task.Run with ConfigureAwait(false) for proper async file operations (Issue #24-25)
+                await Task.Run(() => File.Copy(sourcePath, destinationPath, overwrite: true), cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("Copied file from {Source} to {Destination}", sourcePath, destinationPath);
             }
             catch (Exception ex)
@@ -96,7 +97,8 @@ namespace BulkEditor.Infrastructure.Services
                     CreateDirectory(destinationDir);
                 }
 
-                await Task.Run(() => File.Move(sourcePath, destinationPath), cancellationToken);
+                // CRITICAL FIX: Use Task.Run with ConfigureAwait(false) for proper async file operations (Issue #24-25)
+                await Task.Run(() => File.Move(sourcePath, destinationPath), cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("Moved file from {Source} to {Destination}", sourcePath, destinationPath);
             }
             catch (Exception ex)
@@ -110,7 +112,8 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                await Task.Run(() => File.Delete(filePath), cancellationToken);
+                // CRITICAL FIX: Use Task.Run with ConfigureAwait(false) for proper async file operations (Issue #24-25)
+                await Task.Run(() => File.Delete(filePath), cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("Deleted file: {FilePath}", filePath);
             }
             catch (Exception ex)

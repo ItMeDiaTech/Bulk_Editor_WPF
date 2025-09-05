@@ -25,7 +25,23 @@ namespace BulkEditor.Tests.Infrastructure.Services
         public HttpServiceApiTests()
         {
             _mockLogger = new Mock<ILoggingService>();
-            _httpClient = new HttpClient();
+            
+            // CRITICAL FIX: Use proper HttpClient configuration to prevent socket exhaustion (Issue #22)
+            var handler = new HttpClientHandler()
+            {
+                MaxConnectionsPerServer = 10,
+                UseProxy = false,
+                UseCookies = false
+            };
+            
+            _httpClient = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromMinutes(5)
+            };
+            
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "BulkEditor-Test/1.0");
+            _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+            
             _httpService = new HttpService(_httpClient, _mockLogger.Object);
         }
 

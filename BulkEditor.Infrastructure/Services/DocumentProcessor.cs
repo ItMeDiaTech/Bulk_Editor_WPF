@@ -27,10 +27,10 @@ namespace BulkEditor.Infrastructure.Services
         private readonly ILoggingService _logger;
         private readonly Core.Configuration.AppSettings _appSettings;
 
-        // VBA-compatible regex pattern for exact Lookup_ID matching
-        // Must match Base_File.vba exactly but ensure exactly 6 digits (not 7+)
-        // Using negative lookahead (?![0-9]) to prevent matching partial patterns
-        private static readonly Regex LookupIdRegex = new Regex(@"(TSRC-[^-]+-[0-9]{6}(?![0-9])|CMS-[^-]+-[0-9]{6}(?![0-9]))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // CRITICAL FIX: Exact VBA pattern match without negative lookahead (Issue #1)
+        // VBA: .Pattern = "(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})"
+        // VBA: .IgnoreCase = True
+        private static readonly Regex LookupIdRegex = new Regex(@"(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex DocIdRegex = new Regex(@"docid=([^&]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // OpenXML validator for document integrity checks
@@ -568,6 +568,268 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
+        /// <summary>
+        /// CRITICAL FIX: Implements complete VBA UpdateHyperlinksFromAPI workflow
+        /// Follows exact sequence from Base_File.vba lines 15-350
+        /// </summary>
+        private async Task ProcessHyperlinksUsingVbaWorkflowAsync(BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
+        {
+            try
+            {
+                _logger.LogInformation("Starting VBA-compatible hyperlink processing workflow for: {FileName}", document.FileName);
+
+                // VBA STEP 2: Collect unique Lookup_IDs (lines 41-84)
+                var idDict = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var hyperlink in document.Hyperlinks)
+                {
+                    var lookupId = ExtractLookupIdUsingVbaLogic(hyperlink.OriginalUrl, "");
+                    if (!string.IsNullOrEmpty(lookupId) && !idDict.ContainsKey(lookupId))
+                    {
+                        idDict[lookupId] = true;
+                        _logger.LogDebug("Added unique Lookup_ID: {LookupId}", lookupId);
+                    }
+                }
+
+                if (idDict.Count == 0)
+                {
+                    _logger.LogInformation("No valid Lookup_IDs found in document: {FileName}", document.FileName);
+                    return;
+                }
+
+                _logger.LogInformation("Found {Count} unique Lookup_IDs for API processing", idDict.Count);
+
+                // VBA STEP 3: Build JSON & POST (lines 87-128)
+                var lookupIds = idDict.Keys.ToArray();
+
+                // CRITICAL FIX: Use HyperlinkReplacementService for API processing with VBA methodology
+                // First, we need an HttpService instance with HttpClient
+                using var httpClient = new System.Net.Http.HttpClient();
+                var httpService = new HttpService(httpClient, _logger);
+                var hyperlinkService = new HyperlinkReplacementService(httpService, _logger);
+                var apiResult = await hyperlinkService.ProcessApiResponseAsync(lookupIds, cancellationToken);
+
+                if (apiResult.HasError)
+                {
+                    _logger.LogError("API processing failed: {Error}", apiResult.ErrorMessage);
+                    return;
+                }
+
+                // VBA STEP 5: Update hyperlinks using dictionary lookup (lines 186-318)
+                await UpdateHyperlinksUsingVbaDictionaryLogicAsync(document, apiResult, cancellationToken);
+
+                _logger.LogInformation("Completed VBA-compatible hyperlink processing workflow for: {FileName}", document.FileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in VBA-compatible hyperlink processing workflow: {FileName}", document.FileName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// CRITICAL FIX: Implements VBA dictionary lookup and update logic (lines 186-318)
+        /// VBA: For Each hl In links ... If recDict.Exists(lookupID) Then Set rec = recDict(lookupID)
+        /// </summary>
+        private async Task UpdateHyperlinksUsingVbaDictionaryLogicAsync(BulkEditor.Core.Entities.Document document, HyperlinkReplacementService.ApiProcessingResult apiResult, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Build unified dictionary exactly like VBA
+                var recDict = new Dictionary<string, DocumentRecord>(StringComparer.OrdinalIgnoreCase);
+
+                // Add found documents
+                foreach (var doc in apiResult.FoundDocuments)
+                {
+                    if (!string.IsNullOrEmpty(doc.Document_ID) && !recDict.ContainsKey(doc.Document_ID))
+                        recDict[doc.Document_ID] = doc;
+                    if (!string.IsNullOrEmpty(doc.Content_ID) && !recDict.ContainsKey(doc.Content_ID))
+                        recDict[doc.Content_ID] = doc;
+                }
+
+                // Add expired documents
+                foreach (var doc in apiResult.ExpiredDocuments)
+                {
+                    if (!string.IsNullOrEmpty(doc.Document_ID) && !recDict.ContainsKey(doc.Document_ID))
+                        recDict[doc.Document_ID] = doc;
+                    if (!string.IsNullOrEmpty(doc.Content_ID) && !recDict.ContainsKey(doc.Content_ID))
+                        recDict[doc.Content_ID] = doc;
+                }
+
+                // Process each hyperlink exactly like VBA
+                foreach (var hyperlink in document.Hyperlinks)
+                {
+                    var lookupId = ExtractLookupIdUsingVbaLogic(hyperlink.OriginalUrl, "");
+                    if (string.IsNullOrEmpty(lookupId))
+                        continue;
+
+                    var dispText = hyperlink.DisplayText ?? string.Empty;
+                    var alreadyExpired = dispText.Contains(" - Expired", StringComparison.OrdinalIgnoreCase);
+                    var alreadyNotFound = dispText.Contains(" - Not Found", StringComparison.OrdinalIgnoreCase);
+
+                    if (recDict.ContainsKey(lookupId))
+                    {
+                        // VBA: If recDict.Exists(lookupID) Then Set rec = recDict(lookupID)
+                        var rec = recDict[lookupId];
+                        await ProcessHyperlinkWithVbaLogicAsync(hyperlink, rec, document, alreadyExpired, alreadyNotFound, cancellationToken);
+                    }
+                    else if (!alreadyNotFound && !alreadyExpired)
+                    {
+                        // VBA: ElseIf Not alreadyNotFound And Not alreadyExpired Then
+                        // VBA: hl.TextToDisplay = hl.TextToDisplay & " - Not Found"
+                        hyperlink.DisplayText += " - Not Found";
+                        hyperlink.Status = HyperlinkStatus.NotFound;
+
+                        document.ChangeLog.Changes.Add(new ChangeEntry
+                        {
+                            Type = ChangeType.HyperlinkStatusAdded,
+                            Description = "Hyperlink marked as Not Found (VBA methodology)",
+                            OldValue = dispText,
+                            NewValue = hyperlink.DisplayText,
+                            ElementId = hyperlink.Id,
+                            Details = $"Lookup_ID: {lookupId}"
+                        });
+
+                        _logger.LogInformation("Marked hyperlink as Not Found: {LookupId}", lookupId);
+                    }
+                }
+
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating hyperlinks using VBA dictionary logic");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// CRITICAL FIX: Process individual hyperlink with exact VBA logic (lines 228-306)
+        /// </summary>
+        private async Task ProcessHyperlinkWithVbaLogicAsync(Hyperlink hyperlink, DocumentRecord rec, BulkEditor.Core.Entities.Document document, bool alreadyExpired, bool alreadyNotFound, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var dispText = hyperlink.DisplayText ?? string.Empty;
+
+                // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
+                // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
+                var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
+                var targetSub = $"!/view?docid={rec.Document_ID}";
+
+                // VBA: changedURL = (hl.Address <> targetAddress) Or (hl.SubAddress <> targetSub)
+                var targetUrl = targetAddress + "#" + targetSub;
+                var changedURL = !string.Equals(hyperlink.OriginalUrl, targetUrl, StringComparison.OrdinalIgnoreCase);
+
+                if (changedURL)
+                {
+                    hyperlink.UpdatedUrl = targetUrl;
+                    hyperlink.RequiresUpdate = true;
+                    _logger.LogDebug("URL changed for hyperlink: {Original} -> {New}", hyperlink.OriginalUrl, targetUrl);
+                }
+
+                // VBA Content_ID appending logic (lines 254-280)
+                var appended = false;
+                if (!alreadyExpired && !alreadyNotFound && !string.IsNullOrEmpty(rec.Content_ID))
+                {
+                    // CRITICAL FIX: Exact VBA logic with proper bounds checking
+                    if (rec.Content_ID.Length >= 6)
+                    {
+                        var last6 = rec.Content_ID.Substring(rec.Content_ID.Length - 6);
+                        var last5 = last6.Length > 1 ? last6.Substring(1) : last6;
+
+                        var pattern5 = $" ({last5})";
+                        var pattern6 = $" ({last6})";
+
+                        // VBA: If Right$(dispText, Len(" (" & last5 & ")")) = " (" & last5 & ")" And Right$(dispText, Len(" (" & last6 & ")")) <> " (" & last6 & ")" Then
+                        if (dispText.EndsWith(pattern5) && !dispText.EndsWith(pattern6))
+                        {
+                            if (dispText.Length >= pattern5.Length)
+                            {
+                                dispText = dispText.Substring(0, dispText.Length - pattern5.Length) + pattern6;
+                                hyperlink.DisplayText = dispText;
+                                appended = true;
+                                _logger.LogInformation("Upgraded 5-digit to 6-digit Content_ID: {Old} -> {New}", pattern5, pattern6);
+                            }
+                        }
+                        // VBA: ElseIf InStr(1, dispText, " (" & last6 & ")", vbTextCompare) = 0 Then
+                        else if (!dispText.Contains(pattern6, StringComparison.OrdinalIgnoreCase))
+                        {
+                            hyperlink.DisplayText = dispText.Trim() + pattern6;
+                            dispText = hyperlink.DisplayText;
+                            appended = true;
+                            _logger.LogInformation("Appended Content_ID to hyperlink: {ContentId}", last6);
+                        }
+                    }
+
+                    // VBA title comparison logic (lines 282-286)
+                    var titleWithoutContentId = dispText;
+                    if (dispText.Length > 9) // " (123456)"
+                    {
+                        titleWithoutContentId = dispText.Substring(0, dispText.Length - 9);
+                    }
+
+                    if (!string.Equals(titleWithoutContentId, rec.Title, StringComparison.OrdinalIgnoreCase))
+                    {
+                        document.ChangeLog.Changes.Add(new ChangeEntry
+                        {
+                            Type = ChangeType.PossibleTitleChange,
+                            Description = "Possible Title Change",
+                            OldValue = titleWithoutContentId,
+                            NewValue = rec.Title,
+                            ElementId = hyperlink.Id,
+                            Details = $"Content ID: {rec.Content_ID}"
+                        });
+                        _logger.LogInformation("Detected title difference: Current='{Current}', API='{Api}'", titleWithoutContentId, rec.Title);
+                    }
+                }
+
+                // VBA status handling (lines 292-306)
+                if (rec.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase) && !alreadyExpired)
+                {
+                    hyperlink.DisplayText += " - Expired";
+                    hyperlink.Status = HyperlinkStatus.Expired;
+
+                    document.ChangeLog.Changes.Add(new ChangeEntry
+                    {
+                        Type = ChangeType.HyperlinkStatusAdded,
+                        Description = "Hyperlink marked as Expired (VBA methodology)",
+                        OldValue = dispText,
+                        NewValue = hyperlink.DisplayText,
+                        ElementId = hyperlink.Id,
+                        Details = $"API Status: {rec.Status}, Content_ID: {rec.Content_ID}"
+                    });
+
+                    _logger.LogInformation("Marked hyperlink as Expired: {LookupId}", rec.Lookup_ID);
+                }
+                else if (changedURL || appended)
+                {
+                    var actionDescription = changedURL ? "URL Updated" : "";
+                    if (appended)
+                        actionDescription += (changedURL ? ", " : "") + "Appended Content ID";
+
+                    document.ChangeLog.Changes.Add(new ChangeEntry
+                    {
+                        Type = changedURL ? ChangeType.HyperlinkUpdated : ChangeType.ContentIdAdded,
+                        Description = actionDescription,
+                        OldValue = hyperlink.OriginalUrl,
+                        NewValue = hyperlink.UpdatedUrl ?? hyperlink.OriginalUrl,
+                        ElementId = hyperlink.Id,
+                        Details = $"Document_ID: {rec.Document_ID}, Content_ID: {rec.Content_ID}"
+                    });
+
+                    _logger.LogInformation("Updated hyperlink: {Action} for {LookupId}", actionDescription, rec.Lookup_ID);
+                }
+
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing hyperlink with VBA logic: {HyperlinkId}", hyperlink.Id);
+                throw;
+            }
+        }
+
         private void GenerateChangeLogSummary(BulkEditor.Core.Entities.Document document)
         {
             var changes = document.ChangeLog.Changes;
@@ -732,15 +994,15 @@ namespace BulkEditor.Infrastructure.Services
                     progress?.Report("Validating after invisible hyperlink removal...");
                     await ValidateOpenDocumentAsync(wordDocument, "post-cleanup", cancellationToken);
 
-                    // STEP 8: Validate hyperlinks (external API calls)
+                    // STEP 8: Process hyperlinks using VBA UpdateHyperlinksFromAPI workflow
                     if (document.Hyperlinks.Any())
                     {
-                        progress?.Report("Validating hyperlinks...");
-                        await ValidateHyperlinksAsync(document, cancellationToken);
+                        progress?.Report("Processing hyperlinks using VBA methodology...");
+                        await ProcessHyperlinksUsingVbaWorkflowAsync(document, cancellationToken);
                     }
 
-                    // STEP 9: Update hyperlinks in the same session with atomic operations
-                    progress?.Report("Updating hyperlinks with atomic operations...");
+                    // STEP 9: Apply hyperlink updates in the document session
+                    progress?.Report("Applying hyperlink updates to document...");
                     await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken);
 
                     // STEP 10: Validate after hyperlink updates
@@ -1138,13 +1400,20 @@ namespace BulkEditor.Infrastructure.Services
 
                 _logger.LogDebug("Starting atomic hyperlink update: {RelId}, Original URL: {OriginalUrl}", relationshipId, originalUri);
 
-                // STEP 2: Calculate new URL (using Document_ID like VBA)
+                // STEP 2: Calculate new URL using proper VBA Address/SubAddress separation (Issue #8)
                 var docIdForUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId)
                     ? hyperlinkToUpdate.DocumentId
                     : hyperlinkToUpdate.ContentId;
 
+                // CRITICAL FIX: Separate Address and SubAddress exactly like VBA (Issue #8)
+                // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
+                // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
+                var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
+                var targetSubAddress = $"!/view?docid={docIdForUrl}";
+
+                // Build complete URL for validation/logging only (NOT for relationship creation)
                 var newUrl = !string.IsNullOrEmpty(docIdForUrl)
-                    ? $"https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid={docIdForUrl}"
+                    ? targetAddress + "#" + targetSubAddress
                     : hyperlinkToUpdate.OriginalUrl;
 
                 // STEP 3: Only update if URL actually changed to prevent unnecessary operations
@@ -1152,15 +1421,18 @@ namespace BulkEditor.Infrastructure.Services
 
                 if (urlChanged)
                 {
-                    // CRITICAL FIX: Atomic relationship update
+                    // CRITICAL FIX: Atomic relationship update with proper VBA Address/SubAddress separation (Issue #8)
                     // Create new relationship with validation
                     try
                     {
-                        var newUri = new Uri(newUrl);
-                        var newRelationship = mainPart.AddHyperlinkRelationship(newUri, true);
+                        // CRITICAL FIX: Use separate Address and SubAddress like VBA (Issue #8)
+                        // VBA: .Address = targetAddress, .SubAddress = targetSub
+                        var addressUri = new Uri(targetAddress);
+                        var newRelationship = mainPart.AddHyperlinkRelationship(addressUri, true, targetSubAddress);
                         newRelationshipId = newRelationship.Id;
 
-                        _logger.LogDebug("Created new relationship atomically: {NewRelId} -> {NewUrl}", newRelationshipId, newUrl);
+                        _logger.LogDebug("Created new relationship atomically with VBA Address/SubAddress: {NewRelId} -> {Address}#{SubAddress}",
+                            newRelationshipId, targetAddress, targetSubAddress);
 
                         // Update the hyperlink element to use the new relationship ID
                         openXmlHyperlink.Id = newRelationshipId;
@@ -1204,22 +1476,39 @@ namespace BulkEditor.Infrastructure.Services
                 if (!alreadyExpired && !alreadyNotFound && !string.IsNullOrEmpty(hyperlinkToUpdate.ContentId))
                 {
                     // Get last 6 and last 5 digits like VBA
-                    var last6 = hyperlinkToUpdate.ContentId.Length >= 6
-                        ? hyperlinkToUpdate.ContentId.Substring(hyperlinkToUpdate.ContentId.Length - 6)
-                        : hyperlinkToUpdate.ContentId;
-                    var last5 = last6.Length >= 5
-                        ? last6.Substring(1)
-                        : last6;
+                    // CRITICAL FIX: Add proper bounds checking to prevent IndexOutOfRangeException (Issue #12)
+                    string last6, last5;
+                    if (hyperlinkToUpdate.ContentId.Length >= 6)
+                    {
+                        last6 = hyperlinkToUpdate.ContentId.Substring(hyperlinkToUpdate.ContentId.Length - 6);
+                        last5 = last6.Length > 1 ? last6.Substring(1) : last6; // Safe substring
+                    }
+                    else if (hyperlinkToUpdate.ContentId.Length == 5)
+                    {
+                        // Pad 5-digit with leading zero like VBA methodology
+                        last6 = "0" + hyperlinkToUpdate.ContentId;
+                        last5 = hyperlinkToUpdate.ContentId; // Original 5 digits
+                    }
+                    else
+                    {
+                        // Handle shorter content IDs safely
+                        last6 = hyperlinkToUpdate.ContentId.PadLeft(6, '0');
+                        last5 = last6.Length > 1 ? last6.Substring(1) : last6;
+                    }
 
                     var last5Pattern = $" ({last5})";
                     var last6Pattern = $" ({last6})";
 
-                    // VBA Logic: If ends with " (last5)" but NOT " (last6)", replace 5-digit with 6-digit
+                    // CRITICAL FIX: VBA Logic with safe substring operations (Issue #12)
                     if (currentDisplayText.EndsWith(last5Pattern) && !currentDisplayText.EndsWith(last6Pattern))
                     {
-                        newDisplayText = currentDisplayText.Substring(0, currentDisplayText.Length - last5Pattern.Length) + last6Pattern;
-                        displayTextChanged = true;
-                        _logger.LogInformation("Upgraded 5-digit Content_ID to 6-digit: {Old} -> {New}", last5Pattern, last6Pattern);
+                        // Safe substring operation with bounds checking
+                        if (currentDisplayText.Length >= last5Pattern.Length)
+                        {
+                            newDisplayText = currentDisplayText.Substring(0, currentDisplayText.Length - last5Pattern.Length) + last6Pattern;
+                            displayTextChanged = true;
+                            _logger.LogInformation("Upgraded 5-digit Content_ID to 6-digit: {Old} -> {New}", last5Pattern, last6Pattern);
+                        }
                     }
                     // VBA Logic: If Content_ID not already present, append it
                     else if (!currentDisplayText.Contains(last6Pattern, StringComparison.OrdinalIgnoreCase))
@@ -1603,3 +1892,4 @@ namespace BulkEditor.Infrastructure.Services
 
     }
 }
+
