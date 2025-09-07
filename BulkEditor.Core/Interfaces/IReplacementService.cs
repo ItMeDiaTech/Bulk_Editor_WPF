@@ -1,4 +1,5 @@
 using BulkEditor.Core.Entities;
+using DocumentFormat.OpenXml.Packaging;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,8 +12,18 @@ namespace BulkEditor.Core.Interfaces
     public interface IReplacementService
     {
         /// <summary>
-        /// Processes all replacements for a document
+        /// Processes all replacements for a document using an already opened WordprocessingDocument
         /// </summary>
+        /// <param name="wordDocument">Already opened WordprocessingDocument</param>
+        /// <param name="document">Document entity to track changes</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Number of replacements made</returns>
+        Task<int> ProcessReplacementsInSessionAsync(WordprocessingDocument wordDocument, Entities.Document document, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Processes all replacements for a document (legacy method - opens document independently)
+        /// </summary>
+        [System.Obsolete("Use ProcessReplacementsInSessionAsync to prevent file corruption")]
         Task<Entities.Document> ProcessReplacementsAsync(Entities.Document document, CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -27,8 +38,19 @@ namespace BulkEditor.Core.Interfaces
     public interface IHyperlinkReplacementService
     {
         /// <summary>
-        /// Processes hyperlink replacements in a document
+        /// Processes hyperlink replacements in an already opened document
         /// </summary>
+        /// <param name="wordDocument">Already opened WordprocessingDocument</param>
+        /// <param name="document">Document entity to track changes</param>
+        /// <param name="rules">Hyperlink replacement rules</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Number of replacements made</returns>
+        Task<int> ProcessHyperlinkReplacementsInSessionAsync(WordprocessingDocument wordDocument, Entities.Document document, IEnumerable<Configuration.HyperlinkReplacementRule> rules, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Processes hyperlink replacements in a document (legacy method - opens document independently)
+        /// </summary>
+        [System.Obsolete("Use ProcessHyperlinkReplacementsInSessionAsync to prevent file corruption")]
         Task<Entities.Document> ProcessHyperlinkReplacementsAsync(Entities.Document document, IEnumerable<Configuration.HyperlinkReplacementRule> rules, CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -48,8 +70,19 @@ namespace BulkEditor.Core.Interfaces
     public interface ITextReplacementService
     {
         /// <summary>
-        /// Processes text replacements in a document
+        /// Processes text replacements in an already opened document
         /// </summary>
+        /// <param name="wordDocument">Already opened WordprocessingDocument</param>
+        /// <param name="document">Document entity to track changes</param>
+        /// <param name="rules">Text replacement rules</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Number of replacements made</returns>
+        Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, Entities.Document document, IEnumerable<Configuration.TextReplacementRule> rules, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Processes text replacements in a document (legacy method - opens document independently)
+        /// </summary>
+        [System.Obsolete("Use ProcessTextReplacementsInSessionAsync to prevent file corruption")]
         Task<Entities.Document> ProcessTextReplacementsAsync(Entities.Document document, IEnumerable<Configuration.TextReplacementRule> rules, CancellationToken cancellationToken = default);
 
         /// <summary>

@@ -44,6 +44,14 @@ namespace BulkEditor.UI.Models
         [ObservableProperty]
         private Exception? _exception;
 
+        [ObservableProperty]
+        private bool _isActionable;
+
+        [ObservableProperty]
+        private string _actionText = string.Empty;
+
+        public Action? Action { get; set; }
+
         public string Icon => Severity switch
         {
             NotificationSeverity.Info => "ℹ",
@@ -131,6 +139,20 @@ namespace BulkEditor.UI.Models
                 Severity = NotificationSeverity.Error,
                 Exception = exception,
                 AutoHide = false // Error notifications should be manually dismissed
+            };
+        }
+
+        public static NotificationModel CreateActionable(string title, string message, string actionText, Action action)
+        {
+            return new NotificationModel
+            {
+                Title = title,
+                Message = message,
+                Severity = NotificationSeverity.Info,
+                IsActionable = true,
+                ActionText = actionText,
+                Action = action,
+                AutoHide = false
             };
         }
     }

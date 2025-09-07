@@ -66,6 +66,12 @@ namespace BulkEditor.UI.Services
             }
         }
 
+        public void ShowActionableNotification(string title, string message, string actionText, Action action)
+        {
+            var notification = NotificationModel.CreateActionable(title, message, actionText, action);
+            AddNotification(notification);
+        }
+
         public void AddNotification(NotificationModel notification)
         {
             if (notification == null)

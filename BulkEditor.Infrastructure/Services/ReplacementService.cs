@@ -32,6 +32,57 @@ namespace BulkEditor.Infrastructure.Services
             _appSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
         }
 
+        /// <summary>
+        /// NEW METHOD: Processes replacements using an already opened WordprocessingDocument to prevent corruption
+        /// </summary>
+        public async Task<int> ProcessReplacementsInSessionAsync(DocumentFormat.OpenXml.Packaging.WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var replacementSettings = _appSettings.Replacement;
+                var totalReplacements = 0;
+
+                _logger.LogInformation("Starting replacement processing in session for document: {FileName}", document.FileName);
+
+                // Process hyperlink replacements if enabled
+                if (replacementSettings.EnableHyperlinkReplacement && replacementSettings.HyperlinkRules.Any())
+                {
+                    _logger.LogDebug("Processing hyperlink replacements in session for document: {FileName}", document.FileName);
+                    totalReplacements += await _hyperlinkReplacementService.ProcessHyperlinkReplacementsInSessionAsync(
+                        wordDocument, document, replacementSettings.HyperlinkRules, cancellationToken);
+                }
+
+                // Process text replacements if enabled
+                if (replacementSettings.EnableTextReplacement && replacementSettings.TextRules.Any())
+                {
+                    _logger.LogDebug("Processing text replacements in session for document: {FileName}", document.FileName);
+                    totalReplacements += await _textReplacementService.ProcessTextReplacementsInSessionAsync(
+                        wordDocument, document, replacementSettings.TextRules, cancellationToken);
+                }
+
+                _logger.LogInformation("Replacement processing completed in session for document: {FileName}, total replacements: {Count}", document.FileName, totalReplacements);
+                return totalReplacements;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing replacements in session for document: {FileName}", document.FileName);
+
+                // Add error to change log
+                document.ChangeLog.Changes.Add(new ChangeEntry
+                {
+                    Type = ChangeType.Error,
+                    Description = "Error during replacement processing",
+                    Details = ex.Message
+                });
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// LEGACY METHOD: Opens document independently - can cause corruption
+        /// </summary>
+        [System.Obsolete("Use ProcessReplacementsInSessionAsync to prevent file corruption")]
         public async Task<Document> ProcessReplacementsAsync(Document document, CancellationToken cancellationToken = default)
         {
             try
@@ -81,6 +132,7 @@ namespace BulkEditor.Infrastructure.Services
             {
                 var result = new ReplacementValidationResult { IsValid = true };
 
+                // CRITICAL FIX: Use ConfigureAwait(false) for proper async patterns (Issue #24-25)
                 await Task.Run(() =>
                 {
                     foreach (var rule in rules)
@@ -101,7 +153,7 @@ namespace BulkEditor.Infrastructure.Services
                                 break;
                         }
                     }
-                }, cancellationToken);
+                }, cancellationToken).ConfigureAwait(false);
 
                 result.IsValid = !result.ValidationErrors.Any();
 

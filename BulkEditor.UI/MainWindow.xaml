@@ -213,6 +213,16 @@
                             </Button.Style>
                         </Button>
 
+                        <Button Content="Revert Last Process"
+                                Command="{Binding RevertLastSessionCommand}"
+                                Background="#FF9800"
+                                Foreground="White"
+                                Padding="12,8"
+                                Margin="0,0,0,8"
+                                BorderThickness="0"
+                                IsEnabled="{Binding IsRevertEnabled}"
+                                Visibility="{Binding IsRevertEnabled, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
                         <Button Content="Cancel Processing"
                                 Command="{Binding CancelProcessingCommand}"
                                 Background="#F44336"

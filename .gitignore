@@ -376,3 +376,18 @@ TempFiles/
 *token*
 github_token
 GITHUB_TOKEN
+.github_token
+
+# Output/build directories
+Output/
+dist/
+*.msi
+*.zip
+
+# Log files
+Logs/
+*.log
+
+# Temporary files
+TempFiles/
+BackupFiles/

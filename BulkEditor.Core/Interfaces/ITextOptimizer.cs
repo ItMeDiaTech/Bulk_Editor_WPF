@@ -1,4 +1,5 @@
 using BulkEditor.Core.Entities;
+using DocumentFormat.OpenXml.Packaging;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,8 +11,18 @@ namespace BulkEditor.Core.Interfaces
     public interface ITextOptimizer
     {
         /// <summary>
-        /// Optimizes text formatting in a document
+        /// Optimizes text formatting in a document using an already opened WordprocessingDocument
         /// </summary>
+        /// <param name="wordDocument">Already opened WordprocessingDocument</param>
+        /// <param name="document">Document entity to track changes</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Number of optimizations made</returns>
+        Task<int> OptimizeDocumentTextInSessionAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Optimizes text formatting in a document (legacy method - opens document independently)
+        /// </summary>
+        [System.Obsolete("Use OptimizeDocumentTextInSessionAsync to prevent file corruption")]
         Task<Document> OptimizeDocumentTextAsync(Document document, CancellationToken cancellationToken = default);
 
         /// <summary>

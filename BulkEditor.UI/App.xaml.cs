@@ -19,16 +19,13 @@ namespace BulkEditor.UI
     public partial class App : System.Windows.Application
     {
         private ServiceProvider? _serviceProvider;
-        private UpdateManager? _updateManager;
+        private BulkEditor.Application.Services.UpdateManager? _updateManager;
 
         protected override async void OnStartup(StartupEventArgs e)
         {
             try
             {
-                // Configure basic Serilog first for ConfigurationService
-                ConfigureSerilog();
-
-                // Create temporary logger for ConfigurationService
+                // Create temporary logger for ConfigurationService (minimal configuration)
                 var tempLogger = new BulkEditor.Infrastructure.Services.SerilogService();
 
                 // Initialize configuration service early to avoid double registration
@@ -37,7 +34,7 @@ namespace BulkEditor.UI
                 await configService.MigrateSettingsAsync();
                 var appSettings = await configService.LoadSettingsAsync();
 
-                // Reconfigure Serilog with proper settings
+                // CRITICAL FIX: Configure Serilog only ONCE with proper settings
                 ConfigureSerilog(appSettings);
 
                 // Configure services
@@ -77,6 +74,11 @@ namespace BulkEditor.UI
                 // Register application services
                 services.AddScoped<IApplicationService, BulkEditor.Application.Services.ApplicationService>();
 
+                // Register undo/revert services
+                services.AddSingleton<ISessionManager, SessionManager>();
+                services.AddSingleton<IBackupService, BackupService>();
+                services.AddSingleton<IUndoService, UndoService>();
+
                 // Register update services
                 services.AddSingleton<IUpdateService, GitHubUpdateService>(provider =>
                 {
@@ -86,7 +88,7 @@ namespace BulkEditor.UI
                     return new GitHubUpdateService(httpClient, logger, configServiceProvider,
                         appSettings.Update.GitHubOwner, appSettings.Update.GitHubRepository);
                 });
-                services.AddSingleton<UpdateManager>();
+                services.AddSingleton<BulkEditor.Application.Services.UpdateManager>();
 
                 // Register UI Services
                 services.AddSingleton<BulkEditor.UI.Services.INotificationService, BulkEditor.UI.Services.NotificationService>();
@@ -101,11 +103,8 @@ namespace BulkEditor.UI
                 // Build service provider
                 _serviceProvider = services.BuildServiceProvider();
 
-                // Initialize Serilog with proper paths
-                ConfigureSerilog(appSettings);
-
                 // Initialize update manager
-                _updateManager = _serviceProvider.GetRequiredService<UpdateManager>();
+                _updateManager = _serviceProvider.GetRequiredService<BulkEditor.Application.Services.UpdateManager>();
                 await _updateManager.StartAsync();
 
                 // Subscribe to update events
@@ -120,6 +119,9 @@ namespace BulkEditor.UI
                 mainWindow.Show();
 
                 base.OnStartup(e);
+
+                // Log successful startup
+                Log.Information("Application started successfully");
             }
             catch (Exception ex)
             {
@@ -135,8 +137,11 @@ namespace BulkEditor.UI
         {
             try
             {
-                _updateManager?.Stop();
-                _updateManager?.Dispose();
+                if (_updateManager != null)
+                {
+                    _updateManager.Stop();
+                    _updateManager.Dispose();
+                }
                 _serviceProvider?.Dispose();
                 Log.CloseAndFlush();
             }

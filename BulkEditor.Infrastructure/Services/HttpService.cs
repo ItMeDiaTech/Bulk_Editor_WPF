@@ -2,6 +2,7 @@ using BulkEditor.Core.Interfaces;
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -51,11 +52,26 @@ namespace BulkEditor.Infrastructure.Services
                     return CreateTestApiResponse();
                 }
 
-                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                // CRITICAL FIX: Ensure JSON matches VBA API expectations (Issue #4)
+                var json = System.Text.Json.JsonSerializer.Serialize(data, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = null, // Keep exact property names like "Lookup_ID"
+                    WriteIndented = false
+                });
+
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
                 var response = await _httpClient.PostAsync(url, content, cancellationToken);
                 _logger.LogDebug("Received response {StatusCode} from POST: {Url}", response.StatusCode, url);
+
+                // Log request/response for debugging VBA compatibility
+                _logger.LogDebug("Request JSON: {RequestJson}", json);
+                if (response.Content != null)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogDebug("Response JSON: {ResponseJson}", responseContent);
+                }
+
                 return response;
             }
             catch (Exception ex)
@@ -111,6 +127,20 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                // Handle file:// URLs which are not supported by HttpClient
+                if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("Handling file:// URL: {Url}", url);
+
+                    // Extract local file path from file:// URL
+                    var filePath = new Uri(url).LocalPath;
+                    var fileExists = System.IO.File.Exists(filePath);
+
+                    var fileResponse = new HttpResponseMessage(fileExists ? HttpStatusCode.OK : HttpStatusCode.NotFound);
+                    _logger.LogDebug("File {FilePath} exists: {FileExists}", filePath, fileExists);
+                    return fileResponse;
+                }
+
                 _logger.LogDebug("Sending HEAD request to: {Url}", url);
                 var request = new HttpRequestMessage(HttpMethod.Head, url);
                 var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -128,6 +158,15 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                // Handle file:// URLs directly
+                if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var filePath = new Uri(url).LocalPath;
+                    var fileAccessible = System.IO.File.Exists(filePath);
+                    _logger.LogDebug("File URL {Url} accessibility check: {IsAccessible}", url, fileAccessible);
+                    return fileAccessible;
+                }
+
                 using var response = await HeadAsync(url, cancellationToken);
                 var isAccessible = response.IsSuccessStatusCode;
                 _logger.LogDebug("URL {Url} accessibility check: {IsAccessible} (Status: {StatusCode})",
@@ -164,6 +203,18 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                // Handle file:// URLs directly
+                if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var filePath = new Uri(url).LocalPath;
+                    var fileExists = System.IO.File.Exists(filePath);
+                    var actualStatus = fileExists ? HttpStatusCode.OK : HttpStatusCode.NotFound;
+                    var statusMatches = actualStatus == expectedStatus;
+                    _logger.LogDebug("File URL {Url} status check: Expected {ExpectedStatus}, Got {ActualStatus}, Match: {HasExpectedStatus}",
+                        url, expectedStatus, actualStatus, statusMatches);
+                    return statusMatches;
+                }
+
                 using var response = await HeadAsync(url, cancellationToken);
                 var hasExpectedStatus = response.StatusCode == expectedStatus;
                 _logger.LogDebug("URL {Url} status check: Expected {ExpectedStatus}, Got {ActualStatus}, Match: {HasExpectedStatus}",
@@ -188,5 +239,26 @@ namespace BulkEditor.Infrastructure.Services
             // Note: User-Agent modification disabled to prevent "Properties can only be modified before sending the first request" error
             _logger.LogDebug("HTTP client user agent change requested: {UserAgent} (not applied to avoid HttpClient configuration errors)", userAgent);
         }
+
+        public async Task<bool> TestConnectionAsync(string url, string apiKey = "")
+        {
+            try
+            {
+                var request = new HttpRequestMessage(HttpMethod.Head, url);
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                {
+                    request.Headers.Add("Authorization", $"Bearer {apiKey}");
+                }
+
+                var response = await _httpClient.SendAsync(request);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to test connection to {Url}", url);
+                return false;
+            }
+        }
     }
 }
+

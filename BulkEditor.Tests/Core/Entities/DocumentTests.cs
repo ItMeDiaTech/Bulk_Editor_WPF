@@ -86,11 +86,12 @@ namespace BulkEditor.Tests.Core.Entities
             var errorMessage = "Test error occurred";
 
             // Act
-            document.ProcessingErrors.Add(errorMessage);
+            var processingError = new ProcessingError { Message = errorMessage, Severity = ErrorSeverity.Error };
+            document.ProcessingErrors.Add(processingError);
 
             // Assert
             document.ProcessingErrors.Should().HaveCount(1);
-            document.ProcessingErrors.Should().Contain(errorMessage);
+            document.ProcessingErrors.Should().Contain(processingError);
         }
 
         [Fact]

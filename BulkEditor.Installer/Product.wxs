@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package Id="BulkEditor.Package"
+           Name="Bulk Document Editor"
+           Language="1033"
+           Version="1.0.0.0"
+           Manufacturer="DiaTech"
+           UpgradeCode="12345678-1234-1234-1234-123456789012"
+           InstallerVersion="500"
+           Compressed="yes"
+           Scope="perUser">
+
+    <!-- Major Upgrade Configuration -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+                  AllowSameVersionUpgrades="yes" />
+
+    <!-- Media -->
+    <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
+
+    <!-- Installation Directory Structure -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="CompanyFolder" Name="DiaTech">
+        <Directory Id="INSTALLFOLDER" Name="BulkEditor">
+          <Directory Id="BinFolder" Name="bin" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Desktop and Start Menu -->
+    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuCompanyFolder" Name="DiaTech" />
+    </StandardDirectory>
+
+    <!-- Main Application Files -->
+    <ComponentGroup Id="ApplicationFiles">
+      <Component Id="MainExecutable" Directory="BinFolder">
+        <File Id="BulkEditorUIExe" Source="..\Output\Publish\BulkEditor.UI.exe" KeyPath="yes" />
+      </Component>
+
+      <Component Id="CoreDll" Directory="BinFolder">
+        <File Source="..\Output\Publish\BulkEditor.Core.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="InfrastructureDll" Directory="BinFolder">
+        <File Source="..\Output\Publish\BulkEditor.Infrastructure.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ApplicationDll" Directory="BinFolder">
+        <File Source="..\Output\Publish\BulkEditor.Application.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="UIDll" Directory="BinFolder">
+        <File Source="..\Output\Publish\BulkEditor.UI.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="DepsJson" Directory="BinFolder">
+        <File Source="..\Output\Publish\BulkEditor.UI.deps.json" KeyPath="yes" />
+      </Component>
+
+      <Component Id="RuntimeConfig" Directory="BinFolder">
+        <File Source="..\Output\Publish\BulkEditor.UI.runtimeconfig.json" KeyPath="yes" />
+      </Component>
+
+      <Component Id="CommunityToolkit" Directory="BinFolder">
+        <File Source="..\Output\Publish\CommunityToolkit.Mvvm.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="DocumentFormat1" Directory="BinFolder">
+        <File Source="..\Output\Publish\DocumentFormat.OpenXml.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="DocumentFormat2" Directory="BinFolder">
+        <File Source="..\Output\Publish\DocumentFormat.OpenXml.Framework.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ExtensionsConfig" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Extensions.Configuration.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ExtensionsConfigAbs" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Extensions.Configuration.Abstractions.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ExtensionsConfigBinder" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Extensions.Configuration.Binder.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ExtensionsDI" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Extensions.DependencyInjection.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ExtensionsDIAbs" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Extensions.DependencyInjection.Abstractions.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ExtensionsOptions" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Extensions.Options.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ExtensionsOptionsConfig" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Extensions.Options.ConfigurationExtensions.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ExtensionsPrimitives" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Extensions.Primitives.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="SerilogMain" Directory="BinFolder">
+        <File Source="..\Output\Publish\Serilog.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="SerilogConsole" Directory="BinFolder">
+        <File Source="..\Output\Publish\Serilog.Sinks.Console.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="SerilogFile" Directory="BinFolder">
+        <File Source="..\Output\Publish\Serilog.Sinks.File.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="SystemIOPackaging" Directory="BinFolder">
+        <File Source="..\Output\Publish\System.IO.Packaging.dll" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Registry Configuration -->
+    <ComponentGroup Id="RegistryEntries">
+      <Component Id="InstallPathRegistry" Directory="INSTALLFOLDER">
+        <RegistryValue Root="HKCU"
+                       Key="Software\DiaTech\BulkEditor"
+                       Name="InstallPath"
+                       Type="string"
+                       Value="[BinFolder]"
+                       KeyPath="yes" />
+      </Component>
+
+      <Component Id="VersionRegistry" Directory="INSTALLFOLDER">
+        <RegistryValue Root="HKCU"
+                       Key="Software\DiaTech\BulkEditor"
+                       Name="Version"
+                       Type="string"
+                       Value="1.0.0"
+                       KeyPath="yes" />
+      </Component>
+
+      <Component Id="AutoUpdateRegistry" Directory="INSTALLFOLDER">
+        <RegistryValue Root="HKCU"
+                       Key="Software\DiaTech\BulkEditor\AutoUpdate"
+                       Name="Enabled"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Desktop Shortcut -->
+    <ComponentGroup Id="DesktopShortcut">
+      <Component Id="DesktopShortcutComponent" Directory="DesktopFolder">
+        <Shortcut Id="DesktopShortcut"
+                  Name="Bulk Document Editor"
+                  Description="Professional document processing tool"
+                  Target="[BinFolder]BulkEditor.UI.exe"
+                  WorkingDirectory="BinFolder" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\DiaTech\BulkEditor\Shortcuts"
+                       Name="Desktop"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Start Menu Shortcut -->
+    <ComponentGroup Id="StartMenuShortcuts">
+      <Component Id="StartMenuShortcutComponent" Directory="ProgramMenuCompanyFolder">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="Bulk Document Editor"
+                  Description="Professional document processing tool"
+                  Target="[BinFolder]BulkEditor.UI.exe"
+                  WorkingDirectory="BinFolder" />
+        <RemoveFolder Id="RemoveProgramMenuCompanyFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\DiaTech\BulkEditor\Shortcuts"
+                       Name="StartMenu"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Features -->
+    <Feature Id="MainFeature"
+             Title="Bulk Document Editor"
+             Description="Core application files and functionality"
+             Level="1">
+      <ComponentGroupRef Id="ApplicationFiles" />
+      <ComponentGroupRef Id="RegistryEntries" />
+    </Feature>
+
+    <Feature Id="DesktopShortcutFeature"
+             Title="Desktop Shortcut"
+             Description="Create a desktop shortcut"
+             Level="1">
+      <ComponentGroupRef Id="DesktopShortcut" />
+    </Feature>
+
+    <Feature Id="StartMenuShortcutFeature"
+             Title="Start Menu Shortcuts"
+             Description="Create start menu shortcuts"
+             Level="1">
+      <ComponentGroupRef Id="StartMenuShortcuts" />
+    </Feature>
+
+  </Package>
+</Wix>
