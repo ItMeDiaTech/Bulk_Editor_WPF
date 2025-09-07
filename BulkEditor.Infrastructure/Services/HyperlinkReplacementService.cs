@@ -1052,28 +1052,78 @@ namespace BulkEditor.Infrastructure.Services
                         // Build the complete external URL with fragment
                         var completeUri = new Uri(targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress));
 
-                        // Safely delete the old relationship first
+                        // CRITICAL FIX: Check if URL needs updating (detect HTML-encoded differences)
+                        string currentUrl = null;
+                        bool urlNeedsUpdate = true;
                         try
                         {
-                            mainPart.DeleteReferenceRelationship(relId);
+                            var currentRelationship = mainPart.GetReferenceRelationship(relId);
+                            currentUrl = currentRelationship.Uri.ToString();
+                            
+                            // Compare decoded URLs to detect HTML encoding differences
+                            var currentUrlDecoded = Uri.UnescapeDataString(currentUrl);
+                            var newUrlDecoded = Uri.UnescapeDataString(completeUri.ToString());
+                            
+                            urlNeedsUpdate = !string.Equals(currentUrlDecoded, newUrlDecoded, StringComparison.OrdinalIgnoreCase);
+                            
+                            // Log when HTML-encoded URLs are functionally equivalent but need updating
+                            if (!urlNeedsUpdate && !string.Equals(currentUrl, completeUri.ToString(), StringComparison.Ordinal))
+                            {
+                                _logger.LogInformation("Hyperlink URL has HTML encoding differences but is functionally equivalent: {CurrentUrl} -> {NewUrl}", 
+                                    currentUrl, completeUri.ToString());
+                            }
+                            else if (urlNeedsUpdate)
+                            {
+                                // Check if only encoding differences exist
+                                if (string.Equals(currentUrlDecoded, newUrlDecoded, StringComparison.OrdinalIgnoreCase) &&
+                                    !string.Equals(currentUrl, completeUri.ToString(), StringComparison.Ordinal))
+                                {
+                                    _logger.LogInformation("Updating hyperlink URL due to HTML encoding differences: {CurrentUrl} -> {NewUrl}", 
+                                        currentUrl, completeUri.ToString());
+                                }
+                                else
+                                {
+                                    _logger.LogDebug("Updating hyperlink URL: {CurrentUrl} -> {NewUrl}", 
+                                        currentUrl, completeUri.ToString());
+                                }
+                            }
                         }
                         catch (System.Collections.Generic.KeyNotFoundException)
                         {
-                            _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relId);
+                            _logger.LogDebug("No existing relationship found for {RelId}, will create new one", relId);
+                            currentUrl = "[No existing relationship]";
                         }
 
-                        // Create new relationship with the SAME ID to preserve document integrity
-                        var newRelationship = mainPart.AddHyperlinkRelationship(completeUri, true, relId);
-
-                        // Verify the relationship ID is preserved
-                        if (newRelationship.Id != relId)
+                        // Only update URL if it actually needs changing
+                        if (urlNeedsUpdate)
                         {
-                            _logger.LogWarning("Relationship ID changed from {OldId} to {NewId} - document integrity may be affected", relId, newRelationship.Id);
-                            openXmlHyperlink.Id = newRelationship.Id;
-                        }
+                            // Safely delete the old relationship first
+                            try
+                            {
+                                mainPart.DeleteReferenceRelationship(relId);
+                            }
+                            catch (System.Collections.Generic.KeyNotFoundException)
+                            {
+                                _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relId);
+                            }
 
-                        _logger.LogDebug("Updated hyperlink with VBA-compatible Address/SubAddress: {Address}#{SubAddress}",
-                            targetAddress, targetSubAddress);
+                            // Create new relationship with the SAME ID to preserve document integrity
+                            var newRelationship = mainPart.AddHyperlinkRelationship(completeUri, true, relId);
+
+                            // Verify the relationship ID is preserved
+                            if (newRelationship.Id != relId)
+                            {
+                                _logger.LogWarning("Relationship ID changed from {OldId} to {NewId} - document integrity may be affected", relId, newRelationship.Id);
+                                openXmlHyperlink.Id = newRelationship.Id;
+                            }
+
+                            _logger.LogDebug("Updated hyperlink with VBA-compatible Address/SubAddress: {Address}#{SubAddress}",
+                                targetAddress, targetSubAddress);
+                        }
+                        else
+                        {
+                            _logger.LogDebug("Hyperlink URL unchanged, skipping relationship update for {RelId}", relId);
+                        }
                     }
                     catch (Exception ex)
                     {

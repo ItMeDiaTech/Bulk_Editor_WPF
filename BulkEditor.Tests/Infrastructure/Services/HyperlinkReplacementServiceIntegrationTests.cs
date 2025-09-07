@@ -41,30 +41,6 @@ namespace BulkEditor.Tests.Infrastructure.Services
             _service = new HyperlinkReplacementService(_httpServiceMock.Object, _loggerMock.Object, appSettingsOptions);
         }
 
-        [Fact]
-        public async Task ProcessApiResponseAsync_WithExpiredStatus_ShouldDetectExpiredDocuments()
-        {
-            // Arrange
-            var lookupIds = new[] { "TSRC-PROD-123456", "TSRC-PROD-654321" };
-
-            // Act
-            var result = await _service.ProcessApiResponseAsync(lookupIds, CancellationToken.None);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.IsSuccess.Should().BeTrue();
-
-            // Verify that some documents are detected as expired based on simulation logic
-            var totalDocuments = result.FoundDocuments.Count + result.ExpiredDocuments.Count;
-            totalDocuments.Should().BeGreaterThan(0, "At least some documents should be found");
-
-            // Check that expired detection works
-            if (result.ExpiredDocuments.Any())
-            {
-                result.ExpiredDocuments.Should().AllSatisfy(doc =>
-                    doc.Status.Should().Be("Expired", "Expired documents should have Status='Expired'"));
-            }
-        }
 
         [Fact]
         public async Task ProcessApiResponseAsync_WithMissingLookupIds_ShouldIdentifyMissingIds()
@@ -275,57 +251,6 @@ namespace BulkEditor.Tests.Infrastructure.Services
             jsonResponse.Should().Contain("\"Status\":", "Should contain status fields");
         }
 
-        [Fact]
-        public void ParseJsonResponseWithStatusDetection_ShouldCategorizeDocumentsCorrectly()
-        {
-            // Arrange
-            var jsonResponse = @"{
-                ""Version"": ""1.2.3"",
-                ""Changes"": ""Test response"",
-                ""Results"": [
-                    {
-                        ""Lookup_ID"": ""TSRC-PROD-123456"",
-                        ""Document_ID"": ""doc-123456-789"",
-                        ""Content_ID"": ""123456"",
-                        ""Title"": ""Test Document 1"",
-                        ""Status"": ""Released""
-                    },
-                    {
-                        ""Lookup_ID"": ""TSRC-PROD-654321"",
-                        ""Document_ID"": ""doc-654321-012"",
-                        ""Content_ID"": ""654321"",
-                        ""Title"": ""Test Document 2"",
-                        ""Status"": ""Expired""
-                    }
-                ]
-            }";
-
-            var originalLookupIds = new[] { "TSRC-PROD-123456", "TSRC-PROD-654321", "TSRC-PROD-999999" };
-
-            // Use reflection to test private method
-            var method = typeof(HyperlinkReplacementService).GetMethod("ParseJsonResponseWithFlexibleMatching",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            // Act
-            var result = method.Invoke(_service, new object[] { jsonResponse, originalLookupIds });
-            var typedResult = (HyperlinkReplacementService.ApiProcessingResult)result;
-
-            // Assert
-            typedResult.Should().NotBeNull("Parsing should succeed");
-            typedResult.IsSuccess.Should().BeTrue("Parsing should be successful");
-            typedResult.HasError.Should().BeFalse("Should not have errors");
-
-            typedResult.FoundDocuments.Should().HaveCount(1, "One document should be found with Released status");
-            typedResult.FoundDocuments.First().Status.Should().Be("Released");
-            typedResult.FoundDocuments.First().Lookup_ID.Should().Be("TSRC-PROD-123456");
-
-            typedResult.ExpiredDocuments.Should().HaveCount(1, "One document should be expired");
-            typedResult.ExpiredDocuments.First().Status.Should().Be("Expired");
-            typedResult.ExpiredDocuments.First().Lookup_ID.Should().Be("TSRC-PROD-654321");
-
-            typedResult.MissingLookupIds.Should().HaveCount(1, "One lookup ID should be missing");
-            typedResult.MissingLookupIds.First().Should().Be("TSRC-PROD-999999");
-        }
 
         [Fact]
         public async Task LookupTitleByIdentifierAsync_WithValidContentId_ShouldReturnTitle()

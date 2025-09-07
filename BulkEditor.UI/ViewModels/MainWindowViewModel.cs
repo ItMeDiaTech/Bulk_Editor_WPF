@@ -38,6 +38,9 @@ namespace BulkEditor.UI.ViewModels
         private ObservableCollection<DocumentViewModel> _documents = new();
 
         [ObservableProperty]
+        private ObservableCollection<ProcessingResultViewModel> _processingResults = new();
+
+        [ObservableProperty]
         private DocumentViewModel? _selectedDocument;
 
         [ObservableProperty]
@@ -82,6 +85,8 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private bool _isRevertEnabled;
 
+        public bool HasProcessingResults => ProcessingResults.Any();
+
         public INotificationService NotificationService => _notificationService;
 
         public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService)
@@ -103,6 +108,11 @@ namespace BulkEditor.UI.ViewModels
             {
                 ProcessDocumentsCommand.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(Documents));
+            };
+
+            ProcessingResults.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(HasProcessingResults));
             };
         }
 
@@ -286,6 +296,13 @@ namespace BulkEditor.UI.ViewModels
                     {
                         UpdateDocumentViewModel(documentVM, result);
                     }
+                }
+
+                // Update ProcessingResults for the modern tree view
+                ProcessingResults.Clear();
+                foreach (var result in results)
+                {
+                    ProcessingResults.Add(new ProcessingResultViewModel(result));
                 }
 
                 ProcessingStatistics = _applicationService.GetProcessingStatistics(results);

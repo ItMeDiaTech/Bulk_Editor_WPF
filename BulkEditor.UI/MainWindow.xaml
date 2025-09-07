@@ -73,7 +73,7 @@
                 <ColumnDefinition Width="1*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Documents List -->
+            <!-- Modern Documents TreeView -->
             <Border Grid.Column="0"
                     Background="White"
                     BorderBrush="#E0E0E0"
@@ -83,90 +83,7 @@
                     DragOver="DocumentsArea_DragOver"
                     DragEnter="DocumentsArea_DragEnter"
                     DragLeave="DocumentsArea_DragLeave">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Documents Header -->
-                    <Border Grid.Row="0"
-                            Background="#F5F5F5"
-                            Padding="16,12">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0"
-                                       Text="Documents"
-                                       FontSize="18"
-                                       FontWeight="Medium"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding TotalDocuments, StringFormat='Total: {0}'}"
-                                       FontSize="14"
-                                       Foreground="#757575"/>
-                        </Grid>
-                    </Border>
-
-                    <!-- Documents DataGrid -->
-                    <DataGrid Grid.Row="1"
-                              ItemsSource="{Binding Documents}"
-                              SelectedItem="{Binding SelectedDocument}"
-                              AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              CanUserDeleteRows="False"
-                              GridLinesVisibility="Horizontal"
-                              HeadersVisibility="Column"
-                              SelectionMode="Single"
-                              AlternatingRowBackground="#FAFAFA"
-                              Margin="1">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="File Name"
-                                                Binding="{Binding FileName}"
-                                                Width="2*"
-                                                IsReadOnly="True"/>
-                            <DataGridTextColumn Header="Status"
-                                                Binding="{Binding StatusDisplay}"
-                                                Width="Auto"
-                                                IsReadOnly="True"/>
-                            <DataGridTextColumn Header="Hyperlinks"
-                                                Binding="{Binding HyperlinkCount}"
-                                                Width="Auto"
-                                                IsReadOnly="True"/>
-                            <DataGridTextColumn Header="Updated"
-                                                Binding="{Binding UpdatedHyperlinks}"
-                                                Width="Auto"
-                                                IsReadOnly="True"/>
-                            <DataGridTextColumn Header="Errors"
-                                                Binding="{Binding ErrorCount}"
-                                                Width="Auto"
-                                                IsReadOnly="True"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- Empty State -->
-                    <TextBlock Grid.Row="1"
-                               Text="No documents selected. Click 'Select Files' or drag and drop Word documents here to get started."
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               FontSize="14"
-                               Foreground="#757575"
-                               TextWrapping="Wrap"
-                               Margin="20">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Documents.Count}" Value="0">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </Grid>
+                <controls:ModernDocumentTreeView DataContext="{Binding}"/>
             </Border>
 
             <!-- Splitter -->

@@ -59,18 +59,56 @@
                     <CheckBox Content="Create backup before processing"
                               IsChecked="{Binding CreateBackupBeforeProcessing}"
                               Margin="0,0,0,8"/>
-                    <CheckBox Content="Validate hyperlinks"
-                              IsChecked="{Binding ValidateHyperlinks}"
-                              Margin="0,0,0,8"/>
-                    <CheckBox Content="Update hyperlinks automatically"
-                              IsChecked="{Binding UpdateHyperlinks}"
-                              Margin="0,0,0,8"/>
-                    <CheckBox Content="Add Content IDs"
-                              IsChecked="{Binding AddContentIds}"
-                              Margin="0,0,0,8"/>
-                    <CheckBox Content="Optimize text formatting"
-                              IsChecked="{Binding OptimizeText}"
-                              Margin="0,0,0,8"/>
+                    
+                    <!-- TheSource Hyperlink Operations -->
+                    <TextBlock Text="theSource Hyperlink Operations" 
+                               FontWeight="Bold" 
+                               Margin="0,8,0,4"
+                               Foreground="#2196F3"/>
+                    <CheckBox Content="Update URLs of theSource Hyperlinks"
+                              IsChecked="{Binding UpdateTheSourceHyperlinkUrls}"
+                              Margin="16,0,0,4"
+                              ToolTip="Updates hyperlink URLs to point to correct documents"/>
+                    <CheckBox Content="Append Content IDs to theSource Hyperlinks"
+                              IsChecked="{Binding AppendContentIdsToTheSourceHyperlinks}"
+                              Margin="16,0,0,4"
+                              ToolTip="Adds Content IDs to hyperlink display text"/>
+                    <CheckBox Content="Check for Expired Content"
+                              IsChecked="{Binding CheckForExpiredContent}"
+                              Margin="16,0,0,8"
+                              ToolTip="Identifies and marks expired content with status indicators"/>
+                    
+                    <!-- Title Operations -->
+                    <TextBlock Text="Title Operations" 
+                               FontWeight="Bold" 
+                               Margin="0,8,0,4"
+                               Foreground="#FF9800"/>
+                    <CheckBox Content="Auto Replace Outdated Titles"
+                              IsChecked="{Binding AutoReplaceOutdatedTitles}"
+                              Margin="16,0,0,4"
+                              ToolTip="Automatically replaces outdated document titles with current versions"/>
+                    <CheckBox Content="Report Title Differences in Changelog"
+                              IsChecked="{Binding ReportTitleDifferencesInChangelog}"
+                              Margin="16,0,0,8"
+                              ToolTip="Logs title differences for manual review"/>
+                    
+                    <!-- Custom Replacement Operations -->
+                    <TextBlock Text="Custom Replacement Operations" 
+                               FontWeight="Bold" 
+                               Margin="0,8,0,4"
+                               Foreground="#4CAF50"/>
+                    <CheckBox Content="Replace Custom User Defined Hyperlinks"
+                              IsChecked="{Binding ReplaceCustomUserDefinedHyperlinks}"
+                              Margin="16,0,0,4"
+                              ToolTip="Applies user-defined hyperlink replacement rules"/>
+                    <CheckBox Content="Replace Custom User Defined Text"
+                              IsChecked="{Binding ReplaceCustomUserDefinedText}"
+                              Margin="16,0,0,4"
+                              ToolTip="Applies user-defined text replacement rules"/>
+                    <CheckBox Content="Optimize Text Formatting"
+                              IsChecked="{Binding OptimizeTextFormatting}"
+                              Margin="16,0,0,8"
+                              ToolTip="Optimizes document text formatting and structure"/>
                 </StackPanel>
             </GroupBox>
 
