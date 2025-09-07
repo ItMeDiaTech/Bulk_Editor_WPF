@@ -105,7 +105,7 @@ namespace BulkEditor.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task SaveSettingsAsync()
+        private void SaveSettings()
         {
             try
             {

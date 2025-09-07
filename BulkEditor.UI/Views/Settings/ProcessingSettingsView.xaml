@@ -8,6 +8,81 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="16">
 
+            <!-- General Settings -->
+            <GroupBox Header="General Settings">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Consultant Email Address:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" 
+                                 Text="{Binding ConsultantEmail}"
+                                 HorizontalAlignment="Stretch"
+                                 ToolTip="Enter consultant email address for future features"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Theme Settings -->
+            <GroupBox Header="Appearance">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Theme:" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1" 
+                                  SelectedItem="{Binding SelectedTheme}"
+                                  ItemsSource="{Binding AvailableThemes}"
+                                  HorizontalAlignment="Left"
+                                  MinWidth="150"
+                                  ToolTip="Choose application theme">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Padding="8,4"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                    <TextBlock Text="Auto theme follows your Windows system theme preference."
+                               FontSize="11" 
+                               FontStyle="Italic" 
+                               Foreground="Gray"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Import/Export Settings -->
+            <GroupBox Header="Settings Management">
+                <StackPanel>
+                    <TextBlock Text="Export or import all application settings including processing options, replacement rules, and preferences."
+                               FontStyle="Italic" 
+                               Foreground="Gray" 
+                               Margin="0,0,0,12"
+                               TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Export All Settings" 
+                                Command="{Binding ExportAllSettingsCommand}"
+                                Padding="16,8" 
+                                Margin="0,0,8,0"
+                                Background="#2196F3"
+                                Foreground="White"/>
+                        <Button Content="Import Settings" 
+                                Command="{Binding ImportAllSettingsCommand}"
+                                Padding="16,8" 
+                                Margin="0,0,8,0"/>
+                        <Button Content="Reset to Defaults" 
+                                Command="{Binding ResetAllSettingsCommand}"
+                                Padding="16,8"
+                                Background="#FF5722"
+                                Foreground="White"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
             <!-- Concurrency Settings -->
             <GroupBox Header="Concurrency">
                 <StackPanel>
@@ -53,62 +128,23 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Processing Options -->
-            <GroupBox Header="Processing Options">
+            <!-- Basic Processing Options -->
+            <GroupBox Header="Basic Processing Options">
                 <StackPanel>
                     <CheckBox Content="Create backup before processing"
                               IsChecked="{Binding CreateBackupBeforeProcessing}"
                               Margin="0,0,0,8"/>
                     
-                    <!-- TheSource Hyperlink Operations -->
-                    <TextBlock Text="theSource Hyperlink Operations" 
-                               FontWeight="Bold" 
-                               Margin="0,8,0,4"
-                               Foreground="#2196F3"/>
-                    <CheckBox Content="Update URLs of theSource Hyperlinks"
-                              IsChecked="{Binding UpdateTheSourceHyperlinkUrls}"
-                              Margin="16,0,0,4"
-                              ToolTip="Updates hyperlink URLs to point to correct documents"/>
-                    <CheckBox Content="Append Content IDs to theSource Hyperlinks"
-                              IsChecked="{Binding AppendContentIdsToTheSourceHyperlinks}"
-                              Margin="16,0,0,4"
-                              ToolTip="Adds Content IDs to hyperlink display text"/>
-                    <CheckBox Content="Check for Expired Content"
-                              IsChecked="{Binding CheckForExpiredContent}"
-                              Margin="16,0,0,8"
-                              ToolTip="Identifies and marks expired content with status indicators"/>
-                    
-                    <!-- Title Operations -->
-                    <TextBlock Text="Title Operations" 
-                               FontWeight="Bold" 
-                               Margin="0,8,0,4"
-                               Foreground="#FF9800"/>
-                    <CheckBox Content="Auto Replace Outdated Titles"
-                              IsChecked="{Binding AutoReplaceOutdatedTitles}"
-                              Margin="16,0,0,4"
-                              ToolTip="Automatically replaces outdated document titles with current versions"/>
-                    <CheckBox Content="Report Title Differences in Changelog"
-                              IsChecked="{Binding ReportTitleDifferencesInChangelog}"
-                              Margin="16,0,0,8"
-                              ToolTip="Logs title differences for manual review"/>
-                    
-                    <!-- Custom Replacement Operations -->
-                    <TextBlock Text="Custom Replacement Operations" 
-                               FontWeight="Bold" 
-                               Margin="0,8,0,4"
-                               Foreground="#4CAF50"/>
-                    <CheckBox Content="Replace Custom User Defined Hyperlinks"
-                              IsChecked="{Binding ReplaceCustomUserDefinedHyperlinks}"
-                              Margin="16,0,0,4"
-                              ToolTip="Applies user-defined hyperlink replacement rules"/>
-                    <CheckBox Content="Replace Custom User Defined Text"
-                              IsChecked="{Binding ReplaceCustomUserDefinedText}"
-                              Margin="16,0,0,4"
-                              ToolTip="Applies user-defined text replacement rules"/>
-                    <CheckBox Content="Optimize Text Formatting"
-                              IsChecked="{Binding OptimizeTextFormatting}"
-                              Margin="16,0,0,8"
-                              ToolTip="Optimizes document text formatting and structure"/>
+                    <TextBlock Text="All detailed processing options have been moved to the dedicated 'Processing Options' window."
+                               FontStyle="Italic" 
+                               Foreground="Gray" 
+                               Margin="0,8,0,8"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="Click the 'Processing Options' button next to 'Process Documents' to configure detailed processing settings."
+                               FontStyle="Italic" 
+                               Foreground="#2196F3" 
+                               Margin="0,0,0,8"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
             </GroupBox>
 

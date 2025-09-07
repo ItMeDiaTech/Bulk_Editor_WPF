@@ -42,7 +42,15 @@ namespace BulkEditor.Tests.Infrastructure.Services
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "BulkEditor-Test/1.0");
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
             
-            _httpService = new HttpService(_httpClient, _mockLogger.Object);
+            var mockRetryPolicyService = new Mock<BulkEditor.Core.Services.IRetryPolicyService>();
+            var httpRetryPolicy = new BulkEditor.Core.Services.RetryPolicy { MaxRetries = 3, PolicyName = "HTTP" };
+            mockRetryPolicyService.Setup(x => x.CreateHttpRetryPolicy()).Returns(httpRetryPolicy);
+            mockRetryPolicyService.Setup(x => x.ExecuteWithRetryAsync(It.IsAny<Func<Task<System.Net.Http.HttpResponseMessage>>>(), It.IsAny<BulkEditor.Core.Services.RetryPolicy>(), It.IsAny<CancellationToken>()))
+                .Returns<Func<Task<System.Net.Http.HttpResponseMessage>>, BulkEditor.Core.Services.RetryPolicy, CancellationToken>((func, policy, token) => func());
+            
+            var mockStructuredLogger = new Mock<BulkEditor.Core.Services.IStructuredLoggingService>();
+            
+            _httpService = new HttpService(_httpClient, _mockLogger.Object, mockRetryPolicyService.Object, mockStructuredLogger.Object);
         }
 
         [Fact]

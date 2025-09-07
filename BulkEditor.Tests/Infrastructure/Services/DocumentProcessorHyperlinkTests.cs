@@ -46,13 +46,16 @@ namespace BulkEditor.Tests.Infrastructure.Services
                 }
             };
 
+            var mockRetryPolicyService = new Mock<BulkEditor.Core.Services.IRetryPolicyService>();
+            
             _documentProcessor = new DocumentProcessor(
                 _fileServiceMock.Object,
                 _hyperlinkValidatorMock.Object,
                 _textOptimizerMock.Object,
                 _replacementServiceMock.Object,
                 _loggerMock.Object,
-                _appSettings);
+                _appSettings,
+                mockRetryPolicyService.Object);
         }
 
         [Theory]

@@ -19,6 +19,8 @@ namespace BulkEditor.UI
     public partial class App : System.Windows.Application
     {
         private ServiceProvider? _serviceProvider;
+
+        public ServiceProvider? ServiceProvider => _serviceProvider;
         private BulkEditor.Application.Services.UpdateManager? _updateManager;
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -107,6 +109,10 @@ namespace BulkEditor.UI
                 // Build service provider
                 _serviceProvider = services.BuildServiceProvider();
 
+                // Initialize database
+                var databaseService = _serviceProvider.GetRequiredService<BulkEditor.Core.Services.IDatabaseService>();
+                await databaseService.InitializeAsync();
+
                 // Initialize update manager
                 _updateManager = _serviceProvider.GetRequiredService<BulkEditor.Application.Services.UpdateManager>();
                 await _updateManager.StartAsync();
@@ -159,7 +165,7 @@ namespace BulkEditor.UI
             }
         }
 
-        private void OnUpdateRequiresRestart(object sender, EventArgs e)
+        private void OnUpdateRequiresRestart(object? sender, EventArgs e)
         {
             Log.Information("Update requires application restart");
             Dispatcher.BeginInvoke(() =>
@@ -253,7 +259,7 @@ namespace BulkEditor.UI
             };
         }
 
-        private void ConfigureSerilog(AppSettings appSettings = null)
+        private void ConfigureSerilog(AppSettings? appSettings = null)
         {
             var logDirectory = appSettings?.Logging?.LogDirectory ??
                               Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BulkEditor", "Logs");

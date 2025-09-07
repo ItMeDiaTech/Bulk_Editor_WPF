@@ -1,4 +1,5 @@
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -15,43 +16,75 @@ namespace BulkEditor.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILoggingService _logger;
+        private readonly IRetryPolicyService _retryPolicyService;
+        private readonly IStructuredLoggingService _structuredLogger;
 
-        public HttpService(HttpClient httpClient, ILoggingService logger)
+        public HttpService(HttpClient httpClient, ILoggingService logger, IRetryPolicyService retryPolicyService, IStructuredLoggingService structuredLogger)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _retryPolicyService = retryPolicyService ?? throw new ArgumentNullException(nameof(retryPolicyService));
+            _structuredLogger = structuredLogger ?? throw new ArgumentNullException(nameof(structuredLogger));
 
             // Note: HttpClient configuration moved to DI container to avoid modification after first request
         }
 
         public async Task<HttpResponseMessage> GetAsync(string url, CancellationToken cancellationToken = default)
         {
-            try
+            var correlationId = Guid.NewGuid().ToString();
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var retryPolicy = _retryPolicyService.CreateHttpRetryPolicy();
+            
+            return await _retryPolicyService.ExecuteWithRetryAsync(async () =>
             {
-                _logger.LogDebug("Sending GET request to: {Url}", url);
-                var response = await _httpClient.GetAsync(url, cancellationToken);
-                _logger.LogDebug("Received response {StatusCode} from: {Url}", response.StatusCode, url);
+                // Log structured HTTP request
+                var requestEntry = new HttpRequestLogEntry
+                {
+                    Method = "GET",
+                    Url = url,
+                    CorrelationId = correlationId,
+                    OperationName = "HttpGet",
+                    UserAgent = _httpClient.DefaultRequestHeaders.UserAgent?.ToString()
+                };
+
+                await _structuredLogger.LogHttpRequestAsync(requestEntry);
+
+                var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+                
+                stopwatch.Stop();
+
+                // Log structured HTTP response
+                var responseEntry = new HttpResponseLogEntry
+                {
+                    StatusCode = (int)response.StatusCode,
+                    StatusDescription = response.ReasonPhrase ?? "Unknown",
+                    Duration = stopwatch.Elapsed,
+                    CorrelationId = correlationId,
+                    OperationName = "HttpGet",
+                    IsSuccessStatusCode = response.IsSuccessStatusCode,
+                    ContentLength = response.Content.Headers.ContentLength ?? 0
+                };
+
+                await _structuredLogger.LogHttpResponseAsync(responseEntry);
+
                 return response;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending GET request to: {Url}", url);
-                throw;
-            }
+            }, retryPolicy, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<HttpResponseMessage> PostJsonAsync(string url, object data, CancellationToken cancellationToken = default)
         {
-            try
+            // Handle test mode immediately without retry logic
+            if (url.ToLower() == "test")
             {
-                _logger.LogInformation("Sending POST request for combined lookup identifiers to: {Url}", url);
+                return CreateTestApiResponse();
+            }
 
-                // Handle test mode
-                if (url.ToLower() == "test")
-                {
-                    return CreateTestApiResponse();
-                }
-
+            var correlationId = Guid.NewGuid().ToString();
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var retryPolicy = _retryPolicyService.CreateHttpRetryPolicy();
+            
+            return await _retryPolicyService.ExecuteWithRetryAsync(async () =>
+            {
                 // CRITICAL FIX: Ensure JSON matches VBA API expectations (Issue #4)
                 var json = System.Text.Json.JsonSerializer.Serialize(data, new JsonSerializerOptions
                 {
@@ -59,34 +92,53 @@ namespace BulkEditor.Infrastructure.Services
                     WriteIndented = false
                 });
 
-                _logger.LogInformation("Full HTTP Request Details:");
-                _logger.LogInformation("  URL: {Url}", url);
-                _logger.LogInformation("  Method: POST");
-                _logger.LogInformation("  Content-Type: application/json");
-                _logger.LogInformation("  Request Body: {RequestJson}", json);
+                // Log structured HTTP request
+                var requestEntry = new HttpRequestLogEntry
+                {
+                    Method = "POST",
+                    Url = url,
+                    Body = json,
+                    ContentLength = System.Text.Encoding.UTF8.GetByteCount(json),
+                    CorrelationId = correlationId,
+                    OperationName = "ApiLookupRequest",
+                    UserAgent = _httpClient.DefaultRequestHeaders.UserAgent?.ToString(),
+                    Headers = new Dictionary<string, string>
+                    {
+                        ["Content-Type"] = "application/json"
+                    }
+                };
+
+                await _structuredLogger.LogHttpRequestAsync(requestEntry);
 
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync(url, content, cancellationToken);
+                var response = await _httpClient.PostAsync(url, content, cancellationToken).ConfigureAwait(false);
                 
+                stopwatch.Stop();
+
+                // Read response content for logging
                 var responseContent = string.Empty;
                 if (response.Content != null)
                 {
-                    responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                _logger.LogInformation("Full HTTP Response Details:");
-                _logger.LogInformation("  Status Code: {StatusCode}", response.StatusCode);
-                _logger.LogInformation("  Status: {ReasonPhrase}", response.ReasonPhrase);
-                _logger.LogInformation("  Response Body: {ResponseJson}", responseContent);
+                // Log structured HTTP response
+                var responseEntry = new HttpResponseLogEntry
+                {
+                    StatusCode = (int)response.StatusCode,
+                    StatusDescription = response.ReasonPhrase ?? "Unknown",
+                    Body = responseContent,
+                    ContentLength = responseContent?.Length ?? 0,
+                    Duration = stopwatch.Elapsed,
+                    CorrelationId = correlationId,
+                    OperationName = "ApiLookupRequest",
+                    IsSuccessStatusCode = response.IsSuccessStatusCode
+                };
+
+                await _structuredLogger.LogHttpResponseAsync(responseEntry);
 
                 return response;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending POST request for combined lookup identifiers to: {Url}", url);
-                throw;
-            }
+            }, retryPolicy, cancellationToken).ConfigureAwait(false);
         }
 
         private HttpResponseMessage CreateTestApiResponse()
@@ -133,33 +185,30 @@ namespace BulkEditor.Infrastructure.Services
 
         public async Task<HttpResponseMessage> HeadAsync(string url, CancellationToken cancellationToken = default)
         {
-            try
+            // Handle file:// URLs which are not supported by HttpClient
+            if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
             {
-                // Handle file:// URLs which are not supported by HttpClient
-                if (url.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogDebug("Handling file:// URL: {Url}", url);
+                _logger.LogDebug("Handling file:// URL: {Url}", url);
 
-                    // Extract local file path from file:// URL
-                    var filePath = new Uri(url).LocalPath;
-                    var fileExists = System.IO.File.Exists(filePath);
+                // Extract local file path from file:// URL
+                var filePath = new Uri(url).LocalPath;
+                var fileExists = System.IO.File.Exists(filePath);
 
-                    var fileResponse = new HttpResponseMessage(fileExists ? HttpStatusCode.OK : HttpStatusCode.NotFound);
-                    _logger.LogDebug("File {FilePath} exists: {FileExists}", filePath, fileExists);
-                    return fileResponse;
-                }
+                var fileResponse = new HttpResponseMessage(fileExists ? HttpStatusCode.OK : HttpStatusCode.NotFound);
+                _logger.LogDebug("File {FilePath} exists: {FileExists}", filePath, fileExists);
+                return fileResponse;
+            }
 
+            var retryPolicy = _retryPolicyService.CreateHttpRetryPolicy();
+            
+            return await _retryPolicyService.ExecuteWithRetryAsync(async () =>
+            {
                 _logger.LogDebug("Sending HEAD request to: {Url}", url);
                 var request = new HttpRequestMessage(HttpMethod.Head, url);
-                var response = await _httpClient.SendAsync(request, cancellationToken);
+                var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Received response {StatusCode} from HEAD request: {Url}", response.StatusCode, url);
                 return response;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending HEAD request to: {Url}", url);
-                throw;
-            }
+            }, retryPolicy, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<bool> IsUrlAccessibleAsync(string url, CancellationToken cancellationToken = default)

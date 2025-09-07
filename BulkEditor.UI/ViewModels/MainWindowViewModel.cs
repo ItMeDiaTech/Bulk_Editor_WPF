@@ -2,6 +2,7 @@ using BulkEditor.Application.Services;
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using BulkEditor.UI.Services;
 using BulkEditor.UI.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -32,7 +34,8 @@ namespace BulkEditor.UI.ViewModels
         private readonly IUndoService _undoService;
         private readonly ISessionManager _sessionManager;
         private readonly IBackupService _backupService;
-        private CancellationTokenSource? _cancellationTokenSource;
+        private readonly IBackgroundTaskService _backgroundTaskService;
+        private string? _currentTaskId;
 
         [ObservableProperty]
         private ObservableCollection<DocumentViewModel> _documents = new();
@@ -43,6 +46,54 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasDocuments))]
         private ObservableCollection<DocumentListItemViewModel> _documentItems = new();
+
+        private ObservableCollection<DocumentListItemViewModel> _allDocumentItems = new();
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasSearchText))]
+        private string _searchText = string.Empty;
+
+        public bool HasSearchText => !string.IsNullOrEmpty(SearchText);
+
+        partial void OnSearchTextChanged(string value)
+        {
+            FilterDocuments();
+        }
+        
+        private void FilterDocuments()
+        {
+            try
+            {
+                DocumentItems.Clear();
+                
+                if (string.IsNullOrEmpty(SearchText))
+                {
+                    // Show all documents when search is empty
+                    foreach (var item in _allDocumentItems)
+                    {
+                        DocumentItems.Add(item);
+                    }
+                }
+                else
+                {
+                    // Filter documents by title or content ID
+                    var searchTerm = SearchText.ToLowerInvariant();
+                    var filteredItems = _allDocumentItems.Where(item => 
+                        item.Title.ToLowerInvariant().Contains(searchTerm) ||
+                        item.Location.ToLowerInvariant().Contains(searchTerm)
+                    );
+                    
+                    foreach (var item in filteredItems)
+                    {
+                        DocumentItems.Add(item);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error filtering documents with search term: {SearchTerm}", SearchText);
+            }
+        }
 
         [ObservableProperty]
         private DocumentViewModel? _selectedDocument;
@@ -95,13 +146,55 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private string _busyMessage = "Loading...";
 
+        [ObservableProperty]
+        private string _currentOperation = string.Empty;
+
+        [ObservableProperty]
+        private string _elapsedTime = "00:00:00";
+
+        [ObservableProperty]
+        private string _estimatedTimeRemaining = "Calculating...";
+
+        [ObservableProperty]
+        private double _currentDocumentProgress = 0;
+
+        [ObservableProperty]
+        private int _totalHyperlinksFound = 0;
+
+        [ObservableProperty]
+        private int _totalHyperlinksProcessed = 0;
+
+        [ObservableProperty]
+        private int _totalHyperlinksUpdated = 0;
+
+        [ObservableProperty]
+        private int _totalTextReplacements = 0;
+
+        [ObservableProperty]
+        private string _averageProcessingTime = "0.00s";
+
+        [ObservableProperty]
+        private ObservableCollection<string> _recentErrors = new();
+
+        [ObservableProperty]
+        private ObservableCollection<BackgroundTaskInfo> _activeTasks = new();
+
+        [ObservableProperty]
+        private double _overallProgress = 0;
+
+        [RelayCommand]
+        private void ClearSearch()
+        {
+            SearchText = string.Empty;
+        }
+
         public bool HasProcessingResults => ProcessingResults.Any();
 
         public bool HasDocuments => DocumentItems.Any();
 
         public INotificationService NotificationService => _notificationService;
 
-        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService)
+        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService, IBackgroundTaskService backgroundTaskService)
         {
             _applicationService = applicationService ?? throw new ArgumentNullException(nameof(applicationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -111,9 +204,13 @@ namespace BulkEditor.UI.ViewModels
             _undoService = undoService;
             _sessionManager = sessionManager;
             _backupService = backupService;
+            _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
 
             Title = "Bulk Document Editor";
             SetStatusReady();
+
+            // Subscribe to background task status changes
+            _backgroundTaskService.TaskStatusChanged += OnBackgroundTaskStatusChanged;
 
             // Subscribe to collection changes to update command states
             Documents.CollectionChanged += (s, e) =>
@@ -215,20 +312,34 @@ namespace BulkEditor.UI.ViewModels
         {
             try
             {
+                _logger.LogInformation("Starting file addition process for {Count} files", filePaths?.Length ?? 0);
+                
+                if (filePaths == null || filePaths.Length == 0)
+                {
+                    _logger.LogWarning("No files provided for addition");
+                    SetStatusError("No files were provided");
+                    return;
+                }
+
                 SetStatusProcessing("Validating selected files...");
 
                 var validation = await _applicationService.ValidateFilesAsync(filePaths);
+                _logger.LogInformation("Validation completed: {ValidCount} valid, {InvalidCount} invalid files", 
+                    validation.ValidFiles.Count, validation.InvalidFiles.Count);
 
                 foreach (var filePath in validation.ValidFiles)
                 {
                     if (!Documents.Any(d => d.FilePath == filePath))
                     {
-                        // Create Document entity
+                        // Create Document entity with proper initialization
                         var document = new Document
                         {
                             FilePath = filePath,
                             FileName = Path.GetFileName(filePath),
-                            Status = DocumentStatus.Pending
+                            Status = DocumentStatus.Pending,
+                            ChangeLog = new ChangeLog(),
+                            ProcessingErrors = new List<ProcessingError>(),
+                            CreatedAt = DateTime.Now
                         };
 
                         // Add to original Documents collection
@@ -241,12 +352,21 @@ namespace BulkEditor.UI.ViewModels
                         });
 
                         // Add to new DocumentItems collection for display
-                        DocumentItems.Add(new DocumentListItemViewModel(
-                            document, 
-                            RemoveDocumentFromList,
-                            ViewDocumentDetails,
-                            OpenDocumentLocation
-                        ));
+                        try
+                        {
+                            var documentItem = new DocumentListItemViewModel(
+                                document, 
+                                RemoveDocumentFromList,
+                                ViewDocumentDetails,
+                                OpenDocumentLocation
+                            );
+                            _allDocumentItems.Add(documentItem);
+                        }
+                        catch (Exception docItemEx)
+                        {
+                            _logger.LogError(docItemEx, "Error creating DocumentListItemViewModel for file: {FilePath}", filePath);
+                            throw new InvalidOperationException($"Failed to create document item for {filePath}", docItemEx);
+                        }
                     }
                 }
 
@@ -291,7 +411,10 @@ namespace BulkEditor.UI.ViewModels
         {
             if (IsProcessing) return;
 
-            _cancellationTokenSource = new CancellationTokenSource();
+            // Register background task
+            _currentTaskId = _backgroundTaskService.RegisterTask(
+                "Document Processing", 
+                $"Processing {Documents.Count} documents");
 
             try
             {
@@ -300,29 +423,34 @@ namespace BulkEditor.UI.ViewModels
                 FailedDocuments = 0;
                 ProgressValue = 0;
 
-                // Start a new session for this processing job
-                var session = _sessionManager.StartSession();
-                _logger.LogInformation("Processing session {SessionId} started.", session.SessionId);
-                IsRevertEnabled = false; // Disable revert until processing is complete
-
-                SetStatusProcessing("Backing up files before processing...");
-                var filePaths = Documents.Select(d => d.FilePath).ToList();
-
-                // Create backups before processing
-                foreach (var filePath in filePaths)
+                // Start background task
+                var results = await _backgroundTaskService.StartTaskAsync(_currentTaskId, async (cancellationToken) =>
                 {
-                    var backupPath = await _backupService.CreateBackupAsync(filePath, session);
-                    _sessionManager.AddFileToSession(filePath, backupPath);
-                }
+                    // Start a new session for this processing job
+                    var session = _sessionManager.StartSession();
+                    _logger.LogInformation("Processing session {SessionId} started.", session.SessionId);
+                    IsRevertEnabled = false; // Disable revert until processing is complete
 
-                SetStatusProcessing("Starting document processing...");
+                    SetStatusProcessing("Backing up files before processing...");
+                    var filePaths = Documents.Select(d => d.FilePath).ToList();
 
-                var progress = new Progress<BatchProcessingProgress>(OnBatchProgressChanged);
+                    // Create backups before processing
+                    foreach (var filePath in filePaths)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var backupPath = await _backupService.CreateBackupAsync(filePath, session);
+                        _sessionManager.AddFileToSession(filePath, backupPath);
+                    }
 
-                var results = await _applicationService.ProcessDocumentsBatchAsync(
-                    filePaths,
-                    progress,
-                    _cancellationTokenSource.Token);
+                    SetStatusProcessing("Starting document processing...");
+
+                    var progress = new Progress<BatchProcessingProgress>(OnBatchProgressChanged);
+
+                    return await _applicationService.ProcessDocumentsBatchAsync(
+                        filePaths,
+                        progress,
+                        cancellationToken);
+                });
 
                 // Update document ViewModels with results
                 foreach (var result in results)
@@ -376,8 +504,7 @@ namespace BulkEditor.UI.ViewModels
             finally
             {
                 IsProcessing = false;
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = null;
+                _currentTaskId = null;
                 IsRevertEnabled = _undoService.CanUndo();
             }
         }
@@ -387,11 +514,15 @@ namespace BulkEditor.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanCancel))]
         private void CancelProcessing()
         {
-            _cancellationTokenSource?.Cancel();
-            SetStatusWarning("Cancelling processing...");
+            if (!string.IsNullOrEmpty(_currentTaskId))
+            {
+                _backgroundTaskService.CancelTask(_currentTaskId);
+                SetStatusWarning("Cancelling processing...");
+                _logger.LogInformation("User requested cancellation of background task: {TaskId}", _currentTaskId);
+            }
         }
 
-        private bool CanCancel() => IsProcessing && _cancellationTokenSource != null;
+        private bool CanCancel() => IsProcessing && !string.IsNullOrEmpty(_currentTaskId);
 
         [RelayCommand]
         private void ClearDocuments()
@@ -508,12 +639,43 @@ namespace BulkEditor.UI.ViewModels
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
+                // Update basic progress
                 TotalDocuments = progress.TotalDocuments;
                 ProcessedDocuments = progress.ProcessedDocuments;
                 FailedDocuments = progress.FailedDocuments;
                 ProgressValue = progress.PercentageComplete;
-                ProgressMessage = $"Processing: {progress.CurrentDocument}";
-                SetStatusProcessing($"Processing {progress.ProcessedDocuments}/{progress.TotalDocuments} documents...");
+                OverallProgress = progress.OverallProgress;
+                
+                // Update detailed progress information
+                CurrentOperation = progress.CurrentOperation;
+                CurrentDocumentProgress = progress.CurrentDocumentProgress;
+                ElapsedTime = progress.FormattedElapsedTime;
+                EstimatedTimeRemaining = progress.FormattedEstimatedTimeRemaining;
+                
+                // Update processing statistics
+                TotalHyperlinksFound = progress.TotalHyperlinksFound;
+                TotalHyperlinksProcessed = progress.TotalHyperlinksProcessed;
+                TotalHyperlinksUpdated = progress.TotalHyperlinksUpdated;
+                TotalTextReplacements = progress.TotalTextReplacements;
+                AverageProcessingTime = $"{progress.AverageProcessingTimePerDocument:F2}s";
+                
+                // Update recent errors (keep only last 5)
+                RecentErrors.Clear();
+                foreach (var error in progress.RecentErrors.TakeLast(5))
+                {
+                    RecentErrors.Add(error);
+                }
+                
+                // Update progress message with more detail
+                var currentDoc = !string.IsNullOrEmpty(progress.CurrentDocument) 
+                    ? Path.GetFileName(progress.CurrentDocument) 
+                    : "Unknown";
+                
+                ProgressMessage = string.IsNullOrEmpty(progress.CurrentOperation)
+                    ? $"Processing: {currentDoc}"
+                    : $"{progress.CurrentOperation}: {currentDoc}";
+                
+                SetStatusProcessing($"Processing {progress.ProcessedDocuments}/{progress.TotalDocuments} documents - {progress.FormattedElapsedTime} elapsed");
             });
         }
 
@@ -555,10 +717,46 @@ namespace BulkEditor.UI.ViewModels
             _notificationService.ShowInfo("Application Ready", "Bulk Document Editor is ready for use.");
         }
 
+        private void OnBackgroundTaskStatusChanged(object? sender, BackgroundTaskStatusChangedEventArgs e)
+        {
+            try
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // Update active tasks collection
+                    var activeTasks = _backgroundTaskService.GetActiveTasks().ToList();
+                    ActiveTasks.Clear();
+                    foreach (var task in activeTasks)
+                    {
+                        ActiveTasks.Add(task);
+                    }
+
+                    // Update command states
+                    CancelProcessingCommand.NotifyCanExecuteChanged();
+                    ProcessDocumentsCommand.NotifyCanExecuteChanged();
+
+                    _logger.LogDebug("Background task {TaskId} status changed: {OldStatus} -> {NewStatus}",
+                        e.TaskId, e.OldStatus, e.NewStatus);
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling background task status change");
+            }
+        }
+
         public override void Cleanup()
         {
-            _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource?.Dispose();
+            // Unsubscribe from events
+            _backgroundTaskService.TaskStatusChanged -= OnBackgroundTaskStatusChanged;
+
+            // Cancel any running background tasks
+            if (!string.IsNullOrEmpty(_currentTaskId))
+            {
+                _backgroundTaskService.CancelTask(_currentTaskId);
+            }
+            _backgroundTaskService.CancelAllTasks();
+            
             base.Cleanup();
         }
 

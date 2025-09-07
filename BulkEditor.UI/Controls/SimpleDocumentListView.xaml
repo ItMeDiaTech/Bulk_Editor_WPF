@@ -131,9 +131,37 @@
         <!-- Document List Item Template -->
         <DataTemplate x:Key="DocumentItemTemplate" DataType="{x:Type vm:DocumentListItemViewModel}">
             <Border Background="White"
-                    BorderBrush="#E0E0E0"
-                    BorderThickness="0,0,0,1"
-                    Padding="16,12">
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="8"
+                    Padding="16,12"
+                    Margin="8,4">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Opacity="0.06" BlurRadius="4" ShadowDepth="1" Direction="270"/>
+                </Border.Effect>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="Black" Opacity="0.12" BlurRadius="8" ShadowDepth="2" Direction="270"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Border.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy Document Title" Command="{Binding CopyTitleCommand}" InputGestureText="Ctrl+C"/>
+                        <MenuItem Header="Copy Document Path" Command="{Binding CopyPathCommand}"/>
+                        <MenuItem Header="Copy Document Info" Command="{Binding CopyInfoCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="Open Location" Command="{Binding OpenLocationCommand}"/>
+                        <MenuItem Header="Remove" Command="{Binding RemoveCommand}"/>
+                    </ContextMenu>
+                </Border.ContextMenu>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -200,22 +228,78 @@
                 BorderBrush="#E0E0E0"
                 BorderThickness="0,0,0,1">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Title Row -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0"
-                           Text="Documents"
-                           FontSize="18"
-                           FontWeight="Medium"
-                           VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="0"
+                               Text="Documents"
+                               FontSize="18"
+                               FontWeight="Medium"
+                               VerticalAlignment="Center"/>
 
-                <TextBlock Grid.Column="1"
-                           Text="{Binding DocumentItems.Count, StringFormat='Total: {0} documents'}"
-                           FontSize="14"
-                           Foreground="#757575"
-                           VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding DocumentItems.Count, StringFormat='Total: {0} documents'}"
+                               FontSize="14"
+                               Foreground="#757575"
+                               VerticalAlignment="Center"/>
+                </Grid>
+                
+                <!-- Search Row -->
+                <Grid Grid.Row="1" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBox Grid.Column="0"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="14"
+                             Padding="12,8"
+                             Background="White"
+                             BorderBrush="#CCCCCC"
+                             BorderThickness="1"
+                             VerticalAlignment="Center">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="">
+                                        <Setter Property="Background">
+                                            <Setter.Value>
+                                                <VisualBrush AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                                                    <VisualBrush.Visual>
+                                                        <TextBlock Text="Search by title or file path..." 
+                                                                  Foreground="#999999" 
+                                                                  FontSize="14"/>
+                                                    </VisualBrush.Visual>
+                                                </VisualBrush>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                    
+                    <Button Grid.Column="1"
+                            Content="Clear"
+                            Command="{Binding ClearSearchCommand}"
+                            FontSize="12"
+                            Padding="12,6"
+                            Margin="8,0,0,0"
+                            Background="#FF6B6B"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Visibility="{Binding HasSearchText, Converter={StaticResource BoolToVisConverter}}"/>
+                </Grid>
             </Grid>
         </Border>
 
@@ -225,7 +309,7 @@
                       HorizontalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding DocumentItems}"
                           ItemTemplate="{StaticResource DocumentItemTemplate}"
-                          Background="White"
+                          Background="Transparent"
                           Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisConverter}}"/>
         </ScrollViewer>
 

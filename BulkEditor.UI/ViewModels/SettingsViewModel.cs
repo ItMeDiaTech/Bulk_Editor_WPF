@@ -64,10 +64,6 @@ namespace BulkEditor.UI.ViewModels
             ProcessingSettings.MaxConcurrentDocuments = _currentSettings.Processing.MaxConcurrentDocuments;
             ProcessingSettings.BatchSize = _currentSettings.Processing.BatchSize;
             ProcessingSettings.CreateBackupBeforeProcessing = _currentSettings.Processing.CreateBackupBeforeProcessing;
-            ProcessingSettings.ValidateHyperlinks = _currentSettings.Processing.ValidateHyperlinks;
-            ProcessingSettings.UpdateHyperlinks = _currentSettings.Processing.UpdateHyperlinks;
-            ProcessingSettings.AddContentIds = _currentSettings.Processing.AddContentIds;
-            ProcessingSettings.OptimizeText = _currentSettings.Processing.OptimizeText;
             ProcessingSettings.TimeoutPerDocumentMinutes = (int)_currentSettings.Processing.TimeoutPerDocument.TotalMinutes;
 
             // Validation Settings
@@ -137,10 +133,7 @@ namespace BulkEditor.UI.ViewModels
             _currentSettings.Processing.MaxConcurrentDocuments = ProcessingSettings.MaxConcurrentDocuments;
             _currentSettings.Processing.BatchSize = ProcessingSettings.BatchSize;
             _currentSettings.Processing.CreateBackupBeforeProcessing = ProcessingSettings.CreateBackupBeforeProcessing;
-            _currentSettings.Processing.ValidateHyperlinks = ProcessingSettings.ValidateHyperlinks;
-            _currentSettings.Processing.UpdateHyperlinks = ProcessingSettings.UpdateHyperlinks;
-            _currentSettings.Processing.AddContentIds = ProcessingSettings.AddContentIds;
-            _currentSettings.Processing.OptimizeText = ProcessingSettings.OptimizeText;
+            // Note: Processing options moved to dedicated Processing Options window
             _currentSettings.Processing.TimeoutPerDocument = TimeSpan.FromMinutes(ProcessingSettings.TimeoutPerDocumentMinutes);
 
             // Validation Settings
@@ -313,7 +306,7 @@ namespace BulkEditor.UI.ViewModels
             {
                 IsBusy = false;
                 _logger.LogError(ex, "Error saving settings: {Message}", ex.Message);
-                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace ?? "No stack trace available");
                 // Re-throw to ensure the error is properly handled by the UI
                 throw;
             }
@@ -507,10 +500,7 @@ namespace BulkEditor.UI.ViewModels
                     BatchSize = 50,
                     TimeoutPerDocument = TimeSpan.FromMinutes(5),
                     CreateBackupBeforeProcessing = true,
-                    ValidateHyperlinks = true,
-                    UpdateHyperlinks = true,
-                    AddContentIds = true,
-                    OptimizeText = false,
+                    // Processing options now managed in dedicated Processing Options window
                     LookupIdPattern = @"(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})"
                 },
                 Validation = new ValidationSettings

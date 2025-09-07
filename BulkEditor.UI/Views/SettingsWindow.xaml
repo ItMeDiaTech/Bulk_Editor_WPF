@@ -36,8 +36,8 @@
         <!-- Settings Content -->
         <TabControl Grid.Row="0" Margin="16">
 
-            <!-- Processing Settings -->
-            <TabItem Header="Processing">
+            <!-- General Settings -->
+            <TabItem Header="General">
                 <views:ProcessingSettingsView DataContext="{Binding ProcessingSettings}"/>
             </TabItem>
 
@@ -54,11 +54,6 @@
             <!-- Logging Settings -->
             <TabItem Header="Logging">
                 <views:LoggingSettingsView DataContext="{Binding LoggingSettings}"/>
-            </TabItem>
-
-            <!-- Replacement Settings -->
-            <TabItem Header="Replacement">
-                <views:ReplacementSettingsView DataContext="{Binding ReplacementSettings}"/>
             </TabItem>
 
             <!-- Update Settings -->

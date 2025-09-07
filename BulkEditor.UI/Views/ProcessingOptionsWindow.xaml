@@ -173,7 +173,17 @@
                                 </Grid>
 
                                 <DataGrid Name="HyperlinkRulesGrid" ItemsSource="{Binding HyperlinkRules}"
-                                          Height="300" Margin="0,0,0,8">
+                                          Height="300" Margin="0,0,0,8"
+                                          ClipboardCopyMode="IncludeHeader"
+                                          SelectionMode="Extended">
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"/>
+                                            <MenuItem Header="Copy All" Command="{Binding CopyAllHyperlinkRulesCommand}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Paste" Command="ApplicationCommands.Paste" InputGestureText="Ctrl+V"/>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
                                     <DataGrid.Columns>
                                         <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80"/>
                                         <DataGridTextColumn Header="Title to Match" Binding="{Binding TitleToMatch}" Width="300"/>
@@ -186,12 +196,6 @@
                                            FontSize="12" FontStyle="Italic" Foreground="Gray"/>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                    <Button Content="Export Rules" Padding="16,8" Margin="0,0,8,0"
-                                            Command="{Binding ExportHyperlinkRulesCommand}"
-                                            Background="#2196F3" Foreground="White"/>
-                                    <Button Content="Import Rules" Padding="16,8" Margin="0,0,8,0"
-                                            Command="{Binding ImportHyperlinkRulesCommand}"
-                                            Background="#2196F3" Foreground="White"/>
                                     <Button Content="Clear All Rules" Padding="16,8"
                                             Command="{Binding ClearAllHyperlinkRulesCommand}"
                                             Background="#FF6B6B" Foreground="White"/>
@@ -232,7 +236,17 @@
                                 </Grid>
 
                                 <DataGrid Name="TextRulesGrid" ItemsSource="{Binding TextRules}"
-                                          Height="300" Margin="0,0,0,8">
+                                          Height="300" Margin="0,0,0,8"
+                                          ClipboardCopyMode="IncludeHeader"
+                                          SelectionMode="Extended">
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"/>
+                                            <MenuItem Header="Copy All" Command="{Binding CopyAllTextRulesCommand}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Paste" Command="ApplicationCommands.Paste" InputGestureText="Ctrl+V"/>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
                                     <DataGrid.Columns>
                                         <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80"/>
                                         <DataGridTextColumn Header="Source Text" Binding="{Binding SourceText}" Width="350"/>
@@ -245,12 +259,6 @@
                                            FontSize="12" FontStyle="Italic" Foreground="Gray"/>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                    <Button Content="Export Rules" Padding="16,8" Margin="0,0,8,0"
-                                            Command="{Binding ExportTextRulesCommand}"
-                                            Background="#2196F3" Foreground="White"/>
-                                    <Button Content="Import Rules" Padding="16,8" Margin="0,0,8,0"
-                                            Command="{Binding ImportTextRulesCommand}"
-                                            Background="#2196F3" Foreground="White"/>
                                     <Button Content="Clear All Rules" Padding="16,8"
                                             Command="{Binding ClearAllTextRulesCommand}"
                                             Background="#FF6B6B" Foreground="White"/>

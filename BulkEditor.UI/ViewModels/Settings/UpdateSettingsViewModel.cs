@@ -107,7 +107,7 @@ namespace BulkEditor.UI.ViewModels.Settings
                     ReleaseNotes = updateInfo.ReleaseNotes ?? "No release notes available.";
 
                     _logger?.LogInformation("Update available: Version {Version}", updateInfo.Version);
-                    _logger?.LogInformation("Release notes: {ReleaseNotes}", updateInfo.ReleaseNotes);
+                    _logger?.LogInformation("Release notes: {ReleaseNotes}", updateInfo.ReleaseNotes ?? "None");
 
                     // Prompt user for installation
                     await PromptUserForUpdateInstallationAsync(updateInfo);

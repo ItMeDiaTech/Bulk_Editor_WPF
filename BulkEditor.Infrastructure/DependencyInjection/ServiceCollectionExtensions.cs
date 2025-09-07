@@ -1,5 +1,6 @@
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using BulkEditor.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +65,10 @@ namespace BulkEditor.Infrastructure.DependencyInjection
             services.AddScoped<ICacheService, MemoryCacheService>();
             services.AddScoped<BulkEditor.Core.Services.IConfigurationService, ConfigurationService>();
             services.AddScoped<BulkEditor.Core.Services.IUpdateService, GitHubUpdateService>();
+            services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
+            services.AddSingleton<IRetryPolicyService, RetryPolicyService>();
+            services.AddSingleton<IStructuredLoggingService, StructuredLoggingService>();
+            services.AddSingleton<IDatabaseService, SqliteService>();
 
             // Configure Serilog
             ConfigureSerilog(configuration);
@@ -80,7 +85,11 @@ namespace BulkEditor.Infrastructure.DependencyInjection
 
             var loggerConfig = new LoggerConfiguration()
                 .MinimumLevel.Is(GetLogEventLevel(loggingSettings.LogLevel))
-                .Enrich.FromLogContext();
+                .Enrich.FromLogContext()
+                .Enrich.WithProperty("Application", "BulkEditor")
+                .Enrich.WithProperty("Version", System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown")
+                .Enrich.WithProperty("MachineName", Environment.MachineName)
+                .Enrich.WithProperty("ProcessId", Environment.ProcessId);
 
             if (loggingSettings.EnableConsoleLogging)
             {
