@@ -668,29 +668,37 @@ namespace BulkEditor.UI.ViewModels
         }
 
         /// <summary>
-        /// Opens the processing settings (using existing settings window)
+        /// Opens the dedicated processing options window
         /// </summary>
         [RelayCommand]
         private void OpenProcessingSettings()
         {
             try
             {
-                // Use the existing settings window approach but focus on processing
-                var settingsViewModel = _serviceProvider.GetRequiredService<SettingsViewModel>();
-                var settingsWindow = new Views.SettingsWindow(settingsViewModel)
+                var processingOptionsViewModel = new SimpleProcessingOptionsViewModel(
+                    _logger,
+                    _notificationService);
+                
+                var processingOptionsWindow = new Views.ProcessingOptionsWindow(processingOptionsViewModel)
                 {
                     Owner = System.Windows.Application.Current.MainWindow
                 };
-                
-                // TODO: In future, could programmatically select the processing tab
-                settingsWindow.ShowDialog();
 
-                _logger.LogInformation("Processing settings opened via main settings window");
+                var result = processingOptionsWindow.ShowDialog();
+
+                if (result == true)
+                {
+                    _notificationService.ShowSuccess("Processing Options Saved", "Processing options have been updated successfully.");
+                    SetStatusSuccess("Processing options updated successfully");
+                    _logger.LogInformation("Processing options updated by user");
+                }
+
+                _logger.LogInformation("Processing options window opened");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error opening processing settings");
-                _notificationService.ShowError("Settings Error", "Failed to open processing settings.", ex);
+                _logger.LogError(ex, "Error opening processing options window");
+                _notificationService.ShowError("Processing Options Error", "Failed to open processing options window.", ex);
             }
         }
 

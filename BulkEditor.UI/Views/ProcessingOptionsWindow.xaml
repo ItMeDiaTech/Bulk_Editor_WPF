@@ -1,0 +1,291 @@
+<Window x:Class="BulkEditor.UI.Views.ProcessingOptionsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Processing Options - Bulk Document Editor"
+        Height="650" Width="900"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        MinHeight="600" MinWidth="800">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#FAFAFA"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="SectionHeader">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Foreground" Value="#2196F3"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="True"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="#F8F8F8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Processing Options Content -->
+        <TabControl Grid.Row="0" Margin="16" Background="White" BorderBrush="#333333" BorderThickness="1">
+
+            <!-- Processing Options Tab -->
+            <TabItem Header="Processing Options">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+
+                        <!-- TheSource Hyperlink Operations -->
+                        <GroupBox Header="theSource Hyperlink Operations">
+                            <StackPanel>
+                                <CheckBox Content="Update URLs of theSource Hyperlinks"
+                                          IsChecked="{Binding UpdateTheSourceHyperlinkUrls}"
+                                          ToolTip="Updates hyperlink URLs to point to correct documents"/>
+                                <CheckBox Content="Append Content IDs to theSource Hyperlinks"
+                                          IsChecked="{Binding AppendContentIdsToTheSourceHyperlinks}"
+                                          ToolTip="Adds Content IDs to hyperlink display text"/>
+                                <CheckBox Content="Check for Expired Content"
+                                          IsChecked="{Binding CheckForExpiredContent}"
+                                          ToolTip="Identifies and marks expired content with status indicators"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Title Operations -->
+                        <GroupBox Header="Title Operations">
+                            <StackPanel>
+                                <CheckBox Content="Auto Replace Outdated Titles"
+                                          IsChecked="{Binding AutoReplaceOutdatedTitles}"
+                                          ToolTip="Automatically replaces outdated document titles with current versions"/>
+                                <CheckBox Content="Report Title Differences in Changelog"
+                                          IsChecked="{Binding ReportTitleDifferencesInChangelog}"
+                                          ToolTip="Logs title differences for manual review"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Custom Replacement Operations -->
+                        <GroupBox Header="Custom Replacement Operations">
+                            <StackPanel>
+                                <CheckBox Content="Replace Custom User Defined Hyperlinks"
+                                          IsChecked="{Binding ReplaceCustomUserDefinedHyperlinks}"
+                                          ToolTip="Applies user-defined hyperlink replacement rules"/>
+                                <CheckBox Content="Replace Custom User Defined Text"
+                                          IsChecked="{Binding ReplaceCustomUserDefinedText}"
+                                          ToolTip="Applies user-defined text replacement rules"/>
+                                <CheckBox Content="Optimize Text Formatting"
+                                          IsChecked="{Binding OptimizeTextFormatting}"
+                                          ToolTip="Optimizes document text formatting and structure"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Processing Settings -->
+                        <GroupBox Header="Processing Settings">
+                            <StackPanel>
+                                <CheckBox Content="Create backup before processing"
+                                          IsChecked="{Binding CreateBackupBeforeProcessing}"/>
+
+                                <Grid Margin="0,8,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Maximum Concurrent Documents:" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Slider Name="MaxConcurrentSlider"
+                                                Value="{Binding MaxConcurrentDocuments}"
+                                                Minimum="1" Maximum="50"
+                                                Width="150"
+                                                TickFrequency="5"
+                                                IsSnapToTickEnabled="True"/>
+                                        <TextBlock Text="{Binding ElementName=MaxConcurrentSlider, Path=Value}"
+                                                   Margin="8,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   MinWidth="30"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="150"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Timeout per document (minutes):" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding TimeoutPerDocumentMinutes}"
+                                             HorizontalAlignment="Stretch"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Replacement Hyperlinks Tab -->
+            <TabItem Header="Replacement Hyperlinks">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+
+                        <!-- Hyperlink Replacement Rules -->
+                        <GroupBox Header="Hyperlink Replacement Rules">
+                            <StackPanel>
+                                <TextBlock Text="Define rules to replace hyperlink titles with specific content IDs."
+                                           FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Hyperlink Rules:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="Add Rule" Padding="12,6" Margin="0,0,8,0"
+                                                Command="{Binding AddHyperlinkRuleCommand}"
+                                                Background="#4CAF50" Foreground="White"/>
+                                        <Button Content="Remove Selected" Padding="12,6"
+                                                Command="{Binding RemoveHyperlinkRuleCommand}"
+                                                CommandParameter="{Binding SelectedItem, ElementName=HyperlinkRulesGrid}"
+                                                Background="#F44336" Foreground="White"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <DataGrid Name="HyperlinkRulesGrid" ItemsSource="{Binding HyperlinkRules}"
+                                          Height="300" Margin="0,0,0,8">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80"/>
+                                        <DataGridTextColumn Header="Title to Match" Binding="{Binding TitleToMatch}" Width="300"/>
+                                        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="200"/>
+                                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="120" IsReadOnly="True"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <TextBlock Text="Example: Title='User Guide' → Content ID='CMS-DOC-123456'"
+                                           FontSize="12" FontStyle="Italic" Foreground="Gray"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                    <Button Content="Export Rules" Padding="16,8" Margin="0,0,8,0"
+                                            Command="{Binding ExportHyperlinkRulesCommand}"
+                                            Background="#2196F3" Foreground="White"/>
+                                    <Button Content="Import Rules" Padding="16,8" Margin="0,0,8,0"
+                                            Command="{Binding ImportHyperlinkRulesCommand}"
+                                            Background="#2196F3" Foreground="White"/>
+                                    <Button Content="Clear All Rules" Padding="16,8"
+                                            Command="{Binding ClearAllHyperlinkRulesCommand}"
+                                            Background="#FF6B6B" Foreground="White"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Replacement Text Tab -->
+            <TabItem Header="Replacement Text">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+
+                        <!-- Text Replacement Rules -->
+                        <GroupBox Header="Text Replacement Rules">
+                            <StackPanel>
+                                <TextBlock Text="Define rules to replace specific text patterns in documents."
+                                           FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Text Rules:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="Add Rule" Padding="12,6" Margin="0,0,8,0"
+                                                Command="{Binding AddTextRuleCommand}"
+                                                Background="#4CAF50" Foreground="White"/>
+                                        <Button Content="Remove Selected" Padding="12,6"
+                                                Command="{Binding RemoveTextRuleCommand}"
+                                                CommandParameter="{Binding SelectedItem, ElementName=TextRulesGrid}"
+                                                Background="#F44336" Foreground="White"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <DataGrid Name="TextRulesGrid" ItemsSource="{Binding TextRules}"
+                                          Height="300" Margin="0,0,0,8">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80"/>
+                                        <DataGridTextColumn Header="Source Text" Binding="{Binding SourceText}" Width="350"/>
+                                        <DataGridTextColumn Header="Replacement Text" Binding="{Binding ReplacementText}" Width="350"/>
+                                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="120" IsReadOnly="True"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <TextBlock Text="Example: Source='Old Company Name' → Replacement='New Company Name'"
+                                           FontSize="12" FontStyle="Italic" Foreground="Gray"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                    <Button Content="Export Rules" Padding="16,8" Margin="0,0,8,0"
+                                            Command="{Binding ExportTextRulesCommand}"
+                                            Background="#2196F3" Foreground="White"/>
+                                    <Button Content="Import Rules" Padding="16,8" Margin="0,0,8,0"
+                                            Command="{Binding ImportTextRulesCommand}"
+                                            Background="#2196F3" Foreground="White"/>
+                                    <Button Content="Clear All Rules" Padding="16,8"
+                                            Command="{Binding ClearAllTextRulesCommand}"
+                                            Background="#FF6B6B" Foreground="White"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+        </TabControl>
+
+        <!-- Action Buttons -->
+        <Border Grid.Row="1" Background="#E8E8E8" Padding="16,12" BorderBrush="#333333" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Reset to Defaults"
+                        Command="{Binding ResetToDefaultsCommand}"
+                        Margin="0,0,8,0"
+                        Padding="16,8"
+                        Background="#9E9E9E"
+                        Foreground="White"/>
+                <Button Content="Cancel"
+                        Command="{Binding CancelCommand}"
+                        Margin="0,0,8,0"
+                        Padding="16,8"
+                        Background="#9E9E9E"
+                        Foreground="White"/>
+                <Button Content="Save Settings"
+                        Command="{Binding SaveSettingsCommand}"
+                        Background="#4CAF50"
+                        Foreground="White"
+                        Padding="16,8"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</Window>

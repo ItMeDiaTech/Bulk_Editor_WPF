@@ -123,16 +123,16 @@ namespace BulkEditor.UI.ViewModels
         /// </summary>
         public void UpdateFromDocument()
         {
-            Title = _document.FileName;
-            Location = _document.FilePath;
-            Status = _document.Status;
-            HasErrors = _document.ProcessingErrors?.Count > 0;
-            ProcessedAt = _document.ProcessedAt;
+            Title = _document?.FileName ?? "Unknown Document";
+            Location = _document?.FilePath ?? string.Empty;
+            Status = _document?.Status ?? DocumentStatus.Pending;
+            HasErrors = _document?.ProcessingErrors?.Count > 0;
+            ProcessedAt = _document?.ProcessedAt;
             
             // Can view details if document has been processed (completed, failed, or has changes)
             CanViewDetails = Status == DocumentStatus.Completed || 
                            Status == DocumentStatus.Failed || 
-                           _document.ChangeLog?.Changes?.Count > 0;
+                           _document?.ChangeLog?.Changes?.Count > 0;
 
             // Notify property changes for computed properties
             OnPropertyChanged(nameof(StatusDisplayText));
@@ -142,7 +142,10 @@ namespace BulkEditor.UI.ViewModels
             OnPropertyChanged(nameof(StatusBottomText));
             
             // Update command can execute
-            ((RelayCommand)ViewDetailsCommand).NotifyCanExecuteChanged();
+            if (ViewDetailsCommand is RelayCommand relayCommand)
+            {
+                relayCommand.NotifyCanExecuteChanged();
+            }
         }
     }
 }

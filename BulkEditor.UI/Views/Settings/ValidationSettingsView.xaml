@@ -105,17 +105,8 @@
 
             <GroupBox Header="Validation Options">
                 <StackPanel>
-                    <CheckBox Content="Check for expired content"
-                              IsChecked="{Binding CheckExpiredContent}"
-                              Margin="0,0,0,8"/>
                     <CheckBox Content="Follow redirects"
                               IsChecked="{Binding FollowRedirects}"
-                              Margin="0,0,0,8"/>
-                    <CheckBox Content="Auto-replace titles with API response"
-                              IsChecked="{Binding AutoReplaceTitles}"
-                              Margin="0,0,0,8"/>
-                    <CheckBox Content="Report title differences in changelog"
-                              IsChecked="{Binding ReportTitleDifferences}"
                               Margin="0,0,0,8"/>
                 </StackPanel>
             </GroupBox>

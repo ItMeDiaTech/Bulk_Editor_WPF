@@ -13,22 +13,6 @@
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Log Level:" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1" SelectedItem="{Binding LogLevel}">
-                            <ComboBoxItem Content="Verbose"/>
-                            <ComboBoxItem Content="Debug"/>
-                            <ComboBoxItem Content="Information"/>
-                            <ComboBoxItem Content="Warning"/>
-                            <ComboBoxItem Content="Error"/>
-                            <ComboBoxItem Content="Fatal"/>
-                        </ComboBox>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="200"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>

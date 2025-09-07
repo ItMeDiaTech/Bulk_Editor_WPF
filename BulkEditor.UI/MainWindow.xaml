@@ -138,32 +138,113 @@
             </Style.Triggers>
         </Style>
 
-        <!-- Settings Button Style -->
-        <Style x:Key="SettingsButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#666666"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontSize" Value="13"/>
+        <!-- Processing Options Button Style -->
+        <Style x:Key="ProcessingOptionsButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#9C27B0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
-                                CornerRadius="4"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⚙" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="{TemplateBinding Content}"
-                                           VerticalAlignment="Center"
-                                           Foreground="{TemplateBinding Foreground}"
-                                           FontSize="{TemplateBinding FontSize}"/>
-                            </StackPanel>
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontWeight="{TemplateBinding FontWeight}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#F0F0F0"/>
-                                <Setter Property="Foreground" Value="#333333"/>
+                                <Setter Property="Background" Value="#8E24AA"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#7B1FA2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- App Settings Button Style -->
+        <Style x:Key="AppSettingsButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#607D8B"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontWeight="{TemplateBinding FontWeight}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#546E7A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#455A64"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Clear All Button Style -->
+        <Style x:Key="ClearAllButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#E91E63"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontWeight="{TemplateBinding FontWeight}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#D81B60"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#C2185B"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -180,7 +261,7 @@
         </Grid.RowDefinitions>
 
         <!-- Modern Header -->
-        <Border Grid.Row="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="White" BorderBrush="#333333" BorderThickness="0,0,0,1">
             <Grid Margin="32,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -207,11 +288,11 @@
                             Margin="0,0,12,0"/>
                     <Button Content="App Settings"
                             Command="{Binding OpenSettingsCommand}"
-                            Style="{StaticResource SecondaryButtonStyle}"
+                            Style="{StaticResource AppSettingsButtonStyle}"
                             Margin="0,0,12,0"/>
                     <Button Content="Clear All"
                             Command="{Binding ClearDocumentsCommand}"
-                            Style="{StaticResource SecondaryButtonStyle}"/>
+                            Style="{StaticResource ClearAllButtonStyle}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -227,7 +308,7 @@
             <!-- Documents Area -->
             <Border Grid.Column="0"
                     Background="White"
-                    BorderBrush="#E0E0E0"
+                    BorderBrush="#333333"
                     BorderThickness="1"
                     CornerRadius="8"
                     AllowDrop="True"
@@ -241,7 +322,7 @@
             <!-- Control Panel -->
             <Border Grid.Column="2"
                     Background="White"
-                    BorderBrush="#E0E0E0"
+                    BorderBrush="#333333"
                     BorderThickness="1"
                     CornerRadius="8">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -249,25 +330,21 @@
 
                         <!-- Processing Section -->
                         <StackPanel Margin="0,0,0,32">
-                            <Grid Margin="0,0,0,16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Processing"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="#1A1A1A"
-                                           VerticalAlignment="Center"/>
-                                <Button Grid.Column="1"
-                                        Content="Settings"
-                                        Command="{Binding OpenProcessingSettingsCommand}"
-                                        Style="{StaticResource SettingsButtonStyle}"/>
-                            </Grid>
+                            <TextBlock Text="Processing"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       Foreground="#1A1A1A"
+                                       Margin="0,0,0,16"/>
 
                             <Button Content="Process Documents"
                                     Command="{Binding ProcessDocumentsCommand}"
                                     Style="{StaticResource PrimaryActionButtonStyle}"
+                                    Margin="0,0,0,12"
+                                    HorizontalAlignment="Stretch"/>
+
+                            <Button Content="Processing Options"
+                                    Command="{Binding OpenProcessingSettingsCommand}"
+                                    Style="{StaticResource ProcessingOptionsButtonStyle}"
                                     Margin="0,0,0,12"
                                     HorizontalAlignment="Stretch"/>
 
