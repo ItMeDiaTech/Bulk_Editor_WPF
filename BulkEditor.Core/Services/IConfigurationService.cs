@@ -36,7 +36,7 @@ namespace BulkEditor.Core.Services
         /// <summary>
         /// Create a backup of current settings
         /// </summary>
-        Task BackupSettingsAsync(string backupSuffix = null);
+        Task BackupSettingsAsync(string? backupSuffix = null);
 
         /// <summary>
         /// Restore settings from a backup

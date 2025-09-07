@@ -3,6 +3,7 @@ using BulkEditor.Core.Interfaces;
 using BulkEditor.Infrastructure.Utilities;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,10 +28,11 @@ namespace BulkEditor.Infrastructure.Services
         private readonly ILoggingService _logger;
         private readonly Core.Configuration.AppSettings _appSettings;
 
-        // CRITICAL FIX: Exact VBA pattern match without negative lookahead (Issue #1)
+        // CRITICAL FIX: Exact VBA pattern match with word boundaries to ensure exactly 6 digits (Issue #1)
         // VBA: .Pattern = "(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})"
         // VBA: .IgnoreCase = True
-        private static readonly Regex LookupIdRegex = new Regex(@"(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // Added word boundaries to prevent matching 7+ digit sequences
+        private static readonly Regex LookupIdRegex = new Regex(@"\b(TSRC-[^-]+-\d{6}|CMS-[^-]+-\d{6})\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex DocIdRegex = new Regex(@"docid=([^&]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // OpenXML validator for document integrity checks
@@ -606,7 +608,10 @@ namespace BulkEditor.Infrastructure.Services
                 // First, we need an HttpService instance with HttpClient
                 using var httpClient = new System.Net.Http.HttpClient();
                 var httpService = new HttpService(httpClient, _logger);
-                var hyperlinkService = new HyperlinkReplacementService(httpService, _logger);
+
+                // Create IOptions wrapper for AppSettings to match constructor requirements
+                var appSettingsOptions = Microsoft.Extensions.Options.Options.Create(_appSettings);
+                var hyperlinkService = new HyperlinkReplacementService(httpService, _logger, appSettingsOptions);
                 var apiResult = await hyperlinkService.ProcessApiResponseAsync(lookupIds, cancellationToken);
 
                 if (apiResult.HasError)
@@ -715,10 +720,12 @@ namespace BulkEditor.Infrastructure.Services
                 // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
                 // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
                 var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
-                var targetSub = $"!/view?docid={rec.Document_ID}";
+
+                // CRITICAL FIX: Properly encode the fragment to prevent XSD validation errors with 0x21 (!) character
+                var targetSub = Uri.EscapeDataString($"!/view?docid={rec.Document_ID}");
 
                 // VBA: changedURL = (hl.Address <> targetAddress) Or (hl.SubAddress <> targetSub)
-                var targetUrl = targetAddress + "#" + targetSub;
+                var targetUrl = targetAddress + "#" + Uri.UnescapeDataString(targetSub);
                 var changedURL = !string.Equals(hyperlink.OriginalUrl, targetUrl, StringComparison.OrdinalIgnoreCase);
 
                 if (changedURL)
@@ -1409,11 +1416,13 @@ namespace BulkEditor.Infrastructure.Services
                 // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
                 // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
                 var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
-                var targetSubAddress = $"!/view?docid={docIdForUrl}";
+
+                // CRITICAL FIX: Properly encode the fragment to prevent XSD validation errors with 0x21 (!) character
+                var targetSubAddress = Uri.EscapeDataString($"!/view?docid={docIdForUrl}");
 
                 // Build complete URL for validation/logging only (NOT for relationship creation)
                 var newUrl = !string.IsNullOrEmpty(docIdForUrl)
-                    ? targetAddress + "#" + targetSubAddress
+                    ? targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress)
                     : hyperlinkToUpdate.OriginalUrl;
 
                 // STEP 3: Only update if URL actually changed to prevent unnecessary operations
@@ -1875,6 +1884,73 @@ namespace BulkEditor.Infrastructure.Services
                 _logger.LogError(recoveryEx, "Document recovery failed: {FilePath}", document.FilePath);
                 document.Status = DocumentStatus.Failed;
                 document.ProcessingErrors.Add(new ProcessingError { Message = $"Recovery failed: {recoveryEx.Message}", Severity = ErrorSeverity.Error });
+            }
+        }
+
+        /// <summary>
+        /// Validates and sanitizes URL fragments for OpenXML compatibility
+        /// CRITICAL FIX: Prevents XSD validation errors from special characters like 0x21 (!)
+        /// </summary>
+        /// <param name="fragment">URL fragment to validate and sanitize</param>
+        /// <returns>Sanitized fragment safe for OpenXML relationships</returns>
+        private string ValidateAndSanitizeUrlFragment(string fragment)
+        {
+            if (string.IsNullOrEmpty(fragment))
+                return fragment;
+
+            try
+            {
+                // Check for problematic characters that cause XSD validation errors
+                var problematicChars = new[] { '!', '<', '>', '"', '\'', '&' };
+                var hasProblematicChars = fragment.Any(c => problematicChars.Contains(c));
+
+                if (hasProblematicChars)
+                {
+                    // URL encode the fragment to make it safe for OpenXML
+                    var sanitized = Uri.EscapeDataString(fragment);
+                    _logger.LogDebug("Sanitized URL fragment for OpenXML compatibility: '{Original}' -> '{Sanitized}'", fragment, sanitized);
+                    return sanitized;
+                }
+
+                return fragment;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error sanitizing URL fragment: {Fragment}. Error: {Error}", fragment, ex.Message);
+                // Return encoded version as fallback
+                return Uri.EscapeDataString(fragment);
+            }
+        }
+
+        /// <summary>
+        /// Validates that a URL fragment is safe for use in OpenXML relationships
+        /// CRITICAL FIX: Checks for XSD validation issues with special characters
+        /// </summary>
+        /// <param name="fragment">URL fragment to validate</param>
+        /// <returns>True if fragment is safe for OpenXML, false otherwise</returns>
+        private bool IsUrlFragmentSafeForOpenXml(string fragment)
+        {
+            if (string.IsNullOrEmpty(fragment))
+                return true;
+
+            try
+            {
+                // Characters that cause XSD validation errors in OpenXML relationships
+                var unsafeChars = new[] { '!', '<', '>', '"', '\'', '&', '\0' };
+                var hasUnsafeChars = fragment.Any(c => unsafeChars.Contains(c) || char.IsControl(c));
+
+                if (hasUnsafeChars)
+                {
+                    _logger.LogDebug("URL fragment contains unsafe characters for OpenXML: {Fragment}", fragment);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error validating URL fragment safety: {Fragment}. Error: {Error}", fragment, ex.Message);
+                return false;
             }
         }
 

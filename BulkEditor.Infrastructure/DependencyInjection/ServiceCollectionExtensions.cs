@@ -58,6 +58,7 @@ namespace BulkEditor.Infrastructure.DependencyInjection
             // Document Processing Services
             services.AddScoped<IDocumentProcessor, DocumentProcessor>();
             services.AddScoped<IHyperlinkValidator, HyperlinkValidator>();
+            services.AddScoped<IHyperlinkReplacementService, HyperlinkReplacementService>();
             services.AddScoped<IReplacementService, ReplacementService>();
             services.AddScoped<ITextOptimizer, TextOptimizer>();
             services.AddScoped<ICacheService, MemoryCacheService>();

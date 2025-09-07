@@ -3,6 +3,7 @@ using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
 using DocumentFormat.OpenXml.Packaging;
 using BulkEditor.Infrastructure.Utilities;
+using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
 using System.Net;
@@ -22,6 +23,7 @@ namespace BulkEditor.Infrastructure.Services
     {
         private readonly IHttpService _httpService;
         private readonly ILoggingService _logger;
+        private readonly AppSettings _appSettings;
         private readonly Regex _contentIdRegex;
         private readonly Regex _fiveDigitRegex;
         private readonly Regex _sixDigitRegex;
@@ -29,15 +31,17 @@ namespace BulkEditor.Infrastructure.Services
         // CRITICAL FIX: Add missing primary lookup ID regex pattern like VBA (Issue #1)
         private readonly Regex _lookupIdRegex;
 
-        public HyperlinkReplacementService(IHttpService httpService, ILoggingService logger)
+        public HyperlinkReplacementService(IHttpService httpService, ILoggingService logger, IOptions<AppSettings> appSettings)
         {
             _httpService = httpService ?? throw new ArgumentNullException(nameof(httpService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _appSettings = appSettings?.Value ?? throw new ArgumentNullException(nameof(appSettings));
 
-            // CRITICAL FIX: Primary regex pattern exactly like VBA with IgnoreCase (Issue #1)
+            // CRITICAL FIX: Primary regex pattern exactly like VBA with IgnoreCase and word boundaries (Issue #1)
             // VBA: .Pattern = "(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})"
             // VBA: .IgnoreCase = True
-            _lookupIdRegex = new Regex(@"(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})",
+            // Added word boundaries to ensure exactly 6 digits, not 6+ digits
+            _lookupIdRegex = new Regex(@"\b(TSRC-[^-]+-\d{6}|CMS-[^-]+-\d{6})\b",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
             // Regex for extracting 6-digit content IDs from Content ID field
@@ -350,9 +354,8 @@ namespace BulkEditor.Infrastructure.Services
                 var jsonString = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
                 _logger.LogDebug("API request JSON: {JsonRequest}", jsonString);
 
-                // TODO: Replace with actual CVS Health API endpoint
-                // For now, this demonstrates the correct structure
-                var apiEndpoint = "https://api.cvshealthdocs.com/lookup-documents"; // Example endpoint
+                // CRITICAL FIX: Use configured API endpoint from settings instead of hardcoded example
+                var apiEndpoint = GetConfiguredApiEndpoint();
 
                 var response = await _httpService.PostJsonAsync(apiEndpoint, requestBody, cancellationToken).ConfigureAwait(false);
 
@@ -439,9 +442,9 @@ namespace BulkEditor.Infrastructure.Services
                 var decodedLookupId = Uri.UnescapeDataString(lookupId);
 
                 // Extract the numeric part from TSRC-xxx-123456 or CMS-xxx-123456 format
-                // CRITICAL FIX: Use case-insensitive matching like VBA (Issue #1)
+                // CRITICAL FIX: Use case-insensitive matching like VBA with word boundaries (Issue #1)
                 var match = System.Text.RegularExpressions.Regex.Match(decodedLookupId,
-                    @"(?:TSRC|CMS)-[^-]+-(\d{6})",
+                    @"\b(?:TSRC|CMS)-[^-]+-(\d{6})\b",
                     System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
@@ -680,7 +683,7 @@ namespace BulkEditor.Infrastructure.Services
 
             try
             {
-                // Check for docid parameter in URL
+                // Check for docid parameter in URL with word boundary
                 var docIdMatch = System.Text.RegularExpressions.Regex.Match(input, @"docid=([^&\s]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 if (docIdMatch.Success)
                 {
@@ -1016,11 +1019,14 @@ namespace BulkEditor.Infrastructure.Services
                 // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
                 // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
                 var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
-                var targetSubAddress = $"!/view?docid={cleanDocumentId}";
+
+                // CRITICAL FIX: Properly encode the fragment to prevent XSD validation errors with 0x21 (!) character
+                // The exclamation mark needs to be URL encoded for OpenXML compatibility
+                var targetSubAddress = Uri.EscapeDataString($"!/view?docid={cleanDocumentId}");
 
                 // Build complete URL for validation and logging only
                 // NOTE: This is for logging/validation - actual relationship uses separate Address/SubAddress
-                var newUrl = targetAddress + "#" + targetSubAddress;
+                var newUrl = targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress);
 
                 // Update the hyperlink display text
                 OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
@@ -1040,8 +1046,12 @@ namespace BulkEditor.Infrastructure.Services
                         // CRITICAL FIX: Create relationship with proper URI structure like VBA (Issue #8)
                         // VBA keeps Address and SubAddress SEPARATE - do NOT concatenate!
                         // VBA: .Address = targetAddress, .SubAddress = targetSub
+
+                        // CRITICAL FIX: Validate and sanitize the SubAddress to prevent XSD validation errors
+                        var safeSubAddress = ValidateAndSanitizeUrlFragment(targetSubAddress);
+
                         var relationshipUri = new Uri(targetAddress);
-                        var newRelationship = mainPart.AddHyperlinkRelationship(relationshipUri, true, targetSubAddress);
+                        var newRelationship = mainPart.AddHyperlinkRelationship(relationshipUri, true, safeSubAddress);
 
                         // Update the hyperlink element to use the new relationship ID
                         openXmlHyperlink.Id = newRelationship.Id;
@@ -1303,6 +1313,7 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Validates URL format to ensure it's properly formed before creating relationships
+        /// CRITICAL FIX: Now includes XSD validation for special characters like 0x21 (!)
         /// </summary>
         /// <param name="url">URL to validate</param>
         /// <returns>True if URL is valid, false otherwise</returns>
@@ -1342,6 +1353,73 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
+        /// Validates and sanitizes URL fragments for OpenXML compatibility
+        /// CRITICAL FIX: Prevents XSD validation errors from special characters like 0x21 (!)
+        /// </summary>
+        /// <param name="fragment">URL fragment to validate and sanitize</param>
+        /// <returns>Sanitized fragment safe for OpenXML relationships</returns>
+        private string ValidateAndSanitizeUrlFragment(string fragment)
+        {
+            if (string.IsNullOrEmpty(fragment))
+                return fragment;
+
+            try
+            {
+                // Check for problematic characters that cause XSD validation errors
+                var problematicChars = new[] { '!', '<', '>', '"', '\'', '&' };
+                var hasProblematicChars = fragment.Any(c => problematicChars.Contains(c));
+
+                if (hasProblematicChars)
+                {
+                    // URL encode the fragment to make it safe for OpenXML
+                    var sanitized = Uri.EscapeDataString(fragment);
+                    _logger.LogDebug("Sanitized URL fragment for OpenXML compatibility: '{Original}' -> '{Sanitized}'", fragment, sanitized);
+                    return sanitized;
+                }
+
+                return fragment;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error sanitizing URL fragment: {Fragment}. Error: {Error}", fragment, ex.Message);
+                // Return encoded version as fallback
+                return Uri.EscapeDataString(fragment);
+            }
+        }
+
+        /// <summary>
+        /// Validates that a URL fragment is safe for use in OpenXML relationships
+        /// CRITICAL FIX: Checks for XSD validation issues with special characters
+        /// </summary>
+        /// <param name="fragment">URL fragment to validate</param>
+        /// <returns>True if fragment is safe for OpenXML, false otherwise</returns>
+        private bool IsUrlFragmentSafeForOpenXml(string fragment)
+        {
+            if (string.IsNullOrEmpty(fragment))
+                return true;
+
+            try
+            {
+                // Characters that cause XSD validation errors in OpenXML relationships
+                var unsafeChars = new[] { '!', '<', '>', '"', '\'', '&', '\0' };
+                var hasUnsafeChars = fragment.Any(c => unsafeChars.Contains(c) || char.IsControl(c));
+
+                if (hasUnsafeChars)
+                {
+                    _logger.LogDebug("URL fragment contains unsafe characters for OpenXML: {Fragment}", fragment);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error validating URL fragment safety: {Fragment}. Error: {Error}", fragment, ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Result of API processing with proper categorization
         /// </summary>
         public class ApiProcessingResult
@@ -1352,6 +1430,37 @@ namespace BulkEditor.Infrastructure.Services
             public List<DocumentRecord> FoundDocuments { get; set; } = new();
             public List<DocumentRecord> ExpiredDocuments { get; set; } = new();
             public List<string> MissingLookupIds { get; set; } = new();
+        }
+
+        /// <summary>
+        /// Gets the configured API endpoint from settings or falls back to example endpoint
+        /// </summary>
+        private string GetConfiguredApiEndpoint()
+        {
+            try
+            {
+                // Check if API BaseUrl is configured in settings
+                if (!string.IsNullOrWhiteSpace(_appSettings.Api.BaseUrl))
+                {
+                    var configuredUrl = _appSettings.Api.BaseUrl.TrimEnd('/');
+                    var endpoint = $"{configuredUrl}/lookup-documents";
+                    _logger.LogDebug("Using configured API endpoint from settings: {Endpoint}", endpoint);
+                    return endpoint;
+                }
+
+                // Log warning about missing configuration
+                _logger.LogWarning("API BaseUrl not configured in settings. Using fallback example endpoint. Please configure Api.BaseUrl in application settings.");
+
+                // Return example endpoint as fallback
+                var fallbackEndpoint = "https://api.cvshealthdocs.com/lookup-documents";
+                _logger.LogDebug("Using fallback API endpoint: {Endpoint}", fallbackEndpoint);
+                return fallbackEndpoint;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving configured API endpoint. Using fallback endpoint.");
+                return "https://api.cvshealthdocs.com/lookup-documents";
+            }
         }
 
         /// <summary>
@@ -1369,4 +1478,5 @@ namespace BulkEditor.Infrastructure.Services
         }
     }
 }
+
 

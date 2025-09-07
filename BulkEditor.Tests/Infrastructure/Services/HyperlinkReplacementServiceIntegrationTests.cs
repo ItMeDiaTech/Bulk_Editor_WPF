@@ -1,7 +1,9 @@
+using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Infrastructure.Services;
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using System.Threading;
@@ -25,7 +27,18 @@ namespace BulkEditor.Tests.Infrastructure.Services
         {
             _httpServiceMock = new Mock<IHttpService>();
             _loggerMock = new Mock<ILoggingService>();
-            _service = new HyperlinkReplacementService(_httpServiceMock.Object, _loggerMock.Object);
+
+            // Create default AppSettings for testing
+            var appSettings = new AppSettings
+            {
+                Api = new ApiSettings
+                {
+                    BaseUrl = "https://api.example.com"
+                }
+            };
+            var appSettingsOptions = Options.Create(appSettings);
+
+            _service = new HyperlinkReplacementService(_httpServiceMock.Object, _loggerMock.Object, appSettingsOptions);
         }
 
         [Fact]
@@ -340,6 +353,88 @@ namespace BulkEditor.Tests.Infrastructure.Services
             // Assert
             result.Should().NotBeNullOrEmpty("Should always return a title, even for missing content");
             result.Should().Contain(contentId, "Fallback title should contain the content ID");
+        }
+
+        [Fact]
+        public void ValidateAndSanitizeUrlFragment_WithExclamationMark_ShouldEncodeForOpenXmlCompatibility()
+        {
+            // Arrange - Test the specific 0x21 (!) character that was causing XSD validation errors
+            var fragmentWithExclamation = "!/view?docid=test-doc-123";
+
+            // Use reflection to test private method
+            var method = typeof(HyperlinkReplacementService).GetMethod("ValidateAndSanitizeUrlFragment",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            // Act
+            var result = (string)method.Invoke(_service, new object[] { fragmentWithExclamation });
+
+            // Assert
+            result.Should().NotBeNull("Method should return a result");
+            result.Should().NotContain("!", "Exclamation mark should be URL encoded");
+            result.Should().Contain("%21", "Exclamation mark should be encoded as %21");
+            result.Should().Contain("view", "The rest of the URL should be preserved");
+            result.Should().Contain("docid", "The docid parameter should be preserved");
+        }
+
+        [Fact]
+        public void IsUrlFragmentSafeForOpenXml_WithExclamationMark_ShouldReturnFalse()
+        {
+            // Arrange - Test the specific 0x21 (!) character
+            var unsafeFragment = "!/view?docid=test";
+            var safeFragment = "view?docid=test";
+
+            // Use reflection to test private method
+            var method = typeof(HyperlinkReplacementService).GetMethod("IsUrlFragmentSafeForOpenXml",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            // Act
+            var unsafeResult = (bool)method.Invoke(_service, new object[] { unsafeFragment });
+            var safeResult = (bool)method.Invoke(_service, new object[] { safeFragment });
+
+            // Assert
+            unsafeResult.Should().BeFalse("Fragment with exclamation mark should be unsafe for OpenXML");
+            safeResult.Should().BeTrue("Fragment without special characters should be safe for OpenXML");
+        }
+
+        [Theory]
+        [InlineData("!/view?docid=test", "Fragment with exclamation mark")]
+        [InlineData("<script>alert('test')</script>", "Fragment with angle brackets")]
+        [InlineData("test&param=value", "Fragment with ampersand")]
+        [InlineData("test\"quoted\"", "Fragment with quotes")]
+        [InlineData("test'quoted'", "Fragment with single quotes")]
+        public void ValidateAndSanitizeUrlFragment_WithSpecialCharacters_ShouldEncodeCorrectly(string input, string description)
+        {
+            // Use reflection to test private method
+            var method = typeof(HyperlinkReplacementService).GetMethod("ValidateAndSanitizeUrlFragment",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            // Act
+            var result = (string)method.Invoke(_service, new object[] { input });
+
+            // Assert
+            result.Should().NotBeNull($"Method should return a result for: {description}");
+            result.Should().NotContain("!", "Exclamation marks should be encoded");
+            result.Should().NotContain("<", "Angle brackets should be encoded");
+            result.Should().NotContain(">", "Angle brackets should be encoded");
+            result.Should().NotContain("&", "Ampersands should be encoded (except for encoded sequences)");
+            result.Should().NotContain("\"", "Double quotes should be encoded");
+            result.Should().NotContain("'", "Single quotes should be encoded");
+        }
+
+        [Fact]
+        public async Task BuildUrlFromDocumentId_WithCleanDocumentId_ShouldCreateValidUrl()
+        {
+            // Arrange
+            var documentId = "test-document-123";
+
+            // Act
+            var result = _service.BuildUrlFromDocumentId(documentId);
+
+            // Assert
+            result.Should().NotBeNullOrEmpty("URL should be generated");
+            result.Should().StartWith("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=",
+                "URL should follow the correct CVS Health format");
+            result.Should().EndWith(documentId, "URL should contain the document ID");
         }
     }
 }

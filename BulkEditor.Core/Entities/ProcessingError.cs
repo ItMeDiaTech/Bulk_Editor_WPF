@@ -8,12 +8,12 @@ namespace BulkEditor.Core.Entities
         /// <summary>
         /// Gets or sets the ID of the rule that caused the error, if applicable.
         /// </summary>
-        public string RuleId { get; set; }
+        public string RuleId { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the error message.
         /// </summary>
-        public string Message { get; set; }
+        public string Message { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the severity of the error.

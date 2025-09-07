@@ -16,7 +16,7 @@ namespace BulkEditor.Core.Services
         /// <summary>
         /// Download and install the latest update
         /// </summary>
-        Task<bool> DownloadAndInstallUpdateAsync(UpdateInfo updateInfo, IProgress<UpdateProgress> progress = null);
+        Task<bool> DownloadAndInstallUpdateAsync(UpdateInfo updateInfo, IProgress<UpdateProgress>? progress = null);
 
         /// <summary>
         /// Get the current application version

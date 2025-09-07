@@ -19,7 +19,7 @@ namespace BulkEditor.UI
     public partial class App : System.Windows.Application
     {
         private ServiceProvider? _serviceProvider;
-        private UpdateManager? _updateManager;
+        private BulkEditor.Application.Services.UpdateManager? _updateManager;
 
         protected override async void OnStartup(StartupEventArgs e)
         {
@@ -88,7 +88,7 @@ namespace BulkEditor.UI
                     return new GitHubUpdateService(httpClient, logger, configServiceProvider,
                         appSettings.Update.GitHubOwner, appSettings.Update.GitHubRepository);
                 });
-                services.AddSingleton<UpdateManager>();
+                services.AddSingleton<BulkEditor.Application.Services.UpdateManager>();
 
                 // Register UI Services
                 services.AddSingleton<BulkEditor.UI.Services.INotificationService, BulkEditor.UI.Services.NotificationService>();
@@ -104,7 +104,7 @@ namespace BulkEditor.UI
                 _serviceProvider = services.BuildServiceProvider();
 
                 // Initialize update manager
-                _updateManager = _serviceProvider.GetRequiredService<UpdateManager>();
+                _updateManager = _serviceProvider.GetRequiredService<BulkEditor.Application.Services.UpdateManager>();
                 await _updateManager.StartAsync();
 
                 // Subscribe to update events
