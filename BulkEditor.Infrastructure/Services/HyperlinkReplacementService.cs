@@ -1043,20 +1043,15 @@ namespace BulkEditor.Infrastructure.Services
                             throw new InvalidOperationException($"Generated base address is invalid: {targetAddress}");
                         }
 
-                        // CRITICAL FIX: Create relationship with proper URI structure like VBA (Issue #8)
-                        // VBA keeps Address and SubAddress SEPARATE - do NOT concatenate!
-                        // VBA: .Address = targetAddress, .SubAddress = targetSub
+                        // CRITICAL FIX: Follow OpenXML best practices for hyperlink relationship management
+                        // 1. Preserve the original relationship ID to maintain document integrity
+                        // 2. Properly handle external vs internal links with TargetMode
+                        // 3. Create complete URI with fragment for external links
 
-                        // CRITICAL FIX: Validate and sanitize the SubAddress to prevent XSD validation errors
-                        var safeSubAddress = ValidateAndSanitizeUrlFragment(targetSubAddress);
+                        // Build the complete external URL with fragment
+                        var completeUri = new Uri(targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress));
 
-                        var relationshipUri = new Uri(targetAddress);
-                        var newRelationship = mainPart.AddHyperlinkRelationship(relationshipUri, true, safeSubAddress);
-
-                        // Update the hyperlink element to use the new relationship ID
-                        openXmlHyperlink.Id = newRelationship.Id;
-
-                        // Safely delete the old relationship
+                        // Safely delete the old relationship first
                         try
                         {
                             mainPart.DeleteReferenceRelationship(relId);
@@ -1064,6 +1059,16 @@ namespace BulkEditor.Infrastructure.Services
                         catch (System.Collections.Generic.KeyNotFoundException)
                         {
                             _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relId);
+                        }
+
+                        // Create new relationship with the SAME ID to preserve document integrity
+                        var newRelationship = mainPart.AddHyperlinkRelationship(completeUri, true, relId);
+
+                        // Verify the relationship ID is preserved
+                        if (newRelationship.Id != relId)
+                        {
+                            _logger.LogWarning("Relationship ID changed from {OldId} to {NewId} - document integrity may be affected", relId, newRelationship.Id);
+                            openXmlHyperlink.Id = newRelationship.Id;
                         }
 
                         _logger.LogDebug("Updated hyperlink with VBA-compatible Address/SubAddress: {Address}#{SubAddress}",

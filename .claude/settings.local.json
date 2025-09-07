@@ -6,7 +6,17 @@
       "Bash(dotnet test:*)",
       "Bash(find:*)",
       "WebSearch",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "WebFetch(domain:officeopenxml.com)",
+      "Bash(git commit -m \"$(cat <<''EOF''\n🚀 MAJOR: Comprehensive project cleanup and OpenXML optimization\n\n## Security & Compliance\n- ✅ CRITICAL: Removed exposed GitHub token from repository\n- 🔐 Enhanced .gitignore with comprehensive security patterns\n- 📝 Updated nullable reference handling across codebase\n\n## Architecture & Code Quality  \n- 🏗️ Eliminated duplicate UpdateManager classes (UI → Application layer)\n- 📐 Enhanced regex patterns with word boundaries for precise matching\n- 🧹 Fixed redundancy and improved clean architecture compliance\n\n## OpenXML Hyperlink Management\n- 🔗 CRITICAL: Fixed hyperlink relationship handling per official docs\n- 📋 Preserve original relationship IDs to maintain document integrity\n- 🎯 Proper external link handling with complete URIs and fragments\n- ⚡ Enhanced hyperlink processing with VBA-compatible logic\n\n## Package Management\n- 📦 Updated DocumentFormat.OpenXml: 3.0.1 → 3.3.0\n- 🧪 Modernized all test packages to latest stable versions\n- ✅ Eliminated all NuGet version warnings\n\n## Project Organization\n- 📁 Created docs/ directory and moved all documentation\n- 📜 Created scripts/ directory for VBA and PowerShell files  \n- 🗂️ Cleaned project root of miscellaneous files\n- 📋 Added comprehensive CLAUDE.md with full analysis\n\n## Test & Build Results\n- ✅ Clean build: 0 errors, 0 warnings\n- 🧪 Test success rate: 159/161 (98.8%)\n- 🏛️ Full WPF MVVM best practices compliance\n- 📊 Enhanced code quality and maintainability\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(gh release create:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(tar:*)",
+      "Bash(gh release upload:*)",
+      "Bash(gh release:*)",
+      "Bash(msbuild:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
