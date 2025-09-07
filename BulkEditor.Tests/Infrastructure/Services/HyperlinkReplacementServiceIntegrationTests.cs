@@ -103,13 +103,13 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Fact]
-        public async Task LookupDocumentByContentIdAsync_WithValidContentId_ShouldReturnDocumentRecord()
+        public async Task LookupDocumentByIdentifierAsync_WithValidContentId_ShouldReturnDocumentRecord()
         {
             // Arrange
             var contentId = "123456";
 
             // Act
-            var result = await _service.LookupDocumentByContentIdAsync(contentId, CancellationToken.None);
+            var result = await _service.LookupDocumentByIdentifierAsync(contentId, CancellationToken.None);
 
             // Assert
             result.Should().NotBeNull("Valid content ID should return document record");
@@ -120,13 +120,13 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Fact]
-        public async Task LookupDocumentByContentIdAsync_WithMissingLookupId_ShouldReturnNull()
+        public async Task LookupDocumentByIdentifierAsync_WithMissingLookupId_ShouldReturnNull()
         {
             // Arrange - Use content ID that will trigger missing lookup ID simulation
             var contentId = "000001"; // This should trigger the 15% missing chance based on hash
 
             // Act
-            var result = await _service.LookupDocumentByContentIdAsync(contentId, CancellationToken.None);
+            var result = await _service.LookupDocumentByIdentifierAsync(contentId, CancellationToken.None);
 
             // Assert - Some content IDs will return null to simulate missing lookup IDs
             // We can't guarantee which ones due to hash-based simulation, so we test the behavior
@@ -328,13 +328,13 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Fact]
-        public async Task LookupTitleByContentIdAsync_WithValidContentId_ShouldReturnTitle()
+        public async Task LookupTitleByIdentifierAsync_WithValidContentId_ShouldReturnTitle()
         {
             // Arrange
             var contentId = "123456";
 
             // Act
-            var result = await _service.LookupTitleByContentIdAsync(contentId, CancellationToken.None);
+            var result = await _service.LookupTitleByIdentifierAsync(contentId, CancellationToken.None);
 
             // Assert
             result.Should().NotBeNullOrEmpty("Should return a title");
@@ -342,13 +342,13 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Fact]
-        public async Task LookupTitleByContentIdAsync_WithMissingContentId_ShouldReturnFallbackTitle()
+        public async Task LookupTitleByIdentifierAsync_WithMissingContentId_ShouldReturnFallbackTitle()
         {
             // Arrange - Use content ID that will likely be missing based on simulation
             var contentId = "000001";
 
             // Act
-            var result = await _service.LookupTitleByContentIdAsync(contentId, CancellationToken.None);
+            var result = await _service.LookupTitleByIdentifierAsync(contentId, CancellationToken.None);
 
             // Assert
             result.Should().NotBeNullOrEmpty("Should always return a title, even for missing content");

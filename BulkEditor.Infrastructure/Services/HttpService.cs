@@ -44,7 +44,7 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                _logger.LogDebug("Sending POST request to: {Url}", url);
+                _logger.LogInformation("Sending POST request for combined lookup identifiers to: {Url}", url);
 
                 // Handle test mode
                 if (url.ToLower() == "test")
@@ -59,24 +59,32 @@ namespace BulkEditor.Infrastructure.Services
                     WriteIndented = false
                 });
 
+                _logger.LogInformation("Full HTTP Request Details:");
+                _logger.LogInformation("  URL: {Url}", url);
+                _logger.LogInformation("  Method: POST");
+                _logger.LogInformation("  Content-Type: application/json");
+                _logger.LogInformation("  Request Body: {RequestJson}", json);
+
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
                 var response = await _httpClient.PostAsync(url, content, cancellationToken);
-                _logger.LogDebug("Received response {StatusCode} from POST: {Url}", response.StatusCode, url);
-
-                // Log request/response for debugging VBA compatibility
-                _logger.LogDebug("Request JSON: {RequestJson}", json);
+                
+                var responseContent = string.Empty;
                 if (response.Content != null)
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                    _logger.LogDebug("Response JSON: {ResponseJson}", responseContent);
+                    responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 }
+
+                _logger.LogInformation("Full HTTP Response Details:");
+                _logger.LogInformation("  Status Code: {StatusCode}", response.StatusCode);
+                _logger.LogInformation("  Status: {ReasonPhrase}", response.ReasonPhrase);
+                _logger.LogInformation("  Response Body: {ResponseJson}", responseContent);
 
                 return response;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending POST request to: {Url}", url);
+                _logger.LogError(ex, "Error sending POST request for combined lookup identifiers to: {Url}", url);
                 throw;
             }
         }

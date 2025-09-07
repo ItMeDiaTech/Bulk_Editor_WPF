@@ -190,11 +190,12 @@ namespace BulkEditor.Infrastructure.Services
                 if (match.Success)
                 {
                     var result = match.Value.ToUpperInvariant(); // VBA: UCase$
-                    _logger.LogDebug("Extracted lookup ID via primary regex: {LookupId} from {Full}", result, full);
+                    _logger.LogDebug("Extracted Content_ID via primary regex: {LookupId} from {Full}", result, full);
                     return result;
                 }
 
                 // VBA: ElseIf InStr(1, full, "docid=", vbTextCompare) > 0 Then
+                // CRITICAL: This runs in conjunction with Content_ID extraction, not as fallback
                 if (full.IndexOf("docid=", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     // VBA: ExtractLookupID = Trim$(Split(Split(full, "docid=")(1), "&")(0))
@@ -204,7 +205,7 @@ namespace BulkEditor.Infrastructure.Services
                         var docId = parts[1].Split('&')[0].Trim();
                         // CRITICAL FIX: Handle URL encoding (Issue #3)
                         var decodedDocId = Uri.UnescapeDataString(docId);
-                        _logger.LogDebug("Extracted lookup ID via docid fallback: {LookupId} from {Full}", decodedDocId, full);
+                        _logger.LogDebug("Extracted Document_ID via docid parameter: {LookupId} from {Full}", decodedDocId, full);
                         return decodedDocId;
                     }
                 }

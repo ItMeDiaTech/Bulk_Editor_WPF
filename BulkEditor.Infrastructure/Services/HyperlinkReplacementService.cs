@@ -262,17 +262,17 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        public async Task<string> LookupTitleByContentIdAsync(string contentId, CancellationToken cancellationToken = default)
+        public async Task<string> LookupTitleByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
         {
             try
             {
-                var documentRecord = await LookupDocumentByContentIdAsync(contentId, cancellationToken).ConfigureAwait(false);
-                return documentRecord?.Title ?? $"Document {contentId}";
+                var documentRecord = await LookupDocumentByIdentifierAsync(identifier, cancellationToken).ConfigureAwait(false);
+                return documentRecord?.Title ?? $"Document {identifier}";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error looking up title for Content ID: {ContentId}", contentId);
-                return $"Document {contentId}"; // Fallback title
+                _logger.LogError(ex, "Error looking up title for identifier (Content_ID or Document_ID): {Identifier}", identifier);
+                return $"Document {identifier}"; // Fallback title
             }
         }
 
@@ -293,18 +293,18 @@ namespace BulkEditor.Infrastructure.Services
                     return result;
                 }
 
-                _logger.LogInformation("Processing API response for {Count} lookup identifiers (Document_ID or Content_ID)", lookupIds.Count());
+                _logger.LogInformation("Processing single API call for {Count} lookup identifiers (both Content_IDs and Document_IDs combined)", lookupIds.Count());
 
                 // CRITICAL FIX: Try real API first, fallback to simulation for testing (Issue #2)
                 string jsonResponse;
                 try
                 {
                     jsonResponse = await CallRealApiAsync(lookupIds, cancellationToken).ConfigureAwait(false);
-                    _logger.LogInformation("Successfully called real API for {Count} lookup identifiers", lookupIds.Count());
+                    _logger.LogInformation("Successfully called real API with single request for {Count} combined lookup identifiers (Content_IDs and Document_IDs)", lookupIds.Count());
                 }
                 catch (Exception apiEx)
                 {
-                    _logger.LogWarning("Real API call failed, falling back to simulation: {Error}", apiEx.Message);
+                    _logger.LogWarning("Real API call failed for combined lookup identifiers, falling back to simulation: {Error}", apiEx.Message);
                     jsonResponse = await SimulateApiCallAsync(lookupIds, cancellationToken).ConfigureAwait(false);
                 }
 
@@ -318,7 +318,7 @@ namespace BulkEditor.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing API response for lookup identifiers");
+                _logger.LogError(ex, "Error processing API response for combined lookup identifiers (Content_IDs and Document_IDs)");
                 result.HasError = true;
                 result.ErrorMessage = ex.Message;
                 return result;
@@ -340,7 +340,7 @@ namespace BulkEditor.Infrastructure.Services
                     Lookup_ID = lookupIds.ToArray() // Exact property name like VBA - case sensitive!
                 };
 
-                _logger.LogDebug("Calling real API with {Count} lookup identifiers: {LookupIds}",
+                _logger.LogDebug("Calling real API with single request for {Count} combined lookup identifiers (Content_IDs and Document_IDs): {LookupIds}",
                     lookupIds.Count(), string.Join(", ", lookupIds));
 
                 // CRITICAL FIX: Use proper JSON serialization options (Issue #7)
@@ -352,7 +352,7 @@ namespace BulkEditor.Infrastructure.Services
                 };
 
                 var jsonString = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
-                _logger.LogDebug("API request JSON: {JsonRequest}", jsonString);
+                _logger.LogInformation("Full HTTP API Request JSON: {JsonRequest}", jsonString);
 
                 // CRITICAL FIX: Use configured API endpoint from settings instead of hardcoded example
                 var apiEndpoint = GetConfiguredApiEndpoint();
@@ -366,13 +366,13 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                _logger.LogDebug("Real API response received: {Response}", jsonResponse);
+                _logger.LogInformation("Full HTTP API Response JSON: {Response}", jsonResponse);
 
                 return jsonResponse;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling real API for lookup identifiers");
+                _logger.LogError(ex, "Error calling real API for combined lookup identifiers (Content_IDs and Document_IDs)");
                 throw;
             }
         }
@@ -734,15 +734,16 @@ namespace BulkEditor.Infrastructure.Services
         /// <summary>
         /// Looks up document by identifier - can be Document_ID or Content_ID following Base_File.vba methodology
         /// Uses flexible matching against API response to find the document record
+        /// CRITICAL: Single API call handles both Content_IDs and Document_IDs
         /// </summary>
-        public async Task<DocumentRecord> LookupDocumentByContentIdAsync(string identifier, CancellationToken cancellationToken = default)
+        public async Task<DocumentRecord> LookupDocumentByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(identifier))
                     return null;
 
-                _logger.LogDebug("Looking up document by identifier: {Identifier}", identifier);
+                _logger.LogDebug("Looking up document by identifier (Content_ID or Document_ID): {Identifier}", identifier);
 
                 // Use flexible API lookup with single identifier
                 var apiResult = await ProcessApiResponseAsync(new[] { identifier }, cancellationToken).ConfigureAwait(false);
@@ -833,7 +834,7 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 // CRITICAL FIX: Use flexible lookup - rule.ContentId can be Document_ID or Content_ID
-                var documentRecord = await LookupDocumentByContentIdAsync(rule.ContentId, cancellationToken).ConfigureAwait(false);
+                var documentRecord = await LookupDocumentByIdentifierAsync(rule.ContentId, cancellationToken).ConfigureAwait(false);
 
                 // Handle missing lookup identifier response (when server returns no response)
                 if (documentRecord == null)

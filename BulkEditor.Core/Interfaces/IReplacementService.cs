@@ -54,9 +54,9 @@ namespace BulkEditor.Core.Interfaces
         Task<Entities.Document> ProcessHyperlinkReplacementsAsync(Entities.Document document, IEnumerable<Configuration.HyperlinkReplacementRule> rules, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Looks up document title by Content ID
+        /// Looks up document title by identifier (Content_ID or Document_ID)
         /// </summary>
-        Task<string> LookupTitleByContentIdAsync(string contentId, CancellationToken cancellationToken = default);
+        Task<string> LookupTitleByIdentifierAsync(string identifier, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Builds URL from Content ID using existing URL generation logic
