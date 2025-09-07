@@ -170,9 +170,9 @@ namespace BulkEditor.Tests.Infrastructure.Services
             // Act
             await _httpService.PostJsonAsync("Test", testData);
 
-            // Assert
+            // Assert - verify enhanced logging for debugging  
             _mockLogger.Verify(
-                x => x.LogDebug("Sending POST request to: {Url}", "Test"),
+                x => x.LogInformation("Sending POST request for combined lookup identifiers to: {Url}", "Test"),
                 Times.Once);
 
             _mockLogger.Verify(
