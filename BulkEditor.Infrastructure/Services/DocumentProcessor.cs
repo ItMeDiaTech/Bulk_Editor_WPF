@@ -997,34 +997,39 @@ namespace BulkEditor.Infrastructure.Services
                     progress?.Report("Removing invisible hyperlinks...");
                     await RemoveInvisibleHyperlinksInSessionAsync(mainPart, document, cancellationToken);
 
-                    // STEP 7: Validate after invisible hyperlink removal
+                    // STEP 7: Re-extract hyperlinks after deletion to prevent stale references
+                    progress?.Report("Re-extracting hyperlinks after cleanup...");
+                    document.Hyperlinks = ExtractHyperlinksFromOpenDocument(mainPart);
+                    _logger.LogDebug("Re-extracted {Count} hyperlinks after invisible hyperlink removal", document.Hyperlinks.Count);
+
+                    // STEP 8: Validate after invisible hyperlink removal
                     progress?.Report("Validating after invisible hyperlink removal...");
                     await ValidateOpenDocumentAsync(wordDocument, "post-cleanup", cancellationToken);
 
-                    // STEP 8: Process hyperlinks using VBA UpdateHyperlinksFromAPI workflow
+                    // STEP 9: Process hyperlinks using VBA UpdateHyperlinksFromAPI workflow
                     if (document.Hyperlinks.Any())
                     {
                         progress?.Report("Processing hyperlinks using VBA methodology...");
                         await ProcessHyperlinksUsingVbaWorkflowAsync(document, cancellationToken);
                     }
 
-                    // STEP 9: Apply hyperlink updates in the document session
+                    // STEP 10: Apply hyperlink updates in the document session
                     progress?.Report("Applying hyperlink updates to document...");
                     await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken);
 
-                    // STEP 10: Validate after hyperlink updates
+                    // STEP 11: Validate after hyperlink updates
                     progress?.Report("Validating after hyperlink updates...");
                     await ValidateOpenDocumentAsync(wordDocument, "post-hyperlinks", cancellationToken);
 
-                    // STEP 11: Process replacements in the same session
+                    // STEP 12: Process replacements in the same session
                     progress?.Report("Processing replacements...");
                     await _replacementService.ProcessReplacementsInSessionAsync(wordDocument, document, cancellationToken);
 
-                    // STEP 12: Validate after replacements
+                    // STEP 13: Validate after replacements
                     progress?.Report("Validating after replacements...");
                     await ValidateOpenDocumentAsync(wordDocument, "post-replacements", cancellationToken);
 
-                    // STEP 13: Optimize text in the same session (only if enabled)
+                    // STEP 14: Optimize text in the same session (only if enabled)
                     if (_appSettings.Processing.OptimizeText)
                     {
                         progress?.Report("Optimizing document text...");
