@@ -1449,7 +1449,7 @@ namespace BulkEditor.Infrastructure.Services
                 if (!string.IsNullOrWhiteSpace(_appSettings.Api.BaseUrl))
                 {
                     var configuredUrl = _appSettings.Api.BaseUrl.TrimEnd('/');
-                    var endpoint = $"{configuredUrl}/lookup-documents";
+                    var endpoint = $"{configuredUrl}";
                     _logger.LogDebug("Using configured API endpoint from settings: {Endpoint}", endpoint);
                     return endpoint;
                 }
