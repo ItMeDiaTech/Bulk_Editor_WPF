@@ -20,7 +20,9 @@
       "Bash(chmod:*)",
       "Bash(./deploy-release.ps1:*)",
       "Bash(powershell:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(dotnet run:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

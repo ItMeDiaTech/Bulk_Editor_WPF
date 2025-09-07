@@ -45,7 +45,7 @@
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Background" Value="#BDBDBD"/>
-                                <Setter Property="Cursor" Value="Default"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

@@ -89,6 +89,12 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private bool _isRevertEnabled;
 
+        [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
+        private string _busyMessage = "Loading...";
+
         public bool HasProcessingResults => ProcessingResults.Any();
 
         public bool HasDocuments => DocumentItems.Any();
