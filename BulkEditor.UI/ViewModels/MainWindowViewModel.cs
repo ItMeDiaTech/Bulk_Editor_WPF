@@ -41,6 +41,10 @@ namespace BulkEditor.UI.ViewModels
         private ObservableCollection<ProcessingResultViewModel> _processingResults = new();
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasDocuments))]
+        private ObservableCollection<DocumentListItemViewModel> _documentItems = new();
+
+        [ObservableProperty]
         private DocumentViewModel? _selectedDocument;
 
         [ObservableProperty]
@@ -87,6 +91,8 @@ namespace BulkEditor.UI.ViewModels
 
         public bool HasProcessingResults => ProcessingResults.Any();
 
+        public bool HasDocuments => DocumentItems.Any();
+
         public INotificationService NotificationService => _notificationService;
 
         public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService)
@@ -113,6 +119,12 @@ namespace BulkEditor.UI.ViewModels
             ProcessingResults.CollectionChanged += (s, e) =>
             {
                 OnPropertyChanged(nameof(HasProcessingResults));
+            };
+
+            DocumentItems.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(HasDocuments));
+                ClearDocumentsCommand.NotifyCanExecuteChanged();
             };
         }
 
@@ -205,12 +217,30 @@ namespace BulkEditor.UI.ViewModels
                 {
                     if (!Documents.Any(d => d.FilePath == filePath))
                     {
-                        Documents.Add(new DocumentViewModel
+                        // Create Document entity
+                        var document = new Document
                         {
                             FilePath = filePath,
                             FileName = Path.GetFileName(filePath),
                             Status = DocumentStatus.Pending
+                        };
+
+                        // Add to original Documents collection
+                        Documents.Add(new DocumentViewModel
+                        {
+                            FilePath = filePath,
+                            FileName = Path.GetFileName(filePath),
+                            Status = DocumentStatus.Pending,
+                            Document = document
                         });
+
+                        // Add to new DocumentItems collection for display
+                        DocumentItems.Add(new DocumentListItemViewModel(
+                            document, 
+                            RemoveDocumentFromList,
+                            ViewDocumentDetails,
+                            OpenDocumentLocation
+                        ));
                     }
                 }
 
@@ -368,6 +398,8 @@ namespace BulkEditor.UI.ViewModels
             }
 
             Documents.Clear();
+            DocumentItems.Clear();
+            ProcessingResults.Clear();
             SelectedDocument = null;
             TotalDocuments = 0;
             ProcessedDocuments = 0;
@@ -488,6 +520,21 @@ namespace BulkEditor.UI.ViewModels
             documentVM.UpdatedHyperlinks = result.Hyperlinks.Count(h => h.ActionTaken == HyperlinkAction.Updated);
             documentVM.ErrorCount = result.ProcessingErrors.Count;
             documentVM.HasErrors = result.ProcessingErrors.Any();
+
+            // Also update the corresponding DocumentListItemViewModel
+            var documentListItem = DocumentItems.FirstOrDefault(item => item.Document.Id == result.Id);
+            if (documentListItem != null)
+            {
+                // Update the document reference and refresh the view model
+                documentListItem.Document.Status = result.Status;
+                documentListItem.Document.ProcessedAt = result.ProcessedAt;
+                documentListItem.Document.ProcessingErrors = result.ProcessingErrors;
+                documentListItem.Document.ChangeLog = result.ChangeLog;
+                documentListItem.Document.BackupPath = result.BackupPath;
+                
+                // Trigger property updates on the list item
+                documentListItem.UpdateFromDocument();
+            }
         }
 
         partial void OnSelectedDocumentChanged(DocumentViewModel? value)
@@ -544,6 +591,130 @@ namespace BulkEditor.UI.ViewModels
                 SetStatusError("Failed to open settings");
             }
         }
+
+        #region Document List Actions
+
+        /// <summary>
+        /// Removes a document from the processing list
+        /// </summary>
+        private void RemoveDocumentFromList(DocumentListItemViewModel documentItem)
+        {
+            try
+            {
+                // Remove from both collections
+                var documentViewModel = Documents.FirstOrDefault(d => d.Document?.Id == documentItem.Document.Id);
+                if (documentViewModel != null)
+                {
+                    Documents.Remove(documentViewModel);
+                }
+
+                DocumentItems.Remove(documentItem);
+
+                // Update counts
+                TotalDocuments = Documents.Count;
+
+                // Update status
+                if (Documents.Count == 0)
+                {
+                    SetStatusReady();
+                }
+                else
+                {
+                    SetStatusSuccess($"Ready - {Documents.Count} documents selected for processing");
+                }
+
+                _logger.LogInformation($"Document removed from list: {documentItem.Document.FileName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing document from list");
+                _notificationService.ShowError("Remove Error", "Failed to remove document from list.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Opens the document details popup window
+        /// </summary>
+        private void ViewDocumentDetails(DocumentListItemViewModel documentItem)
+        {
+            try
+            {
+                var detailsViewModel = new DocumentDetailsViewModel(
+                    documentItem.Document,
+                    _backupService,
+                    _logger,
+                    _notificationService);
+
+                var detailsWindow = new Views.DocumentDetailsWindow(detailsViewModel)
+                {
+                    Owner = System.Windows.Application.Current.MainWindow
+                };
+
+                detailsWindow.ShowDialog();
+
+                _logger.LogInformation($"Viewed details for document: {documentItem.Document.FileName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error viewing document details");
+                _notificationService.ShowError("View Details Error", "Failed to open document details.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Opens the processing settings (using existing settings window)
+        /// </summary>
+        [RelayCommand]
+        private void OpenProcessingSettings()
+        {
+            try
+            {
+                // Use the existing settings window approach but focus on processing
+                var settingsViewModel = _serviceProvider.GetRequiredService<SettingsViewModel>();
+                var settingsWindow = new Views.SettingsWindow(settingsViewModel)
+                {
+                    Owner = System.Windows.Application.Current.MainWindow
+                };
+                
+                // TODO: In future, could programmatically select the processing tab
+                settingsWindow.ShowDialog();
+
+                _logger.LogInformation("Processing settings opened via main settings window");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error opening processing settings");
+                _notificationService.ShowError("Settings Error", "Failed to open processing settings.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Opens the file location in Windows Explorer
+        /// </summary>
+        private void OpenDocumentLocation(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    // Open Windows Explorer and select the file
+                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+                    _logger.LogInformation($"Opened location for: {filePath}");
+                }
+                else
+                {
+                    _notificationService.ShowWarning("File Not Found", 
+                        $"The file no longer exists at the specified location:\n{filePath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error opening document location");
+                _notificationService.ShowError("Open Location Error", "Failed to open document location.", ex);
+            }
+        }
+
+        #endregion
     }
 
     /// <summary>

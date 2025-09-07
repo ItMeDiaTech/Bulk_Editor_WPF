@@ -175,23 +175,127 @@ namespace BulkEditor.UI.ViewModels
 
         public ChangeEntry Change { get; }
         
-        public string CurrentTitle => Change.OldValue;
-        public string NuxeoTitle => ExtractNuxeoTitle();
+        public string CurrentTitle => ExtractCurrentTitle();
+        public string PreprocessedUrl => Change.OldValue ?? "N/A";
+        public string NewUrl => Change.NewValue ?? "N/A";
         public string ContentId => ExtractContentId();
         public string ChangeDescription => Change.Description;
         public string ChangeType => GetChangeTypeDescription();
 
-        private string ExtractNuxeoTitle()
+        // Legacy properties for backward compatibility
+        public string NuxeoTitle => NewUrl; // Map to new URL for backward compatibility
+
+        private string ExtractCurrentTitle()
         {
-            // Extract Nuxeo title from change details or new value
-            // This would be populated based on the actual processing logic
-            return Change.NewValue ?? "N/A";
+            // Extract current title from the details or description
+            // For hyperlink changes, this might be in the Details field
+            if (!string.IsNullOrEmpty(Change.Details))
+            {
+                // Try to extract title from details JSON or structured data
+                if (Change.Details.Contains("\"title\":", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        // Simple extraction - in real implementation this might be more sophisticated
+                        var titleStart = Change.Details.IndexOf("\"title\":", StringComparison.OrdinalIgnoreCase);
+                        if (titleStart >= 0)
+                        {
+                            var valueStart = Change.Details.IndexOf("\"", titleStart + 8);
+                            if (valueStart >= 0)
+                            {
+                                var valueEnd = Change.Details.IndexOf("\"", valueStart + 1);
+                                if (valueEnd >= 0)
+                                {
+                                    var title = Change.Details.Substring(valueStart + 1, valueEnd - valueStart - 1);
+                                    // Remove any appended Content ID from title
+                                    return RemoveAppendedContentId(title);
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Fall back to description if parsing fails
+                    }
+                }
+            }
+            
+            // Fall back to using the change description
+            var description = Change.Description ?? "";
+            if (description.Contains("title", StringComparison.OrdinalIgnoreCase))
+            {
+                // Try to extract title from description
+                return RemoveAppendedContentId(description);
+            }
+            
+            return "N/A";
         }
 
         private string ExtractContentId()
         {
-            // Extract content ID from element ID or details
-            return Change.ElementId ?? "N/A";
+            // First try the ElementId field - this should contain the actual Content ID
+            if (!string.IsNullOrEmpty(Change.ElementId))
+            {
+                // ElementId might contain the full hyperlink ID or just the Content ID
+                // Extract Content ID patterns (TSRC-xxx-xxxxxx or CMS-xxx-xxxxxx)
+                var contentIdMatch = System.Text.RegularExpressions.Regex.Match(
+                    Change.ElementId, 
+                    @"\b(TSRC-[^-]+-\d{6}|CMS-[^-]+-\d{6})\b", 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    
+                if (contentIdMatch.Success)
+                {
+                    return contentIdMatch.Value;
+                }
+                
+                return Change.ElementId;
+            }
+
+            // Try to extract Content ID from Details field
+            if (!string.IsNullOrEmpty(Change.Details))
+            {
+                var contentIdMatch = System.Text.RegularExpressions.Regex.Match(
+                    Change.Details, 
+                    @"\b(TSRC-[^-]+-\d{6}|CMS-[^-]+-\d{6})\b", 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    
+                if (contentIdMatch.Success)
+                {
+                    return contentIdMatch.Value;
+                }
+            }
+
+            // Try to extract from NewValue (URL) if it contains Content ID
+            if (!string.IsNullOrEmpty(Change.NewValue))
+            {
+                var contentIdMatch = System.Text.RegularExpressions.Regex.Match(
+                    Change.NewValue, 
+                    @"\b(TSRC-[^-]+-\d{6}|CMS-[^-]+-\d{6})\b", 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    
+                if (contentIdMatch.Success)
+                {
+                    return contentIdMatch.Value;
+                }
+            }
+            
+            return "N/A";
+        }
+
+        private string RemoveAppendedContentId(string title)
+        {
+            if (string.IsNullOrEmpty(title))
+                return title;
+                
+            // Remove appended Content ID patterns from title
+            // Pattern: " (TSRC-xxx-xxxxxx)" or " (CMS-xxx-xxxxxx)"
+            var cleanTitle = System.Text.RegularExpressions.Regex.Replace(
+                title,
+                @"\s*\(?(TSRC-[^-]+-\d{6}|CMS-[^-]+-\d{6})\)?$",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                
+            return cleanTitle.Trim();
         }
 
         private string GetChangeTypeDescription()
