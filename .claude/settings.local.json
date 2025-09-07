@@ -16,7 +16,8 @@
       "Bash(gh release upload:*)",
       "Bash(gh release:*)",
       "Bash(msbuild:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
