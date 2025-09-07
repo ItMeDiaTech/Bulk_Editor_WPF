@@ -22,7 +22,8 @@
       "Bash(powershell:*)",
       "Bash(cat:*)",
       "Bash(dotnet run:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(del \"C:\\Users\\DiaTech\\Pictures\\DiaTech\\Programs\\Bulk_Editor\\BulkEditor.UI\\ViewModels\\ProcessingOptionsViewModel.cs\")"
     ],
     "deny": [],
     "ask": []
