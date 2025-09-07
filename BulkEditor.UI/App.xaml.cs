@@ -43,6 +43,10 @@ namespace BulkEditor.UI
                 // Register core instances
                 services.AddSingleton<IConfigurationService>(configService);
                 services.AddSingleton(appSettings);
+                
+                // CRITICAL FIX: Register IOptions<AppSettings> for dependency injection
+                services.AddSingleton<Microsoft.Extensions.Options.IOptions<AppSettings>>(provider =>
+                    Microsoft.Extensions.Options.Options.Create(appSettings));
 
                 // Register infrastructure services
                 services.AddSingleton<BulkEditor.Core.Interfaces.ILoggingService, BulkEditor.Infrastructure.Services.SerilogService>();
