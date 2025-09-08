@@ -64,6 +64,13 @@ namespace BulkEditor.UI.ViewModels
         {
             try
             {
+                // CRITICAL FIX: Ensure we're on the UI thread when modifying ObservableCollection
+                if (!System.Windows.Application.Current?.Dispatcher?.CheckAccess() == true)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.Invoke(() => FilterDocuments());
+                    return;
+                }
+                
                 DocumentItems.Clear();
                 
                 if (string.IsNullOrEmpty(SearchText))
@@ -360,7 +367,17 @@ namespace BulkEditor.UI.ViewModels
                                 ViewDocumentDetails,
                                 OpenDocumentLocation
                             );
-                            _allDocumentItems.Add(documentItem);
+                            
+                            // CRITICAL FIX: Ensure thread-safe collection access
+                            if (System.Windows.Application.Current?.Dispatcher != null)
+                            {
+                                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => 
+                                    _allDocumentItems.Add(documentItem));
+                            }
+                            else
+                            {
+                                _allDocumentItems.Add(documentItem);
+                            }
                         }
                         catch (Exception docItemEx)
                         {
@@ -371,7 +388,15 @@ namespace BulkEditor.UI.ViewModels
                 }
 
                 // CRITICAL FIX: Apply filter to refresh DocumentItems display after adding files
-                FilterDocuments();
+                // Ensure this runs on the UI thread to prevent crashes
+                if (System.Windows.Application.Current?.Dispatcher != null)
+                {
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => FilterDocuments());
+                }
+                else
+                {
+                    FilterDocuments();
+                }
 
                 if (validation.InvalidFiles.Any())
                 {
@@ -403,8 +428,15 @@ namespace BulkEditor.UI.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding files");
-                _notificationService.ShowError("File Validation Error", "Failed to validate selected files.", ex);
+                _logger.LogError(ex, "Error adding files: {ErrorMessage}", ex.Message);
+                _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
+                
+                // Additional logging for debugging thread safety issues
+                _logger.LogError("Application dispatcher availability: {DispatcherAvailable}", 
+                    System.Windows.Application.Current?.Dispatcher != null);
+                _logger.LogError("Current thread ID: {ThreadId}", System.Threading.Thread.CurrentThread.ManagedThreadId);
+                
+                _notificationService.ShowError("File Validation Error", "Failed to validate selected files. Check logs for details.", ex);
                 SetStatusError($"Error adding files: {ex.Message}");
             }
         }
