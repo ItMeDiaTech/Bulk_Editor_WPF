@@ -1,7 +1,8 @@
 ﻿<Application x:Class="BulkEditor.UI.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:BulkEditor.UI">
+             xmlns:local="clr-namespace:BulkEditor.UI"
+             DispatcherUnhandledException="Application_DispatcherUnhandledException">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

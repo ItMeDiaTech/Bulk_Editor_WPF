@@ -97,7 +97,8 @@ namespace BulkEditor.UI.ViewModels.Settings
                     return;
                 }
 
-                var updateInfo = await _updateService.CheckForUpdatesAsync();
+                // CRITICAL FIX: Bypass rate limiting for manual update checks
+                var updateInfo = await _updateService.CheckForUpdatesAsync(bypassRateLimit: true);
                 if (updateInfo != null)
                 {
                     // Update available

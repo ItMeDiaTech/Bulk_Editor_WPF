@@ -62,7 +62,9 @@ namespace BulkEditor.UI
                 {
                     var httpClient = new HttpClient();
                     httpClient.Timeout = TimeSpan.FromSeconds(30);
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", "BulkEditor/1.0");
+                    // CRITICAL FIX: More specific User-Agent to comply with GitHub API guidelines
+                    var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", $"BulkEditor/{version} (+https://github.com/ItMeDiaTech/Bulk_Editor_WPF)");
                     httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
                     return httpClient;
                 });
