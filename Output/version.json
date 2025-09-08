@@ -1,6 +1,6 @@
 ﻿{
     "Configuration":  "Release",
-    "Installer":  "BulkEditor-Setup-1.9.0.0.msi",
-    "BuildDate":  "2025-09-07 09:52:42",
-    "Version":  "1.9.0.0"
+    "Installer":  "BulkEditor-Setup-1.9.0.2.msi",
+    "BuildDate":  "2025-09-08 12:06:00",
+    "Version":  "1.9.0.2"
 }
