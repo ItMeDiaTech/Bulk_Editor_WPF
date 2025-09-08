@@ -36,7 +36,7 @@ namespace BulkEditor.UI.ViewModels
         public ReplacementSettingsViewModel ReplacementSettings { get; }
         public UpdateSettingsViewModel UpdateSettings { get; }
 
-        public SettingsViewModel(AppSettings appSettings, ILoggingService logger, IConfigurationService configurationService, IUpdateService updateService, IHttpService httpService)
+        public SettingsViewModel(AppSettings appSettings, ILoggingService logger, IConfigurationService configurationService, IUpdateService updateService, IHttpService httpService, IThemeService themeService)
         {
             _originalSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -47,7 +47,7 @@ namespace BulkEditor.UI.ViewModels
             // Create a copy of the settings to work with
             _currentSettings = CloneSettings(appSettings);
 
-            ProcessingSettings = new ProcessingSettingsViewModel();
+            ProcessingSettings = new ProcessingSettingsViewModel(themeService);
             ValidationSettings = new ValidationSettingsViewModel(logger, httpService);
             BackupSettings = new BackupSettingsViewModel();
             LoggingSettings = new LoggingSettingsViewModel();
