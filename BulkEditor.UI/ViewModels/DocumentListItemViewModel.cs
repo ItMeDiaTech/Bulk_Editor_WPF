@@ -82,6 +82,16 @@ namespace BulkEditor.UI.ViewModels
             }
         }
 
+        // CRITICAL FIX: Cache SolidColorBrush instances to prevent TypeConverter errors
+        private static readonly SolidColorBrush PendingBrush = new(Color.FromRgb(0x87, 0xCE, 0xFA));
+        private static readonly SolidColorBrush ProcessingBrush = new(Color.FromRgb(0xFF, 0x98, 0x00));
+        private static readonly SolidColorBrush CompletedWithErrorsBrush = new(Color.FromRgb(0xF4, 0x43, 0x36));
+        private static readonly SolidColorBrush CompletedBrush = new(Color.FromRgb(0x4C, 0xAF, 0x50));
+        private static readonly SolidColorBrush FailedBrush = new(Color.FromRgb(0xF4, 0x43, 0x36));
+        private static readonly SolidColorBrush CancelledBrush = new(Color.FromRgb(0x75, 0x75, 0x75));
+        private static readonly SolidColorBrush RecoveredBrush = new(Color.FromRgb(0x4C, 0xAF, 0x50));
+        private static readonly SolidColorBrush DefaultBrush = new(Color.FromRgb(0x9E, 0x9E, 0x9E));
+
         /// <summary>
         /// Gets the status background color based on current status and error state
         /// </summary>
@@ -91,14 +101,14 @@ namespace BulkEditor.UI.ViewModels
             {
                 return Status switch
                 {
-                    DocumentStatus.Pending => new SolidColorBrush(Color.FromRgb(0x87, 0xCE, 0xFA)), // Light Blue
-                    DocumentStatus.Processing => new SolidColorBrush(Color.FromRgb(0xFF, 0x98, 0x00)), // Orange
-                    DocumentStatus.Completed when HasErrors => new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36)), // Red
-                    DocumentStatus.Completed => new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)), // Green
-                    DocumentStatus.Failed => new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36)), // Red
-                    DocumentStatus.Cancelled => new SolidColorBrush(Color.FromRgb(0x75, 0x75, 0x75)), // Gray
-                    DocumentStatus.Recovered => new SolidColorBrush(Color.FromRgb(0xFF, 0x98, 0x00)), // Orange
-                    _ => new SolidColorBrush(Color.FromRgb(0x75, 0x75, 0x75)) // Gray
+                    DocumentStatus.Pending => PendingBrush,
+                    DocumentStatus.Processing => ProcessingBrush,
+                    DocumentStatus.Completed when HasErrors => CompletedWithErrorsBrush,
+                    DocumentStatus.Completed => CompletedBrush,
+                    DocumentStatus.Failed => FailedBrush,
+                    DocumentStatus.Cancelled => CancelledBrush,
+                    DocumentStatus.Recovered => RecoveredBrush,
+                    _ => DefaultBrush
                 };
             }
         }
