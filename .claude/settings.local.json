@@ -27,7 +27,12 @@
       "Bash(dotnet add:*)",
       "Bash(git checkout:*)",
       "Bash(sed:*)",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(git show:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(rg:*)",
+      "Bash(dotnet list:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
