@@ -82,15 +82,25 @@ namespace BulkEditor.UI.ViewModels
             }
         }
 
-        // CRITICAL FIX: Cache SolidColorBrush instances to prevent TypeConverter errors
-        private static readonly SolidColorBrush PendingBrush = new(Color.FromRgb(0x87, 0xCE, 0xFA));
-        private static readonly SolidColorBrush ProcessingBrush = new(Color.FromRgb(0xFF, 0x98, 0x00));
-        private static readonly SolidColorBrush CompletedWithErrorsBrush = new(Color.FromRgb(0xF4, 0x43, 0x36));
-        private static readonly SolidColorBrush CompletedBrush = new(Color.FromRgb(0x4C, 0xAF, 0x50));
-        private static readonly SolidColorBrush FailedBrush = new(Color.FromRgb(0xF4, 0x43, 0x36));
-        private static readonly SolidColorBrush CancelledBrush = new(Color.FromRgb(0x75, 0x75, 0x75));
-        private static readonly SolidColorBrush RecoveredBrush = new(Color.FromRgb(0x4C, 0xAF, 0x50));
-        private static readonly SolidColorBrush DefaultBrush = new(Color.FromRgb(0x9E, 0x9E, 0x9E));
+        // CRITICAL FIX: Cache and freeze SolidColorBrush instances to prevent TypeConverter errors
+        private static readonly SolidColorBrush PendingBrush = CreateFrozenBrush(Color.FromRgb(0x87, 0xCE, 0xFA));
+        private static readonly SolidColorBrush ProcessingBrush = CreateFrozenBrush(Color.FromRgb(0xFF, 0x98, 0x00));
+        private static readonly SolidColorBrush CompletedWithErrorsBrush = CreateFrozenBrush(Color.FromRgb(0xF4, 0x43, 0x36));
+        private static readonly SolidColorBrush CompletedBrush = CreateFrozenBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+        private static readonly SolidColorBrush FailedBrush = CreateFrozenBrush(Color.FromRgb(0xF4, 0x43, 0x36));
+        private static readonly SolidColorBrush CancelledBrush = CreateFrozenBrush(Color.FromRgb(0x75, 0x75, 0x75));
+        private static readonly SolidColorBrush RecoveredBrush = CreateFrozenBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+        private static readonly SolidColorBrush DefaultBrush = CreateFrozenBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
+
+        /// <summary>
+        /// Creates a frozen SolidColorBrush for thread-safe XAML access
+        /// </summary>
+        private static SolidColorBrush CreateFrozenBrush(Color color)
+        {
+            var brush = new SolidColorBrush(color);
+            brush.Freeze(); // CRITICAL: Freeze for thread-safe access
+            return brush;
+        }
 
         /// <summary>
         /// Gets the status background color based on current status and error state

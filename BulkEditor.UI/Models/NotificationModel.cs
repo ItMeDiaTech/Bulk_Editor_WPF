@@ -52,6 +52,43 @@ namespace BulkEditor.UI.Models
 
         public Action? Action { get; set; }
 
+    // CRITICAL FIX: Cache and freeze SolidColorBrush instances to prevent TypeConverter errors
+    private static readonly SolidColorBrush InfoIconBrush = CreateFrozenBrush(Color.FromRgb(0x21, 0x96, 0xF3));
+    private static readonly SolidColorBrush SuccessIconBrush = CreateFrozenBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+    private static readonly SolidColorBrush WarningIconBrush = CreateFrozenBrush(Color.FromRgb(0xFF, 0x98, 0x00));
+    private static readonly SolidColorBrush ErrorIconBrush = CreateFrozenBrush(Color.FromRgb(0xF4, 0x43, 0x36));
+    private static readonly SolidColorBrush DefaultIconBrush = CreateFrozenBrush(Color.FromRgb(0x75, 0x75, 0x75));
+
+    private static readonly SolidColorBrush InfoBackgroundBrush = CreateFrozenBrush(Color.FromArgb(10, 0x21, 0x96, 0xF3));
+    private static readonly SolidColorBrush SuccessBackgroundBrush = CreateFrozenBrush(Color.FromArgb(10, 0x4C, 0xAF, 0x50));
+    private static readonly SolidColorBrush WarningBackgroundBrush = CreateFrozenBrush(Color.FromArgb(10, 0xFF, 0x98, 0x00));
+    private static readonly SolidColorBrush ErrorBackgroundBrush = CreateFrozenBrush(Color.FromArgb(10, 0xF4, 0x43, 0x36));
+    private static readonly SolidColorBrush DefaultBackgroundBrush = CreateFrozenBrush(Color.FromArgb(10, 0x75, 0x75, 0x75));
+
+    private static readonly SolidColorBrush InfoBorderBrush = CreateFrozenBrush(Color.FromArgb(50, 0x21, 0x96, 0xF3));
+    private static readonly SolidColorBrush SuccessBorderBrush = CreateFrozenBrush(Color.FromArgb(50, 0x4C, 0xAF, 0x50));
+    private static readonly SolidColorBrush WarningBorderBrush = CreateFrozenBrush(Color.FromArgb(50, 0xFF, 0x98, 0x00));
+    private static readonly SolidColorBrush ErrorBorderBrush = CreateFrozenBrush(Color.FromArgb(50, 0xF4, 0x43, 0x36));
+    private static readonly SolidColorBrush DefaultBorderBrush = CreateFrozenBrush(Color.FromArgb(50, 0x75, 0x75, 0x75));
+
+    private static readonly SolidColorBrush InfoTitleBrush = CreateFrozenBrush(Color.FromRgb(0x0D, 0x47, 0xA1));
+    private static readonly SolidColorBrush SuccessTitleBrush = CreateFrozenBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
+    private static readonly SolidColorBrush WarningTitleBrush = CreateFrozenBrush(Color.FromRgb(0xE6, 0x5C, 0x00));
+    private static readonly SolidColorBrush ErrorTitleBrush = CreateFrozenBrush(Color.FromRgb(0xC6, 0x28, 0x28));
+    private static readonly SolidColorBrush DefaultTitleBrush = CreateFrozenBrush(Color.FromRgb(0x42, 0x42, 0x42));
+
+    private static readonly SolidColorBrush MessageBrush = CreateFrozenBrush(Color.FromRgb(0x42, 0x42, 0x42));
+
+    /// <summary>
+    /// Creates a frozen SolidColorBrush for thread-safe XAML access
+    /// </summary>
+    private static SolidColorBrush CreateFrozenBrush(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze(); // CRITICAL: Freeze for thread-safe access
+        return brush;
+    }
+
         public string Icon => Severity switch
         {
             NotificationSeverity.Info => "ℹ",
@@ -63,41 +100,41 @@ namespace BulkEditor.UI.Models
 
         public SolidColorBrush IconColor => Severity switch
         {
-            NotificationSeverity.Info => new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3)),
-            NotificationSeverity.Success => new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)),
-            NotificationSeverity.Warning => new SolidColorBrush(Color.FromRgb(0xFF, 0x98, 0x00)),
-            NotificationSeverity.Error => new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36)),
-            _ => new SolidColorBrush(Color.FromRgb(0x75, 0x75, 0x75))
+            NotificationSeverity.Info => InfoIconBrush,
+            NotificationSeverity.Success => SuccessIconBrush,
+            NotificationSeverity.Warning => WarningIconBrush,
+            NotificationSeverity.Error => ErrorIconBrush,
+            _ => DefaultIconBrush
         };
 
         public SolidColorBrush BackgroundColor => Severity switch
         {
-            NotificationSeverity.Info => new SolidColorBrush(Color.FromArgb(10, 0x21, 0x96, 0xF3)),
-            NotificationSeverity.Success => new SolidColorBrush(Color.FromArgb(10, 0x4C, 0xAF, 0x50)),
-            NotificationSeverity.Warning => new SolidColorBrush(Color.FromArgb(10, 0xFF, 0x98, 0x00)),
-            NotificationSeverity.Error => new SolidColorBrush(Color.FromArgb(10, 0xF4, 0x43, 0x36)),
-            _ => new SolidColorBrush(Color.FromArgb(10, 0x75, 0x75, 0x75))
+            NotificationSeverity.Info => InfoBackgroundBrush,
+            NotificationSeverity.Success => SuccessBackgroundBrush,
+            NotificationSeverity.Warning => WarningBackgroundBrush,
+            NotificationSeverity.Error => ErrorBackgroundBrush,
+            _ => DefaultBackgroundBrush
         };
 
         public SolidColorBrush BorderColor => Severity switch
         {
-            NotificationSeverity.Info => new SolidColorBrush(Color.FromArgb(50, 0x21, 0x96, 0xF3)),
-            NotificationSeverity.Success => new SolidColorBrush(Color.FromArgb(50, 0x4C, 0xAF, 0x50)),
-            NotificationSeverity.Warning => new SolidColorBrush(Color.FromArgb(50, 0xFF, 0x98, 0x00)),
-            NotificationSeverity.Error => new SolidColorBrush(Color.FromArgb(50, 0xF4, 0x43, 0x36)),
-            _ => new SolidColorBrush(Color.FromArgb(50, 0x75, 0x75, 0x75))
+            NotificationSeverity.Info => InfoBorderBrush,
+            NotificationSeverity.Success => SuccessBorderBrush,
+            NotificationSeverity.Warning => WarningBorderBrush,
+            NotificationSeverity.Error => ErrorBorderBrush,
+            _ => DefaultBorderBrush
         };
 
         public SolidColorBrush TitleColor => Severity switch
         {
-            NotificationSeverity.Info => new SolidColorBrush(Color.FromRgb(0x0D, 0x47, 0xA1)),
-            NotificationSeverity.Success => new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32)),
-            NotificationSeverity.Warning => new SolidColorBrush(Color.FromRgb(0xE6, 0x5C, 0x00)),
-            NotificationSeverity.Error => new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28)),
-            _ => new SolidColorBrush(Color.FromRgb(0x42, 0x42, 0x42))
+            NotificationSeverity.Info => InfoTitleBrush,
+            NotificationSeverity.Success => SuccessTitleBrush,
+            NotificationSeverity.Warning => WarningTitleBrush,
+            NotificationSeverity.Error => ErrorTitleBrush,
+            _ => DefaultTitleBrush
         };
 
-        public SolidColorBrush MessageColor => new SolidColorBrush(Color.FromRgb(0x42, 0x42, 0x42));
+        public SolidColorBrush MessageColor => MessageBrush;
 
         public static NotificationModel CreateInfo(string title, string message)
         {
