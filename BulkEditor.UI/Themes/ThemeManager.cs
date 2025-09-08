@@ -28,8 +28,10 @@ namespace BulkEditor.UI.Themes
         {
             { "Light", "Light Theme" },
             { "Dark", "Dark Theme" },
-            { "Blue", "Blue Theme" },
-            { "Green", "Green Theme" }
+            { "LightBlue", "Light Blue Theme" },
+            { "Green", "Green Theme" },
+            { "Purple", "Purple Theme" },
+            { "Pink", "Pink Theme" }
         };
 
         /// <summary>

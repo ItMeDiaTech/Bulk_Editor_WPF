@@ -682,7 +682,18 @@ namespace BulkEditor.Infrastructure.Services
 
                 foreach (var hyperlink in document.Hyperlinks)
                 {
-                    var lookupId = ExtractLookupIdUsingVbaLogic(hyperlink.OriginalUrl, "");
+                    // CRITICAL FIX: Parse URL to extract both address and subAddress for proper lookup ID extraction
+                    string address = hyperlink.OriginalUrl;
+                    string subAddress = "";
+                    
+                    if (hyperlink.OriginalUrl.Contains('#'))
+                    {
+                        var parts = hyperlink.OriginalUrl.Split('#', 2);
+                        address = parts[0];
+                        subAddress = parts[1];
+                    }
+                    
+                    var lookupId = ExtractLookupIdUsingVbaLogic(address, subAddress);
                     if (!string.IsNullOrEmpty(lookupId) && !idDict.ContainsKey(lookupId))
                     {
                         idDict[lookupId] = true;
@@ -783,6 +794,7 @@ namespace BulkEditor.Infrastructure.Services
                         // VBA: hl.TextToDisplay = hl.TextToDisplay & " - Not Found"
                         hyperlink.DisplayText += " - Not Found";
                         hyperlink.Status = HyperlinkStatus.NotFound;
+                        hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
 
                         document.ChangeLog.Changes.Add(new ChangeEntry
                         {
@@ -854,6 +866,7 @@ namespace BulkEditor.Infrastructure.Services
                             {
                                 dispText = dispText.Substring(0, dispText.Length - pattern5.Length) + pattern6;
                                 hyperlink.DisplayText = dispText;
+                                hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
                                 appended = true;
                                 _logger.LogInformation("Upgraded 5-digit to 6-digit Content_ID: {Old} -> {New}", pattern5, pattern6);
                             }
@@ -862,6 +875,7 @@ namespace BulkEditor.Infrastructure.Services
                         else if (!dispText.Contains(pattern6, StringComparison.OrdinalIgnoreCase))
                         {
                             hyperlink.DisplayText = dispText.Trim() + pattern6;
+                            hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
                             dispText = hyperlink.DisplayText;
                             appended = true;
                             _logger.LogInformation("Appended Content_ID to hyperlink: {ContentId}", last6);
@@ -895,6 +909,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     hyperlink.DisplayText += " - Expired";
                     hyperlink.Status = HyperlinkStatus.Expired;
+                    hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
 
                     document.ChangeLog.Changes.Add(new ChangeEntry
                     {
@@ -1284,11 +1299,23 @@ namespace BulkEditor.Infrastructure.Services
                             var url = relationship.Uri.ToString();
                             var displayText = openXmlHyperlink.InnerText;
 
+                            // CRITICAL FIX: Extract both address and fragment for proper lookup ID detection
+                            // Parse URL to separate address and subAddress (fragment)
+                            string address = url;
+                            string subAddress = "";
+                            
+                            if (url.Contains('#'))
+                            {
+                                var parts = url.Split('#', 2);
+                                address = parts[0];
+                                subAddress = parts[1];
+                            }
+
                             var hyperlink = new Hyperlink
                             {
                                 OriginalUrl = url,
                                 DisplayText = displayText,
-                                LookupId = _hyperlinkValidator.ExtractLookupId(url),
+                                LookupId = ExtractLookupIdUsingVbaLogic(address, subAddress),
                                 RequiresUpdate = ShouldAutoValidateHyperlink(url, displayText)
                             };
 
@@ -1343,8 +1370,22 @@ namespace BulkEditor.Infrastructure.Services
                             var url = relationship.Uri.ToString();
                             var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
 
-                            // Check if hyperlink is invisible (empty display text but has URL)
-                            if (string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url))
+                            // CRITICAL FIX: Only remove genuinely broken hyperlinks, not ones that could be updated
+                            // Check if hyperlink has lookup ID - if so, keep it for potential updates
+                            string address = url;
+                            string subAddress = "";
+                            if (url.Contains('#'))
+                            {
+                                var parts = url.Split('#', 2);
+                                address = parts[0];
+                                subAddress = parts[1];
+                            }
+                            
+                            var lookupId = ExtractLookupIdUsingVbaLogic(address, subAddress);
+                            bool hasLookupId = !string.IsNullOrEmpty(lookupId);
+                            
+                            // Only remove if invisible AND has no lookup ID (genuinely broken)
+                            if (string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url) && !hasLookupId)
                             {
                                 // Remove the hyperlink element
                                 openXmlHyperlink.Remove();

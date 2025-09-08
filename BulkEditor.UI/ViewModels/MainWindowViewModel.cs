@@ -370,6 +370,9 @@ namespace BulkEditor.UI.ViewModels
                     }
                 }
 
+                // CRITICAL FIX: Apply filter to refresh DocumentItems display after adding files
+                FilterDocuments();
+
                 if (validation.InvalidFiles.Any())
                 {
                     var invalidFiles = string.Join(", ", validation.InvalidFiles.Take(3));

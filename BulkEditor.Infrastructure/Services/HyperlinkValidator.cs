@@ -27,8 +27,9 @@ namespace BulkEditor.Infrastructure.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
 
-            // Initialize the lookup ID regex pattern
-            _lookupIdRegex = new Regex(@"(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            // CRITICAL FIX: Add word boundaries to match exactly 6 digits, not 7+
+            // This prevents matching CMS-PROD-1234567 when we only want CMS-PROD-123456
+            _lookupIdRegex = new Regex(@"\b(TSRC-[^-]+-\d{6}|CMS-[^-]+-\d{6})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             // Initialize Content ID extraction regex for title comparison (handle both 5 and 6 digit IDs)
             _contentIdRegex = new Regex(@"\s*\([0-9]{5,6}\)\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);

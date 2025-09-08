@@ -10,7 +10,7 @@
         Height="750" Width="1300"
         MinHeight="650" MinWidth="1000"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource MaterialDesignPaper}">
+        Background="{DynamicResource BackgroundBrush}">
 
     <!-- Add Material Design shadow effects -->
     <Window.Effect>
@@ -384,168 +384,132 @@
                                     Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </StackPanel>
 
-                        <!-- Advanced Progress Section -->
-                        <StackPanel Margin="0,0,0,32" Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <!-- Compact Progress Section -->
+                        <StackPanel Margin="0,0,0,24" Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock Text="Progress"
-                                       FontSize="18"
+                                       FontSize="16"
                                        FontWeight="SemiBold"
                                        Foreground="#1A1A1A"
-                                       Margin="0,0,0,16"/>
+                                       Margin="0,0,0,12"/>
 
                             <Border Background="White"
                                     BorderBrush="Transparent"
                                     BorderThickness="0"
                                     CornerRadius="8"
-                                    Padding="20">
+                                    Padding="16">
                                 <Border.Effect>
                                     <DropShadowEffect Color="Black" Opacity="0.08" BlurRadius="6" ShadowDepth="1" Direction="270"/>
                                 </Border.Effect>
                                 <StackPanel>
                                     <!-- Overall Progress -->
-                                    <Grid Margin="0,0,0,8">
+                                    <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Overall Progress" FontWeight="Medium" Foreground="#333333"/>
+                                        <TextBlock Text="Overall" FontWeight="Medium" Foreground="#333333" FontSize="12"/>
                                         <TextBlock Grid.Column="1" Text="{Binding OverallProgress, StringFormat='{}{0:F1}%'}" 
-                                                   FontWeight="SemiBold" Foreground="#2196F3"/>
+                                                   FontWeight="SemiBold" Foreground="#4CAF50" FontSize="12"/>
                                     </Grid>
-                                    <Border Background="#E8F5E8" Height="12" CornerRadius="6" Margin="0,0,0,12">
+                                    <Border Background="#E8F5E8" Height="8" CornerRadius="4" Margin="0,0,0,8">
                                         <ProgressBar Value="{Binding OverallProgress}"
                                                      Maximum="100"
-                                                     Height="12"
+                                                     Height="8"
                                                      Background="Transparent"
                                                      Foreground="#4CAF50"
                                                      BorderThickness="0"/>
                                     </Border>
                                     
-                                    <!-- Current Document Progress -->
+                                    <!-- Status and Stats -->
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Current Document" FontWeight="Medium" Foreground="#333333" FontSize="12"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding CurrentDocumentProgress, StringFormat='{}{0:F0}%'}" 
-                                                   FontWeight="SemiBold" Foreground="#FF9800" FontSize="12"/>
+                                        <TextBlock Grid.Column="0" FontSize="11" Foreground="#2196F3" FontWeight="SemiBold">
+                                            <Run Text="{Binding ProcessedDocuments}"/><Run Text="/"/><Run Text="{Binding TotalDocuments}"/>
+                                        </TextBlock>
+                                        <TextBlock Grid.Column="2" Text="{Binding ElapsedTime}" 
+                                                   FontSize="11" Foreground="#FF9800" FontWeight="SemiBold"/>
                                     </Grid>
-                                    <Border Background="#FFF3E0" Height="8" CornerRadius="4" Margin="0,0,0,12">
-                                        <ProgressBar Value="{Binding CurrentDocumentProgress}"
-                                                     Maximum="100"
-                                                     Height="8"
-                                                     Background="Transparent"
-                                                     Foreground="#FF9800"
-                                                     BorderThickness="0"/>
-                                    </Border>
                                     
-                                    <!-- Current Operation -->
+                                    <!-- Current Operation (if space allows) -->
                                     <TextBlock Text="{Binding CurrentOperation}"
-                                               FontSize="13"
+                                               FontSize="11"
                                                Foreground="#666666"
-                                               FontWeight="Medium"
-                                               Margin="0,0,0,4"
+                                               TextTrimming="CharacterEllipsis"
                                                Visibility="{Binding CurrentOperation, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                    
-                                    <!-- Current Document -->
-                                    <TextBlock Text="{Binding ProgressMessage}"
-                                               FontSize="12"
-                                               Foreground="#888888"
-                                               TextWrapping="Wrap"
-                                               Margin="0,0,0,12"/>
-                                    
-                                    <!-- Time Information -->
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="Elapsed Time" FontSize="11" Foreground="#666666" FontWeight="Medium"/>
-                                            <TextBlock Text="{Binding ElapsedTime}" FontSize="14" Foreground="#2196F3" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="Est. Remaining" FontSize="11" Foreground="#666666" FontWeight="Medium"/>
-                                            <TextBlock Text="{Binding EstimatedTimeRemaining}" FontSize="14" Foreground="#FF9800" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                    </Grid>
-                                    
-                                    <!-- Processing Speed -->
-                                    <Grid Margin="0,0,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="Avg. per Doc" FontSize="11" Foreground="#666666" FontWeight="Medium"/>
-                                            <TextBlock Text="{Binding AverageProcessingTime}" FontSize="14" Foreground="#9C27B0" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="Documents" FontSize="11" Foreground="#666666" FontWeight="Medium"/>
-                                            <TextBlock FontSize="14" Foreground="#4CAF50" FontWeight="SemiBold">
-                                                <Run Text="{Binding ProcessedDocuments}"/><Run Text="/"/><Run Text="{Binding TotalDocuments}"/>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Grid>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
 
-                        <!-- Statistics Section -->
-                        <StackPanel Margin="0,0,0,32">
+                        <!-- Compact Statistics Section -->
+                        <StackPanel Margin="0,0,0,24">
                             <TextBlock Text="Statistics"
-                                       FontSize="18"
+                                       FontSize="16"
                                        FontWeight="SemiBold"
                                        Foreground="#1A1A1A"
-                                       Margin="0,0,0,16"/>
+                                       Margin="0,0,0,12"/>
 
                             <Border Background="White"
                                     BorderBrush="Transparent"
                                     BorderThickness="0"
                                     CornerRadius="8"
-                                    Padding="20">
+                                    Padding="16">
                                 <Border.Effect>
                                     <DropShadowEffect Color="Black" Opacity="0.08" BlurRadius="6" ShadowDepth="1" Direction="270"/>
                                 </Border.Effect>
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <!-- Document Stats -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Docs Processed" FontSize="12" Foreground="#333333"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ProcessedDocuments}" FontSize="12" FontWeight="SemiBold" Foreground="#4CAF50"/>
+                                    </Grid>
 
-                                    <!-- Document Statistics -->
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Documents Processed" FontSize="14" Foreground="#333333" Margin="0,0,0,8"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ProcessedDocuments}" FontSize="14" FontWeight="SemiBold" Foreground="#4CAF50" Margin="0,0,0,8"/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Docs Failed" FontSize="12" Foreground="#333333"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding FailedDocuments}" FontSize="12" FontWeight="SemiBold" Foreground="#F44336"/>
+                                    </Grid>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Documents Failed" FontSize="14" Foreground="#333333" Margin="0,0,0,8"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FailedDocuments}" FontSize="14" FontWeight="SemiBold" Foreground="#F44336" Margin="0,0,0,8"/>
+                                    <!-- Hyperlink Stats -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Links Found" FontSize="12" Foreground="#333333"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalHyperlinksFound}" FontSize="12" FontWeight="SemiBold" Foreground="#2196F3"/>
+                                    </Grid>
 
-                                    <!-- Hyperlink Statistics -->
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Hyperlinks Found" FontSize="14" Foreground="#333333" Margin="0,0,0,8"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalHyperlinksFound}" FontSize="14" FontWeight="SemiBold" Foreground="#2196F3" Margin="0,0,0,8"/>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Links Updated" FontSize="12" Foreground="#333333"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalHyperlinksUpdated}" FontSize="12" FontWeight="SemiBold" Foreground="#FF9800"/>
+                                    </Grid>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Hyperlinks Processed" FontSize="14" Foreground="#333333" Margin="0,0,0,8"/>
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TotalHyperlinksProcessed}" FontSize="14" FontWeight="SemiBold" Foreground="#9C27B0" Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Hyperlinks Updated" FontSize="14" Foreground="#333333" Margin="0,0,0,8"/>
-                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TotalHyperlinksUpdated}" FontSize="14" FontWeight="SemiBold" Foreground="#FF9800" Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Text Replacements" FontSize="14" Foreground="#333333" Margin="0,0,0,8"/>
-                                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding TotalTextReplacements}" FontSize="14" FontWeight="SemiBold" Foreground="#607D8B" Margin="0,0,0,8"/>
-
-                                    <!-- Processing Status -->
-                                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Processing Status" FontSize="14" Foreground="#333333" FontWeight="Medium"/>
-                                    <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding StatusMessage}" FontSize="14" FontWeight="SemiBold" Foreground="#4CAF50"/>
-                                </Grid>
+                                    <!-- Status -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Status" FontSize="12" Foreground="#333333"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" FontSize="12" FontWeight="SemiBold" 
+                                                   Foreground="#4CAF50" TextTrimming="CharacterEllipsis" MaxWidth="120"/>
+                                    </Grid>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
 
@@ -722,7 +686,7 @@
 
                 <!-- App Version -->
                 <TextBlock Grid.Column="3"
-                           Text="v1.4.2"
+                           Text="{Binding ApplicationVersion}"
                            Foreground="#999999"
                            FontSize="12"
                            VerticalAlignment="Center"/>

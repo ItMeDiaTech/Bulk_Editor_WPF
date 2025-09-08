@@ -20,9 +20,28 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private string _title = string.Empty;
 
+        [ObservableProperty]
+        private string _applicationVersion = GetApplicationVersion();
+
         protected ViewModelBase()
         {
             Title = GetType().Name.Replace("ViewModel", "");
+        }
+
+        /// <summary>
+        /// Gets the current application version from the assembly
+        /// </summary>
+        private static string GetApplicationVersion()
+        {
+            try
+            {
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                return version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
+            }
+            catch
+            {
+                return "v1.0.0";
+            }
         }
 
         /// <summary>
