@@ -58,7 +58,11 @@ namespace BulkEditor.Core.Interfaces
         public const string Light = "Light";
         public const string Dark = "Dark";
         public const string Auto = "Auto"; // Follow system theme
+        public const string Purple = "Purple";
+        public const string Pink = "Pink";
+        public const string LightBlue = "Light Blue";
+        public const string Green = "Green";
 
-        public static readonly string[] All = { Light, Dark, Auto };
+        public static readonly string[] All = { Light, Purple, Pink, LightBlue, Green, Dark, Auto };
     }
 }
