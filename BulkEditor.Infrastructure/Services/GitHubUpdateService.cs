@@ -209,7 +209,7 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        public async Task<bool> DownloadAndInstallUpdateAsync(UpdateInfo updateInfo, IProgress<UpdateProgress> progress = null)
+        public async Task<bool> DownloadAndInstallUpdateAsync(UpdateInfo updateInfo, IProgress<UpdateProgress>? progress = null)
         {
             try
             {
@@ -389,7 +389,6 @@ namespace BulkEditor.Infrastructure.Services
                 var scriptPath = Path.Combine(_appDataPath, "update_installer.ps1");
                 var currentExePath = Process.GetCurrentProcess().MainModule?.FileName;
                 var currentExeDir = Path.GetDirectoryName(currentExePath);
-                var appName = "BulkEditor";
 
                 var scriptContent = $@"
 # BulkEditor Update Installation Script

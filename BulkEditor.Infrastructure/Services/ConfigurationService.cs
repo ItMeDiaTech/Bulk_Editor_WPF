@@ -133,7 +133,7 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        public async Task BackupSettingsAsync(string backupSuffix = null)
+        public async Task BackupSettingsAsync(string? backupSuffix = null)
         {
             try
             {
