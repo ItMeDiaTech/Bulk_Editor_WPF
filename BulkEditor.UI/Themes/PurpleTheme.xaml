@@ -63,6 +63,18 @@
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
     
+    <!-- CRITICAL FIX: Add missing button brush resources -->
+    <SolidColorBrush x:Key="ButtonPrimaryBrush" Color="{StaticResource ButtonPrimaryColor}"/>
+    <SolidColorBrush x:Key="ButtonPrimaryHoverBrush" Color="{StaticResource ButtonPrimaryHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonSecondaryBrush" Color="{StaticResource ButtonSecondaryColor}"/>
+    <SolidColorBrush x:Key="ButtonSecondaryHoverBrush" Color="{StaticResource ButtonSecondaryHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonDangerBrush" Color="{StaticResource ButtonDangerColor}"/>
+    <SolidColorBrush x:Key="ButtonDangerHoverBrush" Color="{StaticResource ButtonDangerHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonProcessingOptionsBrush" Color="{StaticResource ButtonProcessingOptionsColor}"/>
+    <SolidColorBrush x:Key="ButtonProcessingOptionsHoverBrush" Color="{StaticResource ButtonProcessingOptionsHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonClearAllBrush" Color="{StaticResource ButtonClearAllColor}"/>
+    <SolidColorBrush x:Key="ButtonClearAllHoverBrush" Color="{StaticResource ButtonClearAllHoverColor}"/>
+    
     <!-- Material Design Paper Background -->
     <SolidColorBrush x:Key="MaterialDesignPaper" Color="{StaticResource BackgroundColor}"/>
     
