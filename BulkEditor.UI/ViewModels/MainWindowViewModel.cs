@@ -35,6 +35,7 @@ namespace BulkEditor.UI.ViewModels
         private readonly ISessionManager _sessionManager;
         private readonly IBackupService _backupService;
         private readonly IBackgroundTaskService _backgroundTaskService;
+        private readonly BulkEditor.Application.Services.UpdateManager _updateManager;
         private string? _currentTaskId;
 
         [ObservableProperty]
@@ -201,7 +202,7 @@ namespace BulkEditor.UI.ViewModels
 
         public INotificationService NotificationService => _notificationService;
 
-        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService, IBackgroundTaskService backgroundTaskService)
+        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService, IBackgroundTaskService backgroundTaskService, BulkEditor.Application.Services.UpdateManager updateManager)
         {
             _applicationService = applicationService ?? throw new ArgumentNullException(nameof(applicationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -212,12 +213,16 @@ namespace BulkEditor.UI.ViewModels
             _sessionManager = sessionManager;
             _backupService = backupService;
             _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
+            _updateManager = updateManager ?? throw new ArgumentNullException(nameof(updateManager));
 
             Title = "Bulk Document Editor";
             SetStatusReady();
 
             // Subscribe to background task status changes
             _backgroundTaskService.TaskStatusChanged += OnBackgroundTaskStatusChanged;
+
+            // CRITICAL FIX: Subscribe to update manager events for automatic notifications
+            _updateManager.UpdateAvailable += OnUpdateAvailable;
 
             // Subscribe to collection changes to update command states
             Documents.CollectionChanged += (s, e) =>
@@ -293,6 +298,8 @@ namespace BulkEditor.UI.ViewModels
         {
             try
             {
+                _logger.LogInformation("Starting file selection dialog");
+                
                 var openFileDialog = new OpenFileDialog
                 {
                     Title = "Select Word Documents",
@@ -303,14 +310,29 @@ namespace BulkEditor.UI.ViewModels
 
                 if (openFileDialog.ShowDialog() == true)
                 {
+                    _logger.LogInformation("Files selected: {FileCount}", openFileDialog.FileNames.Length);
                     await AddFilesAsync(openFileDialog.FileNames);
+                }
+                else
+                {
+                    _logger.LogInformation("File selection was cancelled by user");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error selecting files");
-                _notificationService.ShowError("File Selection Error", "Failed to select files for processing.", ex);
-                SetStatusError($"Error selecting files: {ex.Message}");
+                _logger.LogError(ex, "CRITICAL ERROR in SelectFilesAsync: {ErrorMessage}", ex.Message);
+                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogError("Thread ID: {ThreadId}", System.Threading.Thread.CurrentThread.ManagedThreadId);
+                
+                try
+                {
+                    _notificationService.ShowError("File Selection Error", "Failed to select files for processing. Please try again or restart the application.", ex);
+                    SetStatusError($"Error selecting files: {ex.Message}");
+                }
+                catch (Exception innerEx)
+                {
+                    _logger.LogError(innerEx, "CRITICAL: Error in error handling for SelectFilesAsync");
+                }
             }
         }
 
@@ -358,44 +380,110 @@ namespace BulkEditor.UI.ViewModels
                             Document = document
                         });
 
-                        // Add to new DocumentItems collection for display
+                        // Add to new DocumentItems collection for display with comprehensive error handling
                         try
                         {
-                            var documentItem = new DocumentListItemViewModel(
-                                document, 
-                                RemoveDocumentFromList,
-                                ViewDocumentDetails,
-                                OpenDocumentLocation
-                            );
+                            _logger.LogInformation("Creating DocumentListItemViewModel for: {FilePath}", filePath);
                             
-                            // CRITICAL FIX: Ensure thread-safe collection access
-                            if (System.Windows.Application.Current?.Dispatcher != null)
+                            // CRITICAL FIX: Wrap DocumentListItemViewModel creation in additional safety
+                            DocumentListItemViewModel? documentItem = null;
+                            try
                             {
-                                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => 
-                                    _allDocumentItems.Add(documentItem));
+                                documentItem = new DocumentListItemViewModel(
+                                    document, 
+                                    RemoveDocumentFromList,
+                                    ViewDocumentDetails,
+                                    OpenDocumentLocation
+                                );
+                                _logger.LogInformation("Successfully created DocumentListItemViewModel for: {FilePath}", filePath);
+                            }
+                            catch (Exception createEx)
+                            {
+                                _logger.LogError(createEx, "Failed to create DocumentListItemViewModel for: {FilePath}", filePath);
+                                throw new InvalidOperationException($"Failed to create document list item for {filePath}", createEx);
+                            }
+                            
+                            // CRITICAL FIX: Ensure thread-safe collection access with additional validation
+                            if (documentItem != null)
+                            {
+                                try
+                                {
+                                    if (System.Windows.Application.Current?.Dispatcher != null)
+                                    {
+                                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => 
+                                        {
+                                            try
+                                            {
+                                                _allDocumentItems.Add(documentItem);
+                                                _logger.LogInformation("Added DocumentListItemViewModel to collection: {FilePath}", filePath);
+                                            }
+                                            catch (Exception addEx)
+                                            {
+                                                _logger.LogError(addEx, "Failed to add document item to collection: {FilePath}", filePath);
+                                                throw;
+                                            }
+                                        });
+                                    }
+                                    else
+                                    {
+                                        _allDocumentItems.Add(documentItem);
+                                        _logger.LogInformation("Added DocumentListItemViewModel to collection (no dispatcher): {FilePath}", filePath);
+                                    }
+                                }
+                                catch (Exception collectionEx)
+                                {
+                                    _logger.LogError(collectionEx, "Failed to add DocumentListItemViewModel to collection: {FilePath}", filePath);
+                                    throw new InvalidOperationException($"Failed to add document to collection: {filePath}", collectionEx);
+                                }
                             }
                             else
                             {
-                                _allDocumentItems.Add(documentItem);
+                                _logger.LogError("DocumentListItemViewModel is null for: {FilePath}", filePath);
+                                throw new InvalidOperationException($"Document item creation returned null for {filePath}");
                             }
                         }
                         catch (Exception docItemEx)
                         {
-                            _logger.LogError(docItemEx, "Error creating DocumentListItemViewModel for file: {FilePath}", filePath);
-                            throw new InvalidOperationException($"Failed to create document item for {filePath}", docItemEx);
+                            _logger.LogError(docItemEx, "CRITICAL: Complete failure creating/adding DocumentListItemViewModel for file: {FilePath}", filePath);
+                            // Don't rethrow here - continue with other files but log the failure
+                            _notificationService.ShowWarning("Document Display Error", 
+                                $"Failed to add {Path.GetFileName(filePath)} to the document list. It has been added to processing but may not display correctly.");
                         }
                     }
                 }
 
                 // CRITICAL FIX: Apply filter to refresh DocumentItems display after adding files
                 // Ensure this runs on the UI thread to prevent crashes
-                if (System.Windows.Application.Current?.Dispatcher != null)
+                try
                 {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => FilterDocuments());
+                    _logger.LogInformation("Applying FilterDocuments to refresh UI display");
+                    if (System.Windows.Application.Current?.Dispatcher != null)
+                    {
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => 
+                        {
+                            try
+                            {
+                                FilterDocuments();
+                                _logger.LogInformation("Successfully applied FilterDocuments via Dispatcher");
+                            }
+                            catch (Exception filterEx)
+                            {
+                                _logger.LogError(filterEx, "Error in FilterDocuments via Dispatcher");
+                                throw;
+                            }
+                        });
+                    }
+                    else
+                    {
+                        FilterDocuments();
+                        _logger.LogInformation("Successfully applied FilterDocuments without Dispatcher");
+                    }
                 }
-                else
+                catch (Exception filterDocEx)
                 {
-                    FilterDocuments();
+                    _logger.LogError(filterDocEx, "CRITICAL: Failed to apply FilterDocuments - documents may not display");
+                    _notificationService.ShowWarning("Display Update Error", 
+                        "Documents were added successfully but may not appear in the list immediately. Try refreshing or restarting the application.");
                 }
 
                 if (validation.InvalidFiles.Any())
@@ -958,6 +1046,62 @@ namespace BulkEditor.UI.ViewModels
             {
                 _logger.LogError(ex, "Error opening document location");
                 _notificationService.ShowError("Open Location Error", "Failed to open document location.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Handle update availability notifications and show them to the user
+        /// </summary>
+        private void OnUpdateAvailable(object? sender, UpdateAvailableEventArgs e)
+        {
+            try
+            {
+                _logger.LogInformation("Update available: Version {Version}", e.UpdateInfo.Version);
+
+                // Show notification to user about available update  
+                var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+                var message = $"A new version ({e.UpdateInfo.Version}) of BulkEditor is available!\n\n" +
+                              $"Current version: {currentVersion}\n" +
+                              $"Release notes: {e.UpdateInfo.ReleaseNotes ?? "See GitHub for details"}\n\n" +
+                              "Would you like to download and install the update now?";
+
+                var result = System.Windows.MessageBox.Show(
+                    message,
+                    "Update Available",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Information);
+
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    // User wants to install the update
+                    _logger.LogInformation("User chose to install update {Version}", e.UpdateInfo.Version);
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var updateService = _serviceProvider.GetRequiredService<IUpdateService>();
+                            await updateService.DownloadAndInstallUpdateAsync(e.UpdateInfo);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to download and install update");
+                            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                _notificationService.ShowError("Update Error", "Failed to download and install update. Please try again later.", ex);
+                            });
+                        }
+                    });
+                }
+                else
+                {
+                    _logger.LogInformation("User declined to install update {Version}", e.UpdateInfo.Version);
+                    _notificationService.ShowSuccess("Update Available", "A new version is available. You can check for updates later in Settings.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling update available notification");
+                _notificationService.ShowError("Update Notification Error", "Failed to process update notification.", ex);
             }
         }
 
