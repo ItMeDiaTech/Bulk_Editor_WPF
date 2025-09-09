@@ -89,6 +89,7 @@ namespace BulkEditor.Core.Configuration
         public bool MinimizeToSystemTray { get; set; } = false;
         public bool ConfirmBeforeProcessing { get; set; } = true;
         public bool AutoSaveSettings { get; set; } = true;
+        public string ConsultantEmail { get; set; } = string.Empty; // CORRECT LOCATION
         public WindowSettings Window { get; set; } = new();
     }
 

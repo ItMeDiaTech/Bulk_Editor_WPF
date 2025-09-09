@@ -86,25 +86,11 @@ namespace BulkEditor.UI.ViewModels
         {
             try
             {
-                // Add some sample hyperlink rules
-                HyperlinkRules.Add(new HyperlinkReplacementRule
-                {
-                    IsEnabled = true,
-                    TitleToMatch = "User Guide",
-                    ContentId = "CMS-DOC-123456",
-                    CreatedAt = DateTime.Now
-                });
+                // CRITICAL FIX: Don't add sample rules here as they will be overwritten
+                // when LoadCurrentSettingsAsync() is called, creating confusion
+                // Rules will be loaded from actual settings or remain empty if none exist
 
-                // Add some sample text rules
-                TextRules.Add(new TextReplacementRule
-                {
-                    IsEnabled = true,
-                    SourceText = "Old Company Name",
-                    ReplacementText = "New Company Name",
-                    CreatedAt = DateTime.Now
-                });
-
-                _logger.LogInformation("Processing options initialized with default settings");
+                _logger.LogInformation("Processing options initialized with default settings - rules will be loaded from configuration");
             }
             catch (Exception ex)
             {
@@ -145,16 +131,25 @@ namespace BulkEditor.UI.ViewModels
 
                     // Load custom replacement rules
                     HyperlinkRules.Clear();
-                    foreach (var rule in currentSettings.Replacement.HyperlinkRules)
+                    if (currentSettings.Replacement.HyperlinkRules != null)
                     {
-                        HyperlinkRules.Add(rule);
+                        foreach (var rule in currentSettings.Replacement.HyperlinkRules)
+                        {
+                            HyperlinkRules.Add(rule);
+                        }
                     }
 
                     TextRules.Clear();
-                    foreach (var rule in currentSettings.Replacement.TextRules)
+                    if (currentSettings.Replacement.TextRules != null)
                     {
-                        TextRules.Add(rule);
+                        foreach (var rule in currentSettings.Replacement.TextRules)
+                        {
+                            TextRules.Add(rule);
+                        }
                     }
+
+                    _logger.LogDebug("Loaded {HyperlinkRuleCount} hyperlink rules and {TextRuleCount} text rules from settings",
+                        HyperlinkRules.Count, TextRules.Count);
 
                     // Set hyperlink match mode (default to Contains for backward compatibility)
                     HyperlinkMatchMode = HyperlinkMatchMode.Contains;

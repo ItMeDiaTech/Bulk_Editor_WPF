@@ -65,6 +65,7 @@ namespace BulkEditor.UI.ViewModels
             ProcessingSettings.BatchSize = _currentSettings.Processing.BatchSize;
             ProcessingSettings.CreateBackupBeforeProcessing = _currentSettings.Processing.CreateBackupBeforeProcessing;
             ProcessingSettings.TimeoutPerDocumentMinutes = (int)_currentSettings.Processing.TimeoutPerDocument.TotalMinutes;
+            ProcessingSettings.ConsultantEmail = _currentSettings.UI.ConsultantEmail; // FIXED: Correct location
 
             // Validation Settings
             ValidationSettings.HttpTimeoutSeconds = (int)_currentSettings.Validation.HttpTimeout.TotalSeconds;
@@ -135,6 +136,7 @@ namespace BulkEditor.UI.ViewModels
             _currentSettings.Processing.CreateBackupBeforeProcessing = ProcessingSettings.CreateBackupBeforeProcessing;
             // Note: Processing options moved to dedicated Processing Options window
             _currentSettings.Processing.TimeoutPerDocument = TimeSpan.FromMinutes(ProcessingSettings.TimeoutPerDocumentMinutes);
+            _currentSettings.UI.ConsultantEmail = ProcessingSettings.ConsultantEmail; // FIXED: Correct location
 
             // Validation Settings
             _currentSettings.Validation.HttpTimeout = TimeSpan.FromSeconds(ValidationSettings.HttpTimeoutSeconds);
@@ -531,6 +533,16 @@ namespace BulkEditor.UI.ViewModels
                     MaxLogFileSizeMB = 10,
                     MaxLogFiles = 5,
                     LogFilePattern = "bulkeditor-{Date}.log"
+                },
+                UI = new UiSettings
+                {
+                    Theme = "Light",
+                    Language = "en-US",
+                    ShowProgressDetails = true,
+                    MinimizeToSystemTray = false,
+                    ConfirmBeforeProcessing = true,
+                    AutoSaveSettings = true,
+                    ConsultantEmail = string.Empty // FIXED: Default value in correct location
                 },
                 Replacement = new ReplacementSettings
                 {

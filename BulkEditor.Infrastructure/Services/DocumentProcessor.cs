@@ -646,19 +646,17 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Extracts Content_ID or Document_ID using EXACT same logic as VBA ExtractLookupID function
-        /// CRITICAL FIX: Now includes proper docid fallback and URL encoding handling
+        /// CRITICAL FIX: Now processes full URL directly to prevent fragment loss
         /// Note: Despite the VBA function name, this extracts identifiers (Content_IDs/Document_IDs) from URLs
         /// </summary>
-        /// <param name="address">Hyperlink address</param>
-        /// <param name="subAddress">Hyperlink sub-address</param>
+        /// <param name="fullUrl">Complete hyperlink URL including fragments</param>
+        /// <param name="unused">Unused parameter for compatibility</param>
         /// <returns>Extracted identifier (Content_ID or Document_ID) or empty string if no match</returns>
-        private string ExtractIdentifierFromUrl(string address, string subAddress)
+        private string ExtractIdentifierFromUrl(string fullUrl, string unused = "")
         {
             try
             {
-                // Combine address and subAddress like VBA: addr & IIf(Len(subAddr) > 0, "#" & subAddr, "")
-                var fullUrl = address + (!string.IsNullOrEmpty(subAddress) ? "#" + subAddress : "");
-                _logger.LogDebug("Attempting to extract lookup ID from full URL: {FullUrl} (Address: '{Address}', SubAddress: '{SubAddress}')", fullUrl, address, subAddress);
+                _logger.LogDebug("Attempting to extract lookup ID from full URL: {FullUrl}", fullUrl);
 
                 // CRITICAL FIX: First, try exact VBA regex pattern with case-insensitive matching
                 var regexMatch = LookupIdRegex.Match(fullUrl);
@@ -699,7 +697,7 @@ namespace BulkEditor.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error extracting Lookup_ID from URL: {Url}. Error: {Error}", address, ex.Message);
+                _logger.LogError(ex, "Error extracting Lookup_ID from URL: {Url}. Error: {Error}", fullUrl, ex.Message);
                 return string.Empty;
             }
         }
@@ -724,19 +722,8 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     var hyperlinkDetail = $"Hyperlink URL: '{hyperlink.OriginalUrl}', Display: '{hyperlink.DisplayText ?? ""}', ";
 
-                    // CRITICAL FIX: Parse URL to extract both address and subAddress for proper lookup ID extraction
-                    string address = hyperlink.OriginalUrl;
-                    string subAddress = "";
-
-                    if (hyperlink.OriginalUrl.Contains('#'))
-                    {
-                        var parts = hyperlink.OriginalUrl.Split('#', 2);
-                        address = parts[0];
-                        subAddress = parts[1];
-                    }
-
                     // CRITICAL FIX: Extract Content_IDs or Document_IDs from URLs to include in Lookup_ID array
-                    var extractedId = ExtractIdentifierFromUrl(address, subAddress);
+                    var extractedId = ExtractIdentifierFromUrl(hyperlink.OriginalUrl, "");
                     hyperlinkDetail += $"ExtractedID: '{extractedId}', ";
 
                     if (!string.IsNullOrEmpty(extractedId))
@@ -1267,16 +1254,8 @@ namespace BulkEditor.Infrastructure.Services
 
                     foreach (var hyperlink in allHyperlinksBeforeCleanup)
                     {
-                        string address = hyperlink.OriginalUrl;
-                        string subAddress = "";
-                        if (hyperlink.OriginalUrl.Contains('#'))
-                        {
-                            var parts = hyperlink.OriginalUrl.Split('#', 2);
-                            address = parts[0];
-                            subAddress = parts[1];
-                        }
-
-                        var extractedId = ExtractIdentifierFromUrl(address, subAddress);
+                        // CRITICAL FIX: Use full URL directly instead of parsing into address/subAddress
+                        var extractedId = ExtractIdentifierFromUrl(hyperlink.OriginalUrl, "");
                         if (!string.IsNullOrEmpty(extractedId))
                         {
                             validLookupIds.Add(extractedId);
@@ -1414,25 +1393,35 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
-        /// Validates document integrity after processing with retry logic to handle file locking issues
+        /// Validates document integrity after processing with enhanced retry logic and timeout protection
+        /// CRITICAL FIX: Prevents file access conflicts and adds timeout protection
         /// </summary>
         private async Task ValidateDocumentIntegrityWithRetryAsync(string filePath, CancellationToken cancellationToken)
         {
-            const int maxRetries = 3;
-            const int retryDelayMs = 100;
+            const int maxRetries = 5;
+            const int baseRetryDelayMs = 200;
 
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
                 try
                 {
-                    // Add small delay to ensure file handles are fully released
+                    // CRITICAL FIX: Progressive delay with timeout protection to handle file system delays
                     if (attempt > 1)
                     {
-                        await Task.Delay(retryDelayMs * attempt, cancellationToken);
+                        var delayMs = baseRetryDelayMs * attempt;
+                        using var delayCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        delayCts.CancelAfter(TimeSpan.FromSeconds(5)); // Max 5 second delay
+                        await Task.Delay(delayMs, delayCts.Token);
                     }
 
-                    // Try to open the document in read-only mode to verify it's not corrupted
-                    using var testDocument = WordprocessingDocument.Open(filePath, false);
+                    // CRITICAL FIX: Add timeout protection for document opening
+                    using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(10)); // 10-second timeout for validation
+
+                    // Try to open the document in read-only mode with timeout protection
+                    using var testDocument = await Task.Run(() =>
+                        WordprocessingDocument.Open(filePath, false), timeoutCts.Token);
+
                     var mainPart = testDocument.MainDocumentPart;
 
                     if (mainPart?.Document?.Body == null)
@@ -1441,20 +1430,36 @@ namespace BulkEditor.Infrastructure.Services
                     }
 
                     // Try to access the document content to ensure it's readable
-                    var _ = mainPart.Document.Body.InnerText;
+                    var contentLength = mainPart.Document.Body.InnerText?.Length ?? 0;
 
-                    _logger.LogDebug("Document integrity validation passed on attempt {Attempt}: {FilePath}", attempt, filePath);
+                    _logger.LogDebug("Document integrity validation passed on attempt {Attempt}: {FilePath} (Content: {ContentLength} chars)",
+                        attempt, filePath, contentLength);
                     return; // Success
                 }
                 catch (IOException ioEx) when (ioEx.Message.Contains("being used by another process") && attempt < maxRetries)
                 {
-                    _logger.LogWarning("File access conflict on attempt {Attempt}/{MaxRetries}: {FilePath}. Retrying...",
-                        attempt, maxRetries, filePath);
+                    _logger.LogWarning("File access conflict on attempt {Attempt}/{MaxRetries}: {FilePath}. Will retry in {DelayMs}ms...",
+                        attempt, maxRetries, filePath, baseRetryDelayMs * (attempt + 1));
                     continue; // Retry
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogWarning("Document validation cancelled by user on attempt {Attempt}: {FilePath}", attempt, filePath);
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogWarning("Document validation timed out on attempt {Attempt}: {FilePath}", attempt, filePath);
+                    if (attempt == maxRetries)
+                    {
+                        throw new TimeoutException($"Document validation timed out after {maxRetries} attempts");
+                    }
+                    continue; // Retry on timeout
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Document integrity validation failed on attempt {Attempt}: {FilePath}", attempt, filePath);
+                    _logger.LogError(ex, "Document integrity validation failed on attempt {Attempt}/{MaxRetries}: {FilePath}",
+                        attempt, maxRetries, filePath);
 
                     if (attempt == maxRetries)
                     {
@@ -1626,23 +1631,11 @@ namespace BulkEditor.Infrastructure.Services
                             var url = relationship.Uri.ToString();
                             var displayText = openXmlHyperlink.InnerText;
 
-                            // CRITICAL FIX: Extract both address and fragment for proper lookup ID detection
-                            // Parse URL to separate address and subAddress (fragment)
-                            string address = url;
-                            string subAddress = "";
-
-                            if (url.Contains('#'))
-                            {
-                                var parts = url.Split('#', 2);
-                                address = parts[0];
-                                subAddress = parts[1];
-                            }
-
                             var hyperlink = new Hyperlink
                             {
                                 OriginalUrl = url,
                                 DisplayText = displayText,
-                                LookupId = ExtractIdentifierFromUrl(address, subAddress),
+                                LookupId = ExtractIdentifierFromUrl(url, ""), // CRITICAL FIX: Use full URL directly
                                 RequiresUpdate = ShouldAutoValidateHyperlink(url, displayText)
                             };
 
@@ -1700,17 +1693,8 @@ namespace BulkEditor.Infrastructure.Services
                             var url = relationship.Uri.ToString();
                             var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
 
-                            // CRITICAL FIX: Check if hyperlink has valid lookup ID - if so, PRESERVE it
-                            string address = url;
-                            string subAddress = "";
-                            if (url.Contains('#'))
-                            {
-                                var parts = url.Split('#', 2);
-                                address = parts[0];
-                                subAddress = parts[1];
-                            }
-
-                            var lookupId = ExtractIdentifierFromUrl(address, subAddress);
+                            // CRITICAL FIX: Check if hyperlink has valid lookup ID - use full URL
+                            var lookupId = ExtractIdentifierFromUrl(url, "");
                             bool hasLookupId = !string.IsNullOrEmpty(lookupId);
 
                             // CRITICAL FIX: Always remove hyperlinks with empty display text (VBA methodology)
@@ -2380,23 +2364,9 @@ namespace BulkEditor.Infrastructure.Services
                 // Some file systems need more time to flush changes to disk
                 await Task.Delay(100, CancellationToken.None).ConfigureAwait(false);
 
-                // STEP 5: Final integrity check - try to open saved document in read-only mode
-                _logger.LogDebug("Performing final integrity verification for: {FileName}", document.FileName);
-                try
-                {
-                    // Small delay to ensure file handles are released
-                    await Task.Delay(50, CancellationToken.None).ConfigureAwait(false);
-
-                    // Verify we can open the saved document
-                    using var verificationDoc = WordprocessingDocument.Open(document.FilePath, false);
-                    var verificationHyperlinkCount = verificationDoc.MainDocumentPart?.Document?.Body?.Descendants<OpenXmlHyperlink>().Count() ?? 0;
-                    _logger.LogInformation("✓ Final verification: Saved document contains {HyperlinkCount} hyperlinks and is readable", verificationHyperlinkCount);
-                }
-                catch (Exception finalVerifyEx)
-                {
-                    _logger.LogError(finalVerifyEx, "CRITICAL: Final verification failed - document may not be properly saved: {FileName}", document.FileName);
-                    throw new InvalidOperationException($"Document save verification failed: {finalVerifyEx.Message}", finalVerifyEx);
-                }
+                // NOTE: Final integrity verification is now handled in post-save validation
+                // after the WordprocessingDocument is properly disposed to prevent file access conflicts
+                _logger.LogInformation("✓ DOCUMENT SAVE COMPLETED - verification will occur after document disposal");
             }
             catch (Exception saveEx)
             {
