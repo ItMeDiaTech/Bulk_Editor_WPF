@@ -311,7 +311,7 @@ namespace BulkEditor.UI.ViewModels
                 if (openFileDialog.ShowDialog() == true)
                 {
                     _logger.LogInformation("Files selected: {FileCount}", openFileDialog.FileNames.Length);
-                    await AddFilesAsync(openFileDialog.FileNames);
+                    await AddFilesAsync(openFileDialog.FileNames).ConfigureAwait(false);
                 }
                 else
                 {
@@ -352,10 +352,16 @@ namespace BulkEditor.UI.ViewModels
 
                 SetStatusProcessing("Validating selected files...");
 
-                var validation = await _applicationService.ValidateFilesAsync(filePaths);
+                // Add timeout protection for file validation to prevent hanging on network drives
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                
+                var validation = await _applicationService.ValidateFilesAsync(filePaths, timeoutCts.Token).ConfigureAwait(false);
                 _logger.LogInformation("Validation completed: {ValidCount} valid, {InvalidCount} invalid files", 
                     validation.ValidFiles.Count, validation.InvalidFiles.Count);
 
+                SetStatusProcessing($"Adding {validation.ValidFiles.Count} valid documents...");
+                
+                var processedCount = 0;
                 foreach (var filePath in validation.ValidFiles)
                 {
                     if (!Documents.Any(d => d.FilePath == filePath))
@@ -380,6 +386,10 @@ namespace BulkEditor.UI.ViewModels
                             Document = document
                         });
 
+                        // Update progress
+                        processedCount++;
+                        SetStatusProcessing($"Adding documents... ({processedCount}/{validation.ValidFiles.Count})");
+                        
                         // Add to new DocumentItems collection for display with comprehensive error handling
                         try
                         {
@@ -998,7 +1008,8 @@ namespace BulkEditor.UI.ViewModels
             {
                 var processingOptionsViewModel = new SimpleProcessingOptionsViewModel(
                     _logger,
-                    _notificationService);
+                    _notificationService,
+                    _serviceProvider.GetRequiredService<BulkEditor.Core.Services.IConfigurationService>());
                 
                 var processingOptionsWindow = new Views.ProcessingOptionsWindow(processingOptionsViewModel)
                 {

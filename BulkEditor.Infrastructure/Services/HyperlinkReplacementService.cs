@@ -94,9 +94,10 @@ namespace BulkEditor.Infrastructure.Services
                     {
                         var ruleTitleLower = rule.TitleToMatch.Trim().ToLowerInvariant();
 
-                        if (cleanDisplayText.Equals(ruleTitleLower, StringComparison.OrdinalIgnoreCase))
+                        // Check if the title to match exists anywhere in the display text (case-insensitive)
+                        if (cleanDisplayText.Contains(ruleTitleLower, StringComparison.OrdinalIgnoreCase))
                         {
-                            var result = await ProcessHyperlinkReplacementAsync(mainPart, openXmlHyperlink, rule, document, cancellationToken);
+                            var result = await ProcessHyperlinkReplacementAsync(mainPart, openXmlHyperlink, rule, document, cancellationToken).ConfigureAwait(false);
                             if (result.WasReplaced)
                             {
                                 replacementsMade++;
@@ -231,9 +232,10 @@ namespace BulkEditor.Infrastructure.Services
                         {
                             var ruleTitleLower = rule.TitleToMatch.Trim().ToLowerInvariant();
 
-                            if (cleanDisplayText.Equals(ruleTitleLower, StringComparison.OrdinalIgnoreCase))
+                            // Check if the title to match exists anywhere in the display text (case-insensitive)
+                            if (cleanDisplayText.Contains(ruleTitleLower, StringComparison.OrdinalIgnoreCase))
                             {
-                                var result = await ProcessHyperlinkReplacementAsync(mainPart, openXmlHyperlink, rule, document, cancellationToken);
+                                var result = await ProcessHyperlinkReplacementAsync(mainPart, openXmlHyperlink, rule, document, cancellationToken).ConfigureAwait(false);
                                 if (result.WasReplaced)
                                 {
                                     replacementsMade++;
@@ -247,9 +249,10 @@ namespace BulkEditor.Infrastructure.Services
 
                     if (replacementsMade > 0)
                     {
-                        // Save the document
-                        mainPart.Document.Save();
-                        _logger.LogInformation("Saved document with {Count} hyperlink replacements: {FileName}", replacementsMade, document.FileName);
+                        // CRITICAL FIX: Do NOT save here - conflicts with session-based saves
+                        // The document will be saved by the main session processor
+                        // mainPart.Document.Save(); // REMOVED - causes save conflicts
+                        _logger.LogInformation("Processed {Count} hyperlink replacements in legacy method: {FileName} (save handled by session)", replacementsMade, document.FileName);
                     }
                 }
 
@@ -382,7 +385,10 @@ namespace BulkEditor.Infrastructure.Services
         /// </summary>
         private async Task<string> SimulateApiCallAsync(IEnumerable<string> lookupIds, CancellationToken cancellationToken)
         {
-            await Task.Delay(100, cancellationToken).ConfigureAwait(false); // Simulate network delay
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+            
+            // Check cancellation early to prevent hanging
+            cancellationToken.ThrowIfCancellationRequested(); // Simulate network delay
 
             var responseBuilder = new System.Text.StringBuilder();
             responseBuilder.AppendLine("{");
@@ -763,8 +769,11 @@ namespace BulkEditor.Infrastructure.Services
 
                 _logger.LogDebug("Looking up document by identifier (Content_ID or Document_ID): {Identifier}", identifier);
 
-                // Use flexible API lookup with single identifier
-                var apiResult = await ProcessApiResponseAsync(new[] { identifier }, cancellationToken).ConfigureAwait(false);
+                // Use flexible API lookup with single identifier with timeout protection
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(30)); // 30-second timeout
+                
+                var apiResult = await ProcessApiResponseAsync(new[] { identifier }, timeoutCts.Token).ConfigureAwait(false);
 
                 if (apiResult.HasError)
                 {
@@ -852,6 +861,9 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 // CRITICAL FIX: Use flexible lookup - rule.ContentId can be Document_ID or Content_ID
+                // Add cancellation check before expensive lookup operation
+                cancellationToken.ThrowIfCancellationRequested();
+                
                 var documentRecord = await LookupDocumentByIdentifierAsync(rule.ContentId, cancellationToken).ConfigureAwait(false);
 
                 // Handle missing lookup identifier response (when server returns no response)
@@ -951,9 +963,10 @@ namespace BulkEditor.Infrastructure.Services
                     return result;
                 }
 
-                // CRITICAL FIX: Use exact VBA Content_ID appending logic (Issues #11-13)
+                // CRITICAL FIX: Replace ENTIRE display text when title is found anywhere in it
+                // The rule matching now uses Contains() so we replace the whole title
                 var currentDisplayText = result.OriginalTitle ?? string.Empty;
-                var newDisplayText = documentRecord.Title ?? string.Empty;
+                var newDisplayText = documentRecord.Title ?? string.Empty; // Use API title as the complete new title
 
                 // Apply VBA Content_ID logic if we have a valid Content_ID
                 var apiContentId = !string.IsNullOrEmpty(documentRecord.Content_ID)
@@ -1281,6 +1294,9 @@ namespace BulkEditor.Infrastructure.Services
             {
                 // Simulate API call delay
                 await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+                
+                // Check cancellation to prevent hanging
+                cancellationToken.ThrowIfCancellationRequested();
 
                 // More predictable simulation for testing - only simulate missing for specific patterns
                 var shouldBeMissing = contentId.Contains("999999") || contentId.Contains("000001");

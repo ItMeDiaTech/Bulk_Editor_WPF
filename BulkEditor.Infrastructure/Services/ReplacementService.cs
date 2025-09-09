@@ -47,20 +47,24 @@ namespace BulkEditor.Infrastructure.Services
                 // Process hyperlink replacements if enabled
                 if (replacementSettings.EnableHyperlinkReplacement && replacementSettings.HyperlinkRules.Any())
                 {
-                    _logger.LogDebug("Processing hyperlink replacements in session for document: {FileName}", document.FileName);
-                    totalReplacements += await _hyperlinkReplacementService.ProcessHyperlinkReplacementsInSessionAsync(
+                    _logger.LogInformation("Processing {Count} hyperlink replacement rules in session for document: {FileName}", replacementSettings.HyperlinkRules.Count(), document.FileName);
+                    var hyperlinkReplacements = await _hyperlinkReplacementService.ProcessHyperlinkReplacementsInSessionAsync(
                         wordDocument, document, replacementSettings.HyperlinkRules, cancellationToken);
+                    totalReplacements += hyperlinkReplacements;
+                    _logger.LogInformation("Completed hyperlink replacements: {Count} changes made for document: {FileName}", hyperlinkReplacements, document.FileName);
                 }
 
                 // Process text replacements if enabled
                 if (replacementSettings.EnableTextReplacement && replacementSettings.TextRules.Any())
                 {
-                    _logger.LogDebug("Processing text replacements in session for document: {FileName}", document.FileName);
-                    totalReplacements += await _textReplacementService.ProcessTextReplacementsInSessionAsync(
+                    _logger.LogInformation("Processing {Count} text replacement rules in session for document: {FileName}", replacementSettings.TextRules.Count(), document.FileName);
+                    var textReplacements = await _textReplacementService.ProcessTextReplacementsInSessionAsync(
                         wordDocument, document, replacementSettings.TextRules, cancellationToken);
+                    totalReplacements += textReplacements;
+                    _logger.LogInformation("Completed text replacements: {Count} changes made for document: {FileName}", textReplacements, document.FileName);
                 }
 
-                _logger.LogInformation("Replacement processing completed in session for document: {FileName}, total replacements: {Count}", document.FileName, totalReplacements);
+                _logger.LogInformation("SESSION-BASED REPLACEMENT PROCESSING COMPLETED for document: {FileName}, TOTAL REPLACEMENTS: {Count}", document.FileName, totalReplacements);
                 return totalReplacements;
             }
             catch (Exception ex)

@@ -92,9 +92,16 @@ namespace BulkEditor.Infrastructure.Services
                     throw new InvalidOperationException($"File is not a valid Word document: {filePath}");
                 }
 
-                // Create backup
-                progress?.Report("Creating backup...");
-                document.BackupPath = await CreateBackupAsync(filePath, cancellationToken).ConfigureAwait(false);
+                // Create backup if enabled in settings
+                if (_appSettings.Processing.CreateBackupBeforeProcessing)
+                {
+                    progress?.Report("Creating backup...");
+                    document.BackupPath = await CreateBackupAsync(filePath, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    _logger.LogDebug("Backup creation skipped - disabled in settings for document: {FileName}", document.FileName);
+                }
 
                 // CRITICAL FIX: Process document in single session to prevent corruption
                 progress?.Report("Processing document...");
@@ -722,7 +729,11 @@ namespace BulkEditor.Infrastructure.Services
                 // Create IOptions wrapper for AppSettings to match constructor requirements
                 var appSettingsOptions = Microsoft.Extensions.Options.Options.Create(_appSettings);
                 var hyperlinkService = new HyperlinkReplacementService(httpService, _logger, appSettingsOptions);
-                var apiResult = await hyperlinkService.ProcessApiResponseAsync(lookupIds, cancellationToken);
+                // Add timeout protection for API call to prevent hanging
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromMinutes(2)); // 2-minute timeout for API call
+                
+                var apiResult = await hyperlinkService.ProcessApiResponseAsync(lookupIds, timeoutCts.Token).ConfigureAwait(false);
 
                 if (apiResult.HasError)
                 {
@@ -730,8 +741,11 @@ namespace BulkEditor.Infrastructure.Services
                     return;
                 }
 
+                // Check cancellation before hyperlink updates
+                cancellationToken.ThrowIfCancellationRequested();
+                
                 // VBA STEP 5: Update hyperlinks using dictionary lookup (lines 186-318)
-                await UpdateHyperlinksUsingVbaDictionaryLogicAsync(document, apiResult, cancellationToken);
+                await UpdateHyperlinksUsingVbaDictionaryLogicAsync(document, apiResult, cancellationToken).ConfigureAwait(false);
 
                 _logger.LogInformation("Completed VBA-compatible hyperlink processing workflow for: {FileName}", document.FileName);
             }
@@ -774,6 +788,9 @@ namespace BulkEditor.Infrastructure.Services
                 // Process each hyperlink exactly like VBA
                 foreach (var hyperlink in document.Hyperlinks)
                 {
+                    // Check cancellation in hyperlink processing loop to prevent hanging
+                    cancellationToken.ThrowIfCancellationRequested();
+                    
                     var lookupId = ExtractLookupIdUsingVbaLogic(hyperlink.OriginalUrl, "");
                     if (string.IsNullOrEmpty(lookupId))
                         continue;
@@ -786,7 +803,7 @@ namespace BulkEditor.Infrastructure.Services
                     {
                         // VBA: If recDict.Exists(lookupID) Then Set rec = recDict(lookupID)
                         var rec = recDict[lookupId];
-                        await ProcessHyperlinkWithVbaLogicAsync(hyperlink, rec, document, alreadyExpired, alreadyNotFound, cancellationToken);
+                        await ProcessHyperlinkWithVbaLogicAsync(hyperlink, rec, document, alreadyExpired, alreadyNotFound, cancellationToken).ConfigureAwait(false);
                     }
                     else if (!alreadyNotFound && !alreadyExpired)
                     {
@@ -1088,7 +1105,7 @@ namespace BulkEditor.Infrastructure.Services
 
                 // STEP 1: Pre-processing validation
                 progress?.Report("Validating document before processing...");
-                await ValidateDocumentIntegrityAsync(document.FilePath, "pre-processing", cancellationToken);
+                await ValidateDocumentIntegrityAsync(document.FilePath, "pre-processing", cancellationToken).ConfigureAwait(false);
 
                 // Open document once and perform ALL operations within this session
                 using (var wordDocument = WordprocessingDocument.Open(document.FilePath, true))
@@ -1129,16 +1146,22 @@ namespace BulkEditor.Infrastructure.Services
                     progress?.Report("Validating after invisible hyperlink removal...");
                     await ValidateOpenDocumentAsync(wordDocument, "post-cleanup", cancellationToken).ConfigureAwait(false);
 
-                    // STEP 9: Process hyperlinks using VBA UpdateHyperlinksFromAPI workflow
-                    if (document.Hyperlinks.Any())
+                    // STEP 9: Process hyperlinks using VBA UpdateHyperlinksFromAPI workflow (only if enabled)
+                    if (_appSettings.Processing.UpdateHyperlinks && document.Hyperlinks.Any())
                     {
                         progress?.Report("Processing hyperlinks using VBA methodology...");
+                        // Add cancellation check before expensive VBA workflow
+                        cancellationToken.ThrowIfCancellationRequested();
                         await ProcessHyperlinksUsingVbaWorkflowAsync(document, cancellationToken).ConfigureAwait(false);
-                    }
 
-                    // STEP 10: Apply hyperlink updates in the document session
-                    progress?.Report("Applying hyperlink updates to document...");
-                    await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken).ConfigureAwait(false);
+                        // STEP 10: Apply hyperlink updates in the document session
+                        progress?.Report("Applying hyperlink updates to document...");
+                        await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken).ConfigureAwait(false);
+                    }
+                    else if (!_appSettings.Processing.UpdateHyperlinks)
+                    {
+                        _logger.LogDebug("Hyperlink processing skipped - disabled in settings for document: {FileName}", document.FileName);
+                    }
 
                     // STEP 11: Validate after hyperlink updates
                     progress?.Report("Validating after hyperlink updates...");
@@ -1981,16 +2004,20 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                _logger.LogInformation("Starting document save operation for: {FileName}", document.FileName);
+                
                 // Pre-save validation
                 await ValidateOpenDocumentAsync(wordDocument, "pre-save-final", cancellationToken).ConfigureAwait(false);
 
                 // Ensure all changes are committed before saving
                 var mainPart = wordDocument.MainDocumentPart;
+                _logger.LogDebug("Saving main document part for: {FileName}", document.FileName);
                 mainPart?.Document?.Save();
                 
                 // CRITICAL FIX: Ensure all document changes including hyperlinks are saved
+                _logger.LogDebug("Saving WordprocessingDocument for: {FileName}", document.FileName);
                 wordDocument.Save();
-                _logger.LogDebug("Document saved successfully with comprehensive validation: {FileName}", document.FileName);
+                _logger.LogInformation("DOCUMENT SAVE COMPLETED SUCCESSFULLY: {FileName}", document.FileName);
 
                 // Small delay to ensure file handles are properly released
                 await Task.Delay(50, cancellationToken).ConfigureAwait(false);

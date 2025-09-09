@@ -68,7 +68,8 @@ namespace BulkEditor.Infrastructure.Services
 
                     foreach (var rule in activeRules)
                     {
-                        var replacementResult = ReplaceTextWithCapitalizationPreservation(
+                        // Use exact text replacement (case-insensitive find, exact replace)
+                        var replacementResult = ReplaceTextExact(
                             modifiedText, rule.SourceText, rule.ReplacementText);
 
                         if (replacementResult != modifiedText)
@@ -150,7 +151,8 @@ namespace BulkEditor.Infrastructure.Services
 
                         foreach (var rule in activeRules)
                         {
-                            var replacementResult = ReplaceTextWithCapitalizationPreservation(
+                            // Use exact text replacement (case-insensitive find, exact replace)
+                            var replacementResult = ReplaceTextExact(
                                 modifiedText, rule.SourceText, rule.ReplacementText);
 
                             if (replacementResult != modifiedText)
@@ -183,9 +185,10 @@ namespace BulkEditor.Infrastructure.Services
 
                     if (totalReplacements > 0)
                     {
-                        // Save the document
-                        mainPart.Document.Save();
-                        _logger.LogInformation("Saved document with {Count} text replacements: {FileName}", totalReplacements, document.FileName);
+                        // CRITICAL FIX: Do NOT save here - conflicts with session-based saves
+                        // The document will be saved by the main session processor
+                        // mainPart.Document.Save(); // REMOVED - causes save conflicts
+                        _logger.LogInformation("Processed {Count} text replacements in legacy method: {FileName} (save handled by session)", totalReplacements, document.FileName);
                     }
                 }
 
@@ -281,6 +284,33 @@ namespace BulkEditor.Infrastructure.Services
             chars[firstLetterIndex] = char.ToUpperInvariant(chars[firstLetterIndex]);
 
             return new string(chars);
+        }
+
+        /// <summary>
+        /// Replaces text with exact replacement text (case-insensitive find, exact replace)
+        /// This is the preferred method that respects user's exact capitalization preferences
+        /// </summary>
+        public string ReplaceTextExact(string sourceText, string searchText, string replacementText)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(sourceText) || string.IsNullOrWhiteSpace(searchText))
+                    return sourceText;
+
+                // Use regex with case-insensitive matching and word boundaries
+                var escapedSearchText = Regex.Escape(searchText);
+                var pattern = $@"(?i)\b{escapedSearchText}\b";
+
+                // Replace with exact text provided by user (no capitalization changes)
+                var result = Regex.Replace(sourceText, pattern, replacementText);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in exact text replacement. SearchText: {SearchText}, ReplacementText: {ReplacementText}", searchText, replacementText);
+                return sourceText; // Return original text on error
+            }
         }
     }
 }
