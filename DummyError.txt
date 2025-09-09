@@ -1,173 +1,83 @@
-[2025-09-09 16:01:49.719 -04:00 INF] Application starting up
-[2025-09-09 16:01:49.802 -04:00 INF] Freeze detection timer started - monitoring UI responsiveness
-[2025-09-09 16:01:51.074 -04:00 INF] MainWindowViewModel initialized
-[2025-09-09 16:01:51.074 -04:00 INF] Info notification: Application Ready - Bulk Document Editor is ready for use.
-[2025-09-09 16:01:51.096 -04:00 INF] Initializing SQLite database at: C:\Users\C551465\AppData\Roaming\BulkEditor\Database\BulkEditor.db
-[2025-09-09 16:01:51.152 -04:00 INF] SQLite database initialized successfully
-[2025-09-09 16:01:51.154 -04:00 INF] Starting update manager
-[2025-09-09 16:01:51.154 -04:00 INF] Checking for application updates...
-[2025-09-09 16:01:51.156 -04:00 INF] Checking for updates from GitHub...
-[2025-09-09 16:01:51.456 -04:00 WRN] Failed to check for updates. Status: "Forbidden" (rate limit exceeded). Rate limit headers: 0/60, Reset: 1757449824
-[2025-09-09 16:01:51.458 -04:00 INF] No updates available
-[2025-09-09 16:01:51.458 -04:00 INF] Update manager started successfully
-[2025-09-09 16:01:51.458 -04:00 INF] Application started successfully
-[2025-09-09 16:01:53.331 -04:00 INF] Starting file selection dialog
-[2025-09-09 16:01:56.814 -04:00 INF] Files selected: 1
-[2025-09-09 16:01:56.817 -04:00 INF] Starting file addition process for 1 files
-[2025-09-09 16:01:56.821 -04:00 INF] File validation completed: 1 valid, 0 invalid
-[2025-09-09 16:01:56.825 -04:00 INF] Validation completed: 1 valid, 0 invalid files
-[2025-09-09 16:01:56.826 -04:00 INF] Creating DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:01:56.827 -04:00 INF] Successfully created DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:01:56.828 -04:00 INF] Added DocumentListItemViewModel to collection: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:01:56.829 -04:00 INF] Applying FilterDocuments to refresh UI display
-[2025-09-09 16:01:56.830 -04:00 INF] Successfully applied FilterDocuments via Dispatcher
-[2025-09-09 16:01:56.831 -04:00 INF] Success notification: Files Added - Successfully added 1 document(s) for processing.
-[2025-09-09 16:02:20.110 -04:00 INF] Starting save settings process
-[2025-09-09 16:02:20.111 -04:00 INF] Settings updated from properties
-[2025-09-09 16:02:20.113 -04:00 INF] Settings validation passed
-[2025-09-09 16:02:20.114 -04:00 INF] Settings copied to original
-[2025-09-09 16:02:20.114 -04:00 INF] Configuration service initialized
-[2025-09-09 16:02:20.139 -04:00 INF] Settings saved to file successfully
-[2025-09-09 16:02:20.149 -04:00 INF] Settings dialog closed with success result
-[2025-09-09 16:02:20.149 -04:00 INF] Success notification: Settings Saved - Application settings have been updated successfully.
-[2025-09-09 16:02:20.150 -04:00 INF] Settings updated by user
-[2025-09-09 16:02:26.041 -04:00 INF] Registered background task: Document Processing (ID: 6193c37c-b278-4068-8b49-b890e3161e40)
-[2025-09-09 16:02:26.043 -04:00 INF] Starting background task: Document Processing (ID: 6193c37c-b278-4068-8b49-b890e3161e40)
-[2025-09-09 16:02:26.045 -04:00 INF] Started new session: "d10cd229-af4a-44d6-bbb1-2e5e8405aba7"
-[2025-09-09 16:02:26.047 -04:00 INF] Processing session "d10cd229-af4a-44d6-bbb1-2e5e8405aba7" started.
-[2025-09-09 16:02:26.053 -04:00 INF] Successfully created backup for C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx at C:\Users\C551465\AppData\Local\BulkEditor\backups\d10cd229-af4a-44d6-bbb1-2e5e8405aba7\TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:26.055 -04:00 INF] Starting batch processing of 1 files
-[2025-09-09 16:02:26.055 -04:00 INF] File validation completed: 1 valid, 0 invalid
-[2025-09-09 16:02:26.057 -04:00 INF] Starting batch processing of 1 documents
-[2025-09-09 16:02:26.059 -04:00 INF] Starting document processing: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:26.065 -04:00 INF] Copied file from C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx to C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (21) - Copy_backup_20250909_160226.docx
-[2025-09-09 16:02:26.066 -04:00 INF] Created backup: C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (21) - Copy_backup_20250909_160226.docx
-[2025-09-09 16:02:26.070 -04:00 INF] Processing document in single session with enhanced corruption prevention: TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:26.480 -04:00 WRN] Hyperlink replacement is enabled but no rules are configured
-[2025-09-09 16:02:26.481 -04:00 WRN] Text replacement is enabled but no rules are configured
-[2025-09-09 16:02:26.546 -04:00 INF] Starting hyperlink processing for TestDoc3_Backup - Copy (21) - Copy.docx: 9 hyperlinks found, UpdateHyperlinks=true, ValidateHyperlinks=true
-[2025-09-09 16:02:26.548 -04:00 INF] Starting VBA-compatible hyperlink processing workflow for: TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:26.549 -04:00 INF] Found 3 unique identifiers (Content_IDs and Document_IDs) for Lookup_ID API array
-[2025-09-09 16:02:26.553 -04:00 INF] Processing single API call for 3 lookup identifiers (both Content_IDs and Document_IDs combined)
-[2025-09-09 16:02:26.562 -04:00 INF] Full HTTP API Request JSON: {"Lookup_ID":["8f2f198d-df40-4667-b72c-6f2d2141a91c","CMS-PRD1-062568","TSRC-PROD-066440"]}
-[2025-09-09 16:02:26.572 -04:00 INF] HTTP Request: POST https://prod-11.westus.logic.azure.com:443/workflows/Dummy/triggers/manual/paths/DUMMY| Size: 91 bytes | Operation: ApiLookupRequest | CorrelationId: 7d11748e-3b29-41c9-9d8a-cfff7b74b942
-[2025-09-09 16:02:29.810 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 32.980318 seconds
-[2025-09-09 16:02:29.811 -04:00 ERR] FREEZE DETECTED during processing - attempting recovery
-[2025-09-09 16:02:29.811 -04:00 INF] Cancellation requested for background task: Document Processing (ID: 6193c37c-b278-4068-8b49-b890e3161e40)
-[2025-09-09 16:02:29.812 -04:00 INF] Cancelled background task 6193c37c-b278-4068-8b49-b890e3161e40 due to freeze detection
-[2025-09-09 16:02:29.821 -04:00 ERR] Operation failed with non-retryable exception using policy 'HTTP'
-System.Threading.Tasks.TaskCanceledException: The operation was canceled.
- ---> System.Threading.Tasks.TaskCanceledException: The operation was canceled.
- ---> System.IO.IOException: Unable to read data from the transport connection: The I/O operation has been aborted because of either a thread exit or an application request..
- ---> System.Net.Sockets.SocketException (995): The I/O operation has been aborted because of either a thread exit or an application request.
-   --- End of inner exception stack trace ---
-   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
-   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource<System.Int32>.GetResult(Int16 token)
-   at System.Net.Security.SslStream.EnsureFullTlsFrameAsync[TIOAdapter](CancellationToken cancellationToken, Int32 estimatedSize)
-   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
-   at System.Net.Security.SslStream.ReadAsyncInternal[TIOAdapter](Memory`1 buffer, CancellationToken cancellationToken)
-   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
-   at System.Net.Http.HttpConnection.InitialFillAsync(Boolean async)
-   at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   --- End of inner exception stack trace ---
-   at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
-   at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
-   --- End of inner exception stack trace ---
-   at System.Net.Http.HttpClient.HandleFailure(Exception e, Boolean telemetryStarted, HttpResponseMessage response, CancellationTokenSource cts, CancellationToken cancellationToken, CancellationTokenSource pendingRequestsCts)
-   at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
-   at BulkEditor.Infrastructure.Services.HttpService.<>c__DisplayClass6_0.<<PostJsonAsync>b__0>d.MoveNext()
---- End of stack trace from previous location ---
-   at BulkEditor.Infrastructure.Services.RetryPolicyService.ExecuteWithRetryAsync[T](Func`1 operation, RetryPolicy policy, CancellationToken cancellationToken)
-[2025-09-09 16:02:29.833 -04:00 ERR] Error calling real API for combined lookup identifiers (Content_IDs and Document_IDs)
-System.Threading.Tasks.TaskCanceledException: The operation was canceled.
- ---> System.Threading.Tasks.TaskCanceledException: The operation was canceled.
- ---> System.IO.IOException: Unable to read data from the transport connection: The I/O operation has been aborted because of either a thread exit or an application request..
- ---> System.Net.Sockets.SocketException (995): The I/O operation has been aborted because of either a thread exit or an application request.
-   --- End of inner exception stack trace ---
-   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
-   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource<System.Int32>.GetResult(Int16 token)
-   at System.Net.Security.SslStream.EnsureFullTlsFrameAsync[TIOAdapter](CancellationToken cancellationToken, Int32 estimatedSize)
-   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
-   at System.Net.Security.SslStream.ReadAsyncInternal[TIOAdapter](Memory`1 buffer, CancellationToken cancellationToken)
-   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
-   at System.Net.Http.HttpConnection.InitialFillAsync(Boolean async)
-   at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   --- End of inner exception stack trace ---
-   at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
-   at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-   at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
-   --- End of inner exception stack trace ---
-   at System.Net.Http.HttpClient.HandleFailure(Exception e, Boolean telemetryStarted, HttpResponseMessage response, CancellationTokenSource cts, CancellationToken cancellationToken, CancellationTokenSource pendingRequestsCts)
-   at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
-   at BulkEditor.Infrastructure.Services.HttpService.<>c__DisplayClass6_0.<<PostJsonAsync>b__0>d.MoveNext()
---- End of stack trace from previous location ---
-   at BulkEditor.Infrastructure.Services.RetryPolicyService.ExecuteWithRetryAsync[T](Func`1 operation, RetryPolicy policy, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.RetryPolicyService.ExecuteWithRetryAsync[T](Func`1 operation, RetryPolicy policy, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.HttpService.PostJsonAsync(String url, Object data, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.HyperlinkReplacementService.CallRealApiAsync(IEnumerable`1 lookupIds, CancellationToken cancellationToken)
-[2025-09-09 16:02:29.834 -04:00 WRN] Real API call failed for combined lookup identifiers, falling back to simulation: The operation was canceled.
-[2025-09-09 16:02:29.835 -04:00 ERR] Error processing API response for combined lookup identifiers (Content_IDs and Document_IDs)
-System.Threading.Tasks.TaskCanceledException: A task was canceled.
-   at BulkEditor.Infrastructure.Services.HyperlinkReplacementService.SimulateApiCallAsync(IEnumerable`1 lookupIds, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.HyperlinkReplacementService.ProcessApiResponseAsync(IEnumerable`1 lookupIds, CancellationToken cancellationToken)
-[2025-09-09 16:02:29.835 -04:00 ERR] API processing failed: A task was canceled.
-[2025-09-09 16:02:29.838 -04:00 INF] Updating 3 hyperlinks in document session using atomic VBA logic: TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:29.839 -04:00 INF] Updated hyperlink atomically with VBA logic: rId5 -> https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c, Display: 'Aetna Compass - Requests for Formularies and Member Materials (064131)'
-[2025-09-09 16:02:29.839 -04:00 INF] Updated hyperlink atomically with VBA logic: rId6 -> file:///C:/Users/PD988/Downloads/CMS-PRD1-062568, Display: ''
-[2025-09-09 16:02:29.839 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> file:///C:/Users/c551465/Downloads/TSRC-PROD-066440, Display: 'Aetna Senior Compass - Copay Overrides'
-[2025-09-09 16:02:29.839 -04:00 INF] Hyperlink updates completed atomically in session for document: TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:29.839 -04:00 INF] Hyperlink processing completed for TestDoc3_Backup - Copy (21) - Copy.docx: Duration=3293.3917ms
-[2025-09-09 16:02:29.860 -04:00 INF] Starting replacement processing for TestDoc3_Backup - Copy (21) - Copy.docx: HyperlinkReplacement=true (0 rules), TextReplacement=true (0 rules)
-[2025-09-09 16:02:29.861 -04:00 INF] Starting replacement processing in session for document: TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:29.861 -04:00 INF] SESSION-BASED REPLACEMENT PROCESSING COMPLETED for document: TestDoc3_Backup - Copy (21) - Copy.docx, TOTAL REPLACEMENTS: 0
-[2025-09-09 16:02:29.861 -04:00 INF] Replacement processing completed for TestDoc3_Backup - Copy (21) - Copy.docx: Duration=1.3452ms
-[2025-09-09 16:02:29.882 -04:00 INF] Text optimization skipped for TestDoc3_Backup - Copy (21) - Copy.docx: OptimizeText disabled in settings
-[2025-09-09 16:02:29.900 -04:00 INF] Starting document save operation for: TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:29.937 -04:00 INF] DOCUMENT SAVE COMPLETED SUCCESSFULLY: TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:29.937 -04:00 ERR] Critical error saving document: TestDoc3_Backup - Copy (21) - Copy.docx
-System.Threading.Tasks.TaskCanceledException: A task was canceled.
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
-[2025-09-09 16:02:29.941 -04:00 ERR] Error in single session document processing with rollback attempt: TestDoc3_Backup - Copy (21) - Copy.docx
-System.InvalidOperationException: Failed to save document safely: A task was canceled.
- ---> System.Threading.Tasks.TaskCanceledException: A task was canceled.
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
-   --- End of inner exception stack trace ---
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.ProcessDocumentInSingleSessionAsync(Document document, IProgress`1 progress, CancellationToken cancellationToken)
-[2025-09-09 16:02:29.942 -04:00 WRN] Attempting document recovery from backup due to error: Failed to save document safely: A task was canceled.
-[2025-09-09 16:02:29.966 -04:00 ERR] Error copying file from C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (21) - Copy_backup_20250909_160226.docx to C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-System.Threading.Tasks.TaskCanceledException: A task was canceled.
-   at BulkEditor.Infrastructure.Services.FileService.CopyFileAsync(String sourcePath, String destinationPath, CancellationToken cancellationToken)
-[2025-09-09 16:02:29.967 -04:00 ERR] Error restoring file from backup: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-System.Threading.Tasks.TaskCanceledException: A task was canceled.
-   at BulkEditor.Infrastructure.Services.FileService.CopyFileAsync(String sourcePath, String destinationPath, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.RestoreFromBackupAsync(String filePath, String backupPath, CancellationToken cancellationToken)
-[2025-09-09 16:02:30.007 -04:00 INF] Successfully recovered document from backup: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:30.007 -04:00 ERR] Error processing document: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-System.InvalidOperationException: Failed to save document safely: A task was canceled.
- ---> System.Threading.Tasks.TaskCanceledException: A task was canceled.
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
-   --- End of inner exception stack trace ---
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.ProcessDocumentInSingleSessionAsync(Document document, IProgress`1 progress, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.ProcessDocumentInSingleSessionAsync(Document document, IProgress`1 progress, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.ProcessDocumentAsync(String filePath, IProgress`1 progress, CancellationToken cancellationToken)
-[2025-09-09 16:02:30.008 -04:00 ERR] Error copying file from C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (21) - Copy_backup_20250909_160226.docx to C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-System.Threading.Tasks.TaskCanceledException: A task was canceled.
-   at BulkEditor.Infrastructure.Services.FileService.CopyFileAsync(String sourcePath, String destinationPath, CancellationToken cancellationToken)
-[2025-09-09 16:02:30.009 -04:00 ERR] Error restoring file from backup: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-System.Threading.Tasks.TaskCanceledException: A task was canceled.
-   at BulkEditor.Infrastructure.Services.FileService.CopyFileAsync(String sourcePath, String destinationPath, CancellationToken cancellationToken)
-   at BulkEditor.Infrastructure.Services.DocumentProcessor.RestoreFromBackupAsync(String filePath, String backupPath, CancellationToken cancellationToken)
-[2025-09-09 16:02:30.009 -04:00 INF] Restored corrupted document from backup: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (21) - Copy.docx
-[2025-09-09 16:02:30.010 -04:00 INF] Batch processing completed: 0 successful, 1 failed
-[2025-09-09 16:02:30.011 -04:00 INF] Batch processing completed in "00:00:03.9554350": 1 files, 0 successful
-[2025-09-09 16:02:30.013 -04:00 INF] Background task completed successfully: Document Processing (ID: 6193c37c-b278-4068-8b49-b890e3161e40)
-[2025-09-09 16:02:30.017 -04:00 INF] Processing statistics calculated: 0/1 successful
-[2025-09-09 16:02:30.018 -04:00 WRN] Warning notification: Processing Complete with Errors - Processed 0 documents successfully, 1 failed.
-[2025-09-09 16:02:30.018 -04:00 INF] Batch processing completed successfully
-[2025-09-09 16:02:35.224 -04:00 INF] Processing options initialized with default settings
-[2025-09-09 16:02:37.062 -04:00 INF] Processing options window opened successfully
+[2025-09-09 16:30:24.166 -04:00 INF] Update manager started successfully
+[2025-09-09 16:30:24.166 -04:00 INF] Application started successfully
+[2025-09-09 16:31:52.567 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.0132845 seconds
+[2025-09-09 16:33:32.561 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 99.9919731 seconds
+[2025-09-09 16:35:02.571 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.0090214 seconds
+[2025-09-09 16:36:42.565 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 99.9945041 seconds
+[2025-09-09 16:38:12.568 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.0026392 seconds
+[2025-09-09 16:39:52.564 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 99.9947366 seconds
+[2025-09-09 16:41:20.948 -04:00 INF] Starting file selection dialog
+[2025-09-09 16:41:24.483 -04:00 INF] Files selected: 1
+[2025-09-09 16:41:24.486 -04:00 INF] Starting file addition process for 1 files
+[2025-09-09 16:41:24.490 -04:00 INF] File validation completed: 1 valid, 0 invalid
+[2025-09-09 16:41:24.493 -04:00 INF] Validation completed: 1 valid, 0 invalid files
+[2025-09-09 16:41:24.495 -04:00 INF] Creating DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:24.497 -04:00 INF] Successfully created DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:24.497 -04:00 INF] Added DocumentListItemViewModel to collection: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:24.498 -04:00 INF] Applying FilterDocuments to refresh UI display
+[2025-09-09 16:41:24.499 -04:00 INF] Successfully applied FilterDocuments via Dispatcher
+[2025-09-09 16:41:24.500 -04:00 INF] Success notification: Files Added - Successfully added 1 document(s) for processing.
+[2025-09-09 16:41:28.936 -04:00 INF] Registered background task: Document Processing (ID: 26404c70-83f2-4fef-8cb7-ae97ea8dab28)
+[2025-09-09 16:41:28.940 -04:00 INF] Starting background task: Document Processing (ID: 26404c70-83f2-4fef-8cb7-ae97ea8dab28)
+[2025-09-09 16:41:28.942 -04:00 INF] Started new session: "6271532e-b63e-486d-99ce-1babd13e5542"
+[2025-09-09 16:41:28.944 -04:00 INF] Processing session "6271532e-b63e-486d-99ce-1babd13e5542" started.
+[2025-09-09 16:41:28.950 -04:00 INF] Successfully created backup for C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx at C:\Users\C551465\AppData\Local\BulkEditor\backups\6271532e-b63e-486d-99ce-1babd13e5542\TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:28.954 -04:00 INF] Starting batch processing of 1 files
+[2025-09-09 16:41:28.955 -04:00 INF] File validation completed: 1 valid, 0 invalid
+[2025-09-09 16:41:28.958 -04:00 INF] Starting batch processing of 1 documents
+[2025-09-09 16:41:28.960 -04:00 INF] Starting document processing: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:28.988 -04:00 INF] Copied file from C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx to C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (22) - Copy_backup_20250909_164128.docx
+[2025-09-09 16:41:28.989 -04:00 INF] Created backup: C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (22) - Copy_backup_20250909_164128.docx
+[2025-09-09 16:41:28.996 -04:00 INF] Processing document in single session with enhanced corruption prevention: TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:29.457 -04:00 WRN] Hyperlink replacement is enabled but no rules are configured
+[2025-09-09 16:41:29.457 -04:00 WRN] Text replacement is enabled but no rules are configured
+[2025-09-09 16:41:29.536 -04:00 INF] Starting hyperlink processing for TestDoc3_Backup - Copy (22) - Copy.docx: 9 hyperlinks found, UpdateHyperlinks=true, ValidateHyperlinks=true
+[2025-09-09 16:41:29.537 -04:00 INF] Starting VBA-compatible hyperlink processing workflow for: TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:29.538 -04:00 INF] Found 3 unique identifiers (Content_IDs and Document_IDs) for Lookup_ID API array
+[2025-09-09 16:41:29.539 -04:00 INF] Processing single API call for 3 lookup identifiers (both Content_IDs and Document_IDs combined)
+[2025-09-09 16:41:29.542 -04:00 INF] Full HTTP API Request JSON: {"Lookup_ID":["8f2f198d-df40-4667-b72c-6f2d2141a91c","CMS-PRD1-062568","TSRC-PROD-066440"]}
+[2025-09-09 16:41:29.547 -04:00 INF] HTTP Request: POST https://prod-11.westus.logic.azure.com:443/workflows/DUMMY/triggers/manual/paths/DUMMY | Size: 91 bytes | Operation: ApiLookupRequest | CorrelationId: 5d42dbee-33c3-4094-902e-44cc192f512c
+[2025-09-09 16:41:46.463 -04:00 INF] HTTP Response: 200 OK | Duration: 16917.292ms | Size: 1095 bytes | Operation: ApiLookupRequest | CorrelationId: 5d42dbee-33c3-4094-902e-44cc192f512c
+[2025-09-09 16:41:46.464 -04:00 INF] Full HTTP API Response JSON: {"Results":[{"Document_ID":"3e2ce332-8254-4a5f-a7d3-9043ef02c6b9","Content_ID":"CMS-PRD1-062568","Title":"Aetna - Requests for Formularies and Member Materials","Status":"Released"},{"Document_ID":"8f2f198d-df40-4667-b72c-6f2d2141a91c","Content_ID":"TSRC-PROD-064131","Title":"Aetna Compass - Requests for Formularies and Member Materials","Status":"Released"},{"Document_ID":"910a5039-91f5-4424-9036-0842d5c1b8b5","Content_ID":"TSRC-PROD-066440","Title":"Aetna Senior Team Compass - Copay Overrides","Status":"Released"}],"Version":"2.1","Changes":"-Download \"UpdateHyperlinksfromAPI\" from:\\n    https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=d0c394f6-a2eb-45fb-b15e-7a896d7dec97\\n-Follow section \"Updating the Macro\" in above Work Instructions\\n\\nChanges:\\n    1. Fixed error that occured when running macro on a document with no work instruction links\\n           a. Old versions of this Macro will still run\\n           b. Please update as time allows.\\n           c. Pop-up saying \"No Valid Look_Up IDs\" is not an error and not what this change is referencing"}
+[2025-09-09 16:41:46.464 -04:00 INF] API Call Performance: Duration=16923.4902ms, Status="OK", ResponseLength=1095 chars
+[2025-09-09 16:41:46.464 -04:00 INF] Successfully called real API with single request for 3 combined lookup identifiers (Content_IDs and Document_IDs)
+[2025-09-09 16:41:46.470 -04:00 WRN] JSON property not found with any case variation: Lookup_ID
+[2025-09-09 16:41:46.471 -04:00 WRN] JSON property not found with any case variation: Lookup_ID
+[2025-09-09 16:41:46.471 -04:00 WRN] JSON property not found with any case variation: Lookup_ID
+[2025-09-09 16:41:46.471 -04:00 INF] Dictionary built with 6 entries, found 3 active, 0 expired, 0 missing
+[2025-09-09 16:41:46.471 -04:00 INF] API response processing completed: 3 found, 0 expired, 0 missing (0.0% success rate)
+[2025-09-09 16:41:46.474 -04:00 INF] Updated hyperlink: URL Updated for 
+[2025-09-09 16:41:46.474 -04:00 INF] Appended Content_ID to hyperlink: 062568
+[2025-09-09 16:41:46.474 -04:00 INF] Detected title difference: Current=' (062568)', API='Aetna - Requests for Formularies and Member Materials'
+[2025-09-09 16:41:46.474 -04:00 INF] Updated hyperlink: URL Updated, Appended Content ID for 
+[2025-09-09 16:41:46.474 -04:00 INF] Appended Content_ID to hyperlink: 066440
+[2025-09-09 16:41:46.474 -04:00 INF] Detected title difference: Current='Aetna Senior Compass - Copay Overrides', API='Aetna Senior Team Compass - Copay Overrides'
+[2025-09-09 16:41:46.474 -04:00 INF] Updated hyperlink: URL Updated, Appended Content ID for 
+[2025-09-09 16:41:46.474 -04:00 INF] Hyperlink processing summary for TestDoc3_Backup - Copy (22) - Copy.docx: Total: 3, Found: 3, Expired: 0, Not Found: 0, Success Rate: 100.0%, API Response Rate: 3 found + 0 expired from 0 API IDs
+[2025-09-09 16:41:46.474 -04:00 INF] Completed VBA-compatible hyperlink processing workflow for: TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:46.476 -04:00 INF] Updating 3 hyperlinks in document session using atomic VBA logic: TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:46.477 -04:00 INF] Updated hyperlink atomically with VBA logic: rId5 -> https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c, Display: 'Aetna Compass - Requests for Formularies and Member Materials (064131)'
+[2025-09-09 16:41:46.477 -04:00 INF] Updated hyperlink atomically with VBA logic: rId6 -> file:///C:/Users/PD988/Downloads/CMS-PRD1-062568, Display: ''
+[2025-09-09 16:41:46.477 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> file:///C:/Users/c551465/Downloads/TSRC-PROD-066440, Display: 'Aetna Senior Compass - Copay Overrides'
+[2025-09-09 16:41:46.477 -04:00 INF] Hyperlink updates completed atomically in session for document: TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:46.477 -04:00 INF] Hyperlink processing completed for TestDoc3_Backup - Copy (22) - Copy.docx: Duration=16941.9106ms
+[2025-09-09 16:41:46.504 -04:00 INF] Starting replacement processing for TestDoc3_Backup - Copy (22) - Copy.docx: HyperlinkReplacement=true (0 rules), TextReplacement=true (0 rules)
+[2025-09-09 16:41:46.505 -04:00 INF] Starting replacement processing in session for document: TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:46.505 -04:00 INF] SESSION-BASED REPLACEMENT PROCESSING COMPLETED for document: TestDoc3_Backup - Copy (22) - Copy.docx, TOTAL REPLACEMENTS: 0
+[2025-09-09 16:41:46.505 -04:00 INF] Replacement processing completed for TestDoc3_Backup - Copy (22) - Copy.docx: Duration=1.3824ms
+[2025-09-09 16:41:46.535 -04:00 INF] Text optimization skipped for TestDoc3_Backup - Copy (22) - Copy.docx: OptimizeText disabled in settings
+[2025-09-09 16:41:46.562 -04:00 INF] Starting document save operation for: TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:46.598 -04:00 INF] DOCUMENT SAVE COMPLETED SUCCESSFULLY: TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:46.696 -04:00 INF] Document processed successfully with comprehensive validation: TestDoc3_Backup - Copy (22) - Copy.docx, Total Duration: 17699.6575ms, Hyperlinks: 9, Changes: 5
+[2025-09-09 16:41:46.697 -04:00 INF] Document processing completed successfully: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:41:46.698 -04:00 INF] Batch processing completed: 1 successful, 0 failed
+[2025-09-09 16:41:46.698 -04:00 INF] Batch processing completed in "00:00:17.7433993": 1 files, 1 successful
+[2025-09-09 16:41:46.704 -04:00 INF] Background task completed successfully: Document Processing (ID: 26404c70-83f2-4fef-8cb7-ae97ea8dab28)
+[2025-09-09 16:41:46.712 -04:00 INF] Processing statistics calculated: 1/1 successful
+[2025-09-09 16:41:46.713 -04:00 INF] Success notification: Processing Complete - Successfully processed all 1 documents.
+[2025-09-09 16:41:46.713 -04:00 INF] Batch processing completed successfully
+[2025-09-09 16:41:53.524 -04:00 INF] Opened location for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
+[2025-09-09 16:43:22.561 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 95.8526485 seconds
+[2025-09-09 16:44:52.569 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.008026 seconds
+[2025-09-09 16:46:32.564 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 99.9944939 seconds
+[2025-09-09 16:48:02.571 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.0073277 seconds
