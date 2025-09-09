@@ -1,10 +1,12 @@
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using BulkEditor.Infrastructure.Utilities;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,6 +29,7 @@ namespace BulkEditor.Infrastructure.Services
         private readonly IReplacementService _replacementService;
         private readonly ILoggingService _logger;
         private readonly Core.Configuration.AppSettings _appSettings;
+        private readonly IRetryPolicyService _retryPolicyService;
 
         // CRITICAL FIX: Exact VBA pattern match with word boundaries to ensure exactly 6 digits (Issue #1)
         // VBA: .Pattern = "(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})"
@@ -37,6 +40,9 @@ namespace BulkEditor.Infrastructure.Services
 
         // OpenXML validator for document integrity checks
         private readonly OpenXmlValidator _validator = new OpenXmlValidator();
+
+        // Thread-safe semaphore collection for atomic document operations
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _documentSemaphores = new();
 
         // Add a HashSet to store ignorable validation error descriptions for performance
         private static readonly HashSet<string> IgnorableValidationErrorDescriptions = new HashSet<string>
@@ -50,7 +56,7 @@ namespace BulkEditor.Infrastructure.Services
             "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:tr'."
         };
 
-        public DocumentProcessor(IFileService fileService, IHyperlinkValidator hyperlinkValidator, ITextOptimizer textOptimizer, IReplacementService replacementService, ILoggingService logger, Core.Configuration.AppSettings appSettings)
+        public DocumentProcessor(IFileService fileService, IHyperlinkValidator hyperlinkValidator, ITextOptimizer textOptimizer, IReplacementService replacementService, ILoggingService logger, Core.Configuration.AppSettings appSettings, IRetryPolicyService retryPolicyService)
         {
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
             _hyperlinkValidator = hyperlinkValidator ?? throw new ArgumentNullException(nameof(hyperlinkValidator));
@@ -58,6 +64,7 @@ namespace BulkEditor.Infrastructure.Services
             _replacementService = replacementService ?? throw new ArgumentNullException(nameof(replacementService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _appSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
+            _retryPolicyService = retryPolicyService ?? throw new ArgumentNullException(nameof(retryPolicyService));
         }
 
         public async Task<BulkEditor.Core.Entities.Document> ProcessDocumentAsync(string filePath, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
@@ -87,18 +94,18 @@ namespace BulkEditor.Infrastructure.Services
 
                 // Create backup
                 progress?.Report("Creating backup...");
-                document.BackupPath = await CreateBackupAsync(filePath, cancellationToken);
+                document.BackupPath = await CreateBackupAsync(filePath, cancellationToken).ConfigureAwait(false);
 
                 // CRITICAL FIX: Process document in single session to prevent corruption
                 progress?.Report("Processing document...");
-                await ProcessDocumentInSingleSessionAsync(document, progress, cancellationToken);
+                await ProcessDocumentInSingleSessionAsync(document, progress, cancellationToken).ConfigureAwait(false);
 
                 // NOTE: Replacements and text optimization are now handled within the single session
                 // to prevent file corruption from multiple document opens
                 progress?.Report("Document processing completed in single session");
 
                 // Optimize memory after processing
-                await OptimizeMemoryAsync(cancellationToken);
+                await OptimizeMemoryAsync(cancellationToken).ConfigureAwait(false);
 
                 document.Status = DocumentStatus.Completed;
                 document.ProcessedAt = DateTime.UtcNow;
@@ -124,7 +131,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     try
                     {
-                        await RestoreFromBackupAsync(filePath, document.BackupPath, cancellationToken);
+                        await RestoreFromBackupAsync(filePath, document.BackupPath, cancellationToken).ConfigureAwait(false);
                         _logger.LogInformation("Restored corrupted document from backup: {FilePath}", filePath);
                     }
                     catch (Exception restoreEx)
@@ -143,10 +150,14 @@ namespace BulkEditor.Infrastructure.Services
             var results = new List<BulkEditor.Core.Entities.Document>();
             var processed = 0;
             var failed = 0;
+            var successful = 0;
+            var startTime = DateTime.Now;
 
             var batchProgress = new BatchProcessingProgress
             {
-                TotalDocuments = filePathsList.Count
+                TotalDocuments = filePathsList.Count,
+                StartTime = startTime,
+                CurrentOperation = "Initializing batch processing..."
             };
 
             _logger.LogInformation("Starting batch processing of {Count} documents", filePathsList.Count);
@@ -159,28 +170,103 @@ namespace BulkEditor.Infrastructure.Services
 
                 var tasks = filePathsList.Select(async filePath =>
                 {
-                    await semaphore.WaitAsync(cancellationToken);
+                    await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    var docStartTime = DateTime.Now;
+                    
                     try
                     {
-                        batchProgress.CurrentDocument = Path.GetFileName(filePath);
+                        // Update progress for current document
+                        batchProgress.CurrentDocument = filePath;
+                        batchProgress.CurrentOperation = "Processing document...";
+                        batchProgress.CurrentDocumentProgress = 0;
                         progress?.Report(batchProgress);
 
-                        var document = await ProcessDocumentAsync(filePath, null, cancellationToken);
+                        var document = await ProcessDocumentAsync(filePath, 
+                            new Progress<string>(msg => 
+                            {
+                                batchProgress.CurrentOperation = msg;
+                                batchProgress.CurrentDocumentProgress = Math.Min(batchProgress.CurrentDocumentProgress + 10, 90);
+                                progress?.Report(batchProgress);
+                            }), 
+                            cancellationToken);
+
+                        var docProcessingTime = DateTime.Now - docStartTime;
 
                         lock (results)
                         {
                             results.Add(document);
+                            
                             if (document.Status == DocumentStatus.Completed)
+                            {
                                 Interlocked.Increment(ref processed);
+                                Interlocked.Increment(ref successful);
+                            }
                             else
+                            {
                                 Interlocked.Increment(ref failed);
+                                
+                                // Add error to recent errors list
+                                var errorMessage = document.ProcessingErrors.LastOrDefault()?.Message ?? "Unknown error";
+                                if (batchProgress.RecentErrors.Count >= 5)
+                                    batchProgress.RecentErrors.RemoveAt(0);
+                                batchProgress.RecentErrors.Add($"{Path.GetFileName(filePath)}: {errorMessage}");
+                            }
 
+                            // Update comprehensive progress statistics
                             batchProgress.ProcessedDocuments = processed;
                             batchProgress.FailedDocuments = failed;
+                            batchProgress.SuccessfulDocuments = successful;
+                            batchProgress.TotalHyperlinksFound += document.Hyperlinks.Count;
+                            batchProgress.TotalHyperlinksProcessed += document.Hyperlinks.Count(h => !string.IsNullOrEmpty(h.UpdatedUrl));
+                            batchProgress.TotalHyperlinksUpdated += document.Hyperlinks.Count(h => !string.IsNullOrEmpty(h.UpdatedUrl) && h.UpdatedUrl != h.OriginalUrl);
+                            
+                            // Calculate average processing time
+                            var totalProcessingTime = (DateTime.Now - startTime).TotalSeconds;
+                            batchProgress.AverageProcessingTimePerDocument = totalProcessingTime / Math.Max(1, processed);
+                            
+                            // Estimate remaining time
+                            var remainingDocs = batchProgress.TotalDocuments - processed;
+                            if (batchProgress.AverageProcessingTimePerDocument > 0 && remainingDocs > 0)
+                            {
+                                batchProgress.EstimatedTimeRemaining = TimeSpan.FromSeconds(remainingDocs * batchProgress.AverageProcessingTimePerDocument);
+                            }
+                            
+                            batchProgress.CurrentDocumentProgress = 100;
+                            batchProgress.CurrentOperation = "Document completed";
                             progress?.Report(batchProgress);
                         }
 
                         return document;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Handle individual document processing error
+                        var errorDoc = new BulkEditor.Core.Entities.Document
+                        {
+                            FilePath = filePath,
+                            FileName = Path.GetFileName(filePath),
+                            Status = DocumentStatus.Failed,
+                            ProcessingErrors = new List<ProcessingError> 
+                            { 
+                                new ProcessingError { Message = ex.Message, Severity = ErrorSeverity.Error }
+                            }
+                        };
+
+                        lock (results)
+                        {
+                            results.Add(errorDoc);
+                            Interlocked.Increment(ref failed);
+                            
+                            if (batchProgress.RecentErrors.Count >= 5)
+                                batchProgress.RecentErrors.RemoveAt(0);
+                            batchProgress.RecentErrors.Add($"{Path.GetFileName(filePath)}: {ex.Message}");
+                            
+                            batchProgress.ProcessedDocuments = processed + failed;
+                            batchProgress.FailedDocuments = failed;
+                            progress?.Report(batchProgress);
+                        }
+
+                        return errorDoc;
                     }
                     finally
                     {
@@ -188,16 +274,27 @@ namespace BulkEditor.Infrastructure.Services
                     }
                 });
 
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+
+                // Final progress update
+                batchProgress.CurrentOperation = "Finalizing batch processing...";
+                batchProgress.CurrentDocumentProgress = 100;
+                progress?.Report(batchProgress);
 
                 // Optimize memory after batch processing
-                await OptimizeMemoryAsync(cancellationToken);
+                await OptimizeMemoryAsync(cancellationToken).ConfigureAwait(false);
 
-                _logger.LogInformation("Batch processing completed: {Processed} successful, {Failed} failed", processed, failed);
+                _logger.LogInformation("Batch processing completed: {Processed} successful, {Failed} failed", successful, failed);
                 return results;
             }
             catch (Exception ex)
             {
+                batchProgress.CurrentOperation = $"Batch processing failed: {ex.Message}";
+                if (batchProgress.RecentErrors.Count >= 5)
+                    batchProgress.RecentErrors.RemoveAt(0);
+                batchProgress.RecentErrors.Add($"Batch error: {ex.Message}");
+                progress?.Report(batchProgress);
+                
                 _logger.LogError(ex, "Error in batch processing");
                 throw;
             }
@@ -212,7 +309,7 @@ namespace BulkEditor.Infrastructure.Services
 
                 _logger.LogInformation("Validating {Count} hyperlinks", document.Hyperlinks.Count);
 
-                var validationResults = await _hyperlinkValidator.ValidateHyperlinksAsync(document.Hyperlinks, cancellationToken);
+                var validationResults = await _hyperlinkValidator.ValidateHyperlinksAsync(document.Hyperlinks, cancellationToken).ConfigureAwait(false);
 
                 // Update hyperlinks with validation results
                 foreach (var result in validationResults)
@@ -585,7 +682,18 @@ namespace BulkEditor.Infrastructure.Services
 
                 foreach (var hyperlink in document.Hyperlinks)
                 {
-                    var lookupId = ExtractLookupIdUsingVbaLogic(hyperlink.OriginalUrl, "");
+                    // CRITICAL FIX: Parse URL to extract both address and subAddress for proper lookup ID extraction
+                    string address = hyperlink.OriginalUrl;
+                    string subAddress = "";
+                    
+                    if (hyperlink.OriginalUrl.Contains('#'))
+                    {
+                        var parts = hyperlink.OriginalUrl.Split('#', 2);
+                        address = parts[0];
+                        subAddress = parts[1];
+                    }
+                    
+                    var lookupId = ExtractLookupIdUsingVbaLogic(address, subAddress);
                     if (!string.IsNullOrEmpty(lookupId) && !idDict.ContainsKey(lookupId))
                     {
                         idDict[lookupId] = true;
@@ -607,7 +715,9 @@ namespace BulkEditor.Infrastructure.Services
                 // CRITICAL FIX: Use HyperlinkReplacementService for API processing with VBA methodology
                 // First, we need an HttpService instance with HttpClient
                 using var httpClient = new System.Net.Http.HttpClient();
-                var httpService = new HttpService(httpClient, _logger);
+                // For now, create a minimal structured logger for this context
+                var minimalStructuredLogger = new StructuredLoggingService(_logger);
+                var httpService = new HttpService(httpClient, _logger, _retryPolicyService, minimalStructuredLogger);
 
                 // Create IOptions wrapper for AppSettings to match constructor requirements
                 var appSettingsOptions = Microsoft.Extensions.Options.Options.Create(_appSettings);
@@ -684,6 +794,7 @@ namespace BulkEditor.Infrastructure.Services
                         // VBA: hl.TextToDisplay = hl.TextToDisplay & " - Not Found"
                         hyperlink.DisplayText += " - Not Found";
                         hyperlink.Status = HyperlinkStatus.NotFound;
+                        hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
 
                         document.ChangeLog.Changes.Add(new ChangeEntry
                         {
@@ -755,6 +866,7 @@ namespace BulkEditor.Infrastructure.Services
                             {
                                 dispText = dispText.Substring(0, dispText.Length - pattern5.Length) + pattern6;
                                 hyperlink.DisplayText = dispText;
+                                hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
                                 appended = true;
                                 _logger.LogInformation("Upgraded 5-digit to 6-digit Content_ID: {Old} -> {New}", pattern5, pattern6);
                             }
@@ -763,6 +875,7 @@ namespace BulkEditor.Infrastructure.Services
                         else if (!dispText.Contains(pattern6, StringComparison.OrdinalIgnoreCase))
                         {
                             hyperlink.DisplayText = dispText.Trim() + pattern6;
+                            hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
                             dispText = hyperlink.DisplayText;
                             appended = true;
                             _logger.LogInformation("Appended Content_ID to hyperlink: {ContentId}", last6);
@@ -796,6 +909,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     hyperlink.DisplayText += " - Expired";
                     hyperlink.Status = HyperlinkStatus.Expired;
+                    hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
 
                     document.ChangeLog.Changes.Add(new ChangeEntry
                     {
@@ -826,6 +940,15 @@ namespace BulkEditor.Infrastructure.Services
                     });
 
                     _logger.LogInformation("Updated hyperlink: {Action} for {LookupId}", actionDescription, rec.Lookup_ID);
+                }
+
+                // CRITICAL FIX: Ensure RequiresUpdate is set if any changes were made
+                // This is a safeguard to catch any missed cases where changes occurred but flag wasn't set
+                if ((changedURL || appended) && !hyperlink.RequiresUpdate)
+                {
+                    hyperlink.RequiresUpdate = true;
+                    _logger.LogDebug("Safeguard: Marked hyperlink for update due to changes: URL={UrlChanged}, Content={ContentChanged}", 
+                        changedURL, appended);
                 }
 
                 await Task.CompletedTask;
@@ -979,7 +1102,7 @@ namespace BulkEditor.Infrastructure.Services
 
                     // STEP 2: Initial document validation
                     progress?.Report("Validating document structure...");
-                    await ValidateOpenDocumentAsync(wordDocument, "initial", cancellationToken);
+                    await ValidateOpenDocumentAsync(wordDocument, "initial", cancellationToken).ConfigureAwait(false);
 
                     // STEP 3: Create document snapshot for rollback
                     progress?.Report("Creating document snapshot...");
@@ -995,40 +1118,45 @@ namespace BulkEditor.Infrastructure.Services
 
                     // STEP 6: Remove invisible hyperlinks (write operations)
                     progress?.Report("Removing invisible hyperlinks...");
-                    await RemoveInvisibleHyperlinksInSessionAsync(mainPart, document, cancellationToken);
+                    await RemoveInvisibleHyperlinksInSessionAsync(mainPart, document, cancellationToken).ConfigureAwait(false);
 
-                    // STEP 7: Validate after invisible hyperlink removal
+                    // STEP 7: Re-extract hyperlinks after deletion to prevent stale references
+                    progress?.Report("Re-extracting hyperlinks after cleanup...");
+                    document.Hyperlinks = ExtractHyperlinksFromOpenDocument(mainPart);
+                    _logger.LogDebug("Re-extracted {Count} hyperlinks after invisible hyperlink removal", document.Hyperlinks.Count);
+
+                    // STEP 8: Validate after invisible hyperlink removal
                     progress?.Report("Validating after invisible hyperlink removal...");
-                    await ValidateOpenDocumentAsync(wordDocument, "post-cleanup", cancellationToken);
+                    await ValidateOpenDocumentAsync(wordDocument, "post-cleanup", cancellationToken).ConfigureAwait(false);
 
-                    // STEP 8: Process hyperlinks using VBA UpdateHyperlinksFromAPI workflow
+                    // STEP 9: Process hyperlinks using VBA UpdateHyperlinksFromAPI workflow
                     if (document.Hyperlinks.Any())
                     {
                         progress?.Report("Processing hyperlinks using VBA methodology...");
-                        await ProcessHyperlinksUsingVbaWorkflowAsync(document, cancellationToken);
+                        await ProcessHyperlinksUsingVbaWorkflowAsync(document, cancellationToken).ConfigureAwait(false);
                     }
 
-                    // STEP 9: Apply hyperlink updates in the document session
+                    // STEP 10: Apply hyperlink updates in the document session
                     progress?.Report("Applying hyperlink updates to document...");
-                    await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken);
+                    await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken).ConfigureAwait(false);
 
-                    // STEP 10: Validate after hyperlink updates
+                    // STEP 11: Validate after hyperlink updates
                     progress?.Report("Validating after hyperlink updates...");
-                    await ValidateOpenDocumentAsync(wordDocument, "post-hyperlinks", cancellationToken);
+                    await ValidateOpenDocumentAsync(wordDocument, "post-hyperlinks", cancellationToken).ConfigureAwait(false);
 
-                    // STEP 11: Process replacements in the same session
+                    // STEP 12: Process replacements in the same session
                     progress?.Report("Processing replacements...");
-                    await _replacementService.ProcessReplacementsInSessionAsync(wordDocument, document, cancellationToken);
+                    await _replacementService.ProcessReplacementsInSessionAsync(wordDocument, document, cancellationToken).ConfigureAwait(false);
 
-                    // STEP 12: Validate after replacements
+                    // STEP 13: Validate after replacements
                     progress?.Report("Validating after replacements...");
-                    await ValidateOpenDocumentAsync(wordDocument, "post-replacements", cancellationToken);
+                    await ValidateOpenDocumentAsync(wordDocument, "post-replacements", cancellationToken).ConfigureAwait(false);
 
-                    // STEP 13: Optimize text in the same session (only if enabled)
+                    // STEP 14: Optimize text in the same session (only if enabled)
                     if (_appSettings.Processing.OptimizeText)
                     {
                         progress?.Report("Optimizing document text...");
-                        await _textOptimizer.OptimizeDocumentTextInSessionAsync(wordDocument, document, cancellationToken);
+                        await _textOptimizer.OptimizeDocumentTextInSessionAsync(wordDocument, document, cancellationToken).ConfigureAwait(false);
                     }
                     else
                     {
@@ -1037,17 +1165,17 @@ namespace BulkEditor.Infrastructure.Services
 
                     // STEP 14: Final validation before save
                     progress?.Report("Final validation before save...");
-                    await ValidateOpenDocumentAsync(wordDocument, "pre-save", cancellationToken);
+                    await ValidateOpenDocumentAsync(wordDocument, "pre-save", cancellationToken).ConfigureAwait(false);
 
                     // STEP 15: Save document with enhanced error handling and validation
                     progress?.Report("Saving document with validation...");
-                    await SaveDocumentSafelyAsync(wordDocument, document, cancellationToken);
+                    await SaveDocumentSafelyAsync(wordDocument, document, cancellationToken).ConfigureAwait(false);
 
                 } // CRITICAL: WordprocessingDocument disposed here - ensures file handles are released
 
                 // STEP 16: Post-save validation
                 progress?.Report("Validating document after save...");
-                await ValidateDocumentIntegrityAsync(document.FilePath, "post-save", cancellationToken);
+                await ValidateDocumentIntegrityAsync(document.FilePath, "post-save", cancellationToken).ConfigureAwait(false);
 
                 _logger.LogInformation("Document processed successfully with comprehensive validation: {FileName}", document.FileName);
             }
@@ -1058,7 +1186,7 @@ namespace BulkEditor.Infrastructure.Services
                 // Attempt to restore from backup if we have one
                 if (!string.IsNullOrEmpty(document.BackupPath))
                 {
-                    await AttemptDocumentRecoveryAsync(document, ex, cancellationToken);
+                    await AttemptDocumentRecoveryAsync(document, ex, cancellationToken).ConfigureAwait(false);
                 }
 
                 throw;
@@ -1180,11 +1308,23 @@ namespace BulkEditor.Infrastructure.Services
                             var url = relationship.Uri.ToString();
                             var displayText = openXmlHyperlink.InnerText;
 
+                            // CRITICAL FIX: Extract both address and fragment for proper lookup ID detection
+                            // Parse URL to separate address and subAddress (fragment)
+                            string address = url;
+                            string subAddress = "";
+                            
+                            if (url.Contains('#'))
+                            {
+                                var parts = url.Split('#', 2);
+                                address = parts[0];
+                                subAddress = parts[1];
+                            }
+
                             var hyperlink = new Hyperlink
                             {
                                 OriginalUrl = url,
                                 DisplayText = displayText,
-                                LookupId = _hyperlinkValidator.ExtractLookupId(url),
+                                LookupId = ExtractLookupIdUsingVbaLogic(address, subAddress),
                                 RequiresUpdate = ShouldAutoValidateHyperlink(url, displayText)
                             };
 
@@ -1239,8 +1379,22 @@ namespace BulkEditor.Infrastructure.Services
                             var url = relationship.Uri.ToString();
                             var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
 
-                            // Check if hyperlink is invisible (empty display text but has URL)
-                            if (string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url))
+                            // CRITICAL FIX: Only remove genuinely broken hyperlinks, not ones that could be updated
+                            // Check if hyperlink has lookup ID - if so, keep it for potential updates
+                            string address = url;
+                            string subAddress = "";
+                            if (url.Contains('#'))
+                            {
+                                var parts = url.Split('#', 2);
+                                address = parts[0];
+                                subAddress = parts[1];
+                            }
+                            
+                            var lookupId = ExtractLookupIdUsingVbaLogic(address, subAddress);
+                            bool hasLookupId = !string.IsNullOrEmpty(lookupId);
+                            
+                            // Only remove if invisible AND has no lookup ID (genuinely broken)
+                            if (string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url) && !hasLookupId)
                             {
                                 // Remove the hyperlink element
                                 openXmlHyperlink.Remove();
@@ -1828,13 +1982,15 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 // Pre-save validation
-                await ValidateOpenDocumentAsync(wordDocument, "pre-save-final", cancellationToken);
+                await ValidateOpenDocumentAsync(wordDocument, "pre-save-final", cancellationToken).ConfigureAwait(false);
 
                 // Ensure all changes are committed before saving
                 var mainPart = wordDocument.MainDocumentPart;
                 mainPart?.Document?.Save();
-
-                _logger.LogDebug("Document saved successfully with validation: {FileName}", document.FileName);
+                
+                // CRITICAL FIX: Ensure all document changes including hyperlinks are saved
+                wordDocument.Save();
+                _logger.LogDebug("Document saved successfully with comprehensive validation: {FileName}", document.FileName);
 
                 // Small delay to ensure file handles are properly released
                 await Task.Delay(50, cancellationToken).ConfigureAwait(false);
@@ -1843,6 +1999,53 @@ namespace BulkEditor.Infrastructure.Services
             {
                 _logger.LogError(saveEx, "Critical error saving document: {FileName}", document.FileName);
                 throw new InvalidOperationException($"Failed to save document safely: {saveEx.Message}", saveEx);
+            }
+        }
+
+        /// <summary>
+        /// Performs atomic document operations with enhanced corruption prevention
+        /// This method ensures that multiple operations on the same document are serialized
+        /// to prevent OpenXML corruption issues
+        /// </summary>
+        private async Task<T> ExecuteAtomicDocumentOperationAsync<T>(
+            string filePath,
+            Func<WordprocessingDocument, Task<T>> operation,
+            string operationName,
+            CancellationToken cancellationToken)
+        {
+            // Use a semaphore per file path to ensure atomic operations
+            var semaphoreKey = filePath.ToLowerInvariant();
+            var semaphore = _documentSemaphores.GetOrAdd(semaphoreKey, _ => new SemaphoreSlim(1, 1));
+
+            try
+            {
+                await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+                using (var wordDocument = WordprocessingDocument.Open(filePath, true))
+                {
+                    // Validate document before operation
+                    await ValidateOpenDocumentAsync(wordDocument, $"{operationName}-pre", cancellationToken).ConfigureAwait(false);
+
+                    // Execute the operation
+                    var result = await operation(wordDocument).ConfigureAwait(false);
+
+                    // Validate document after operation
+                    await ValidateOpenDocumentAsync(wordDocument, $"{operationName}-post", cancellationToken).ConfigureAwait(false);
+
+                    // Ensure changes are saved before releasing the document
+                    wordDocument.MainDocumentPart?.Document?.Save();
+
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Atomic document operation '{OperationName}' failed for: {FilePath}", operationName, filePath);
+                throw;
+            }
+            finally
+            {
+                semaphore.Release();
             }
         }
 

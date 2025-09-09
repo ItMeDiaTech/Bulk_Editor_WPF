@@ -22,6 +22,8 @@ namespace BulkEditor.Infrastructure.Services
         private readonly string _githubRepo;
         private readonly string _appDataPath;
         private bool _autoUpdateEnabled;
+        private DateTime _lastUpdateCheck = DateTime.MinValue;
+        private readonly TimeSpan _minimumCheckInterval = TimeSpan.FromMinutes(10); // Rate limiting: max 1 check per 10 minutes
 
         /// <summary>
         /// Event raised when the application needs to shut down for update installation
@@ -126,18 +128,44 @@ namespace BulkEditor.Infrastructure.Services
             _logger.LogInformation("Auto-update {Status}", enabled ? "enabled" : "disabled");
         }
 
-        public async Task<UpdateInfo> CheckForUpdatesAsync()
+        public async Task<UpdateInfo> CheckForUpdatesAsync(bool bypassRateLimit = false)
         {
             try
             {
+                // CRITICAL FIX: Rate limiting to prevent GitHub API "Forbidden" errors (unless manually bypassed)
+                if (!bypassRateLimit)
+                {
+                    var timeSinceLastCheck = DateTime.UtcNow - _lastUpdateCheck;
+                    if (timeSinceLastCheck < _minimumCheckInterval)
+                    {
+                        var waitTime = _minimumCheckInterval - timeSinceLastCheck;
+                        _logger.LogInformation("Rate limiting: Skipping automatic update check. Last check was {TimeSinceLastCheck} ago, minimum interval is {MinInterval}. Next check in {WaitTime}.",
+                            timeSinceLastCheck, _minimumCheckInterval, waitTime);
+                        return null;
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Bypassing rate limit for manual update check");
+                }
+
                 _logger.LogInformation("Checking for updates from GitHub...");
 
                 var apiUrl = $"https://api.github.com/repos/{_githubOwner}/{_githubRepo}/releases/latest";
+                
+                // Update the last check time regardless of success/failure to prevent spam
+                _lastUpdateCheck = DateTime.UtcNow;
+                
                 var response = await _httpClient.GetAsync(apiUrl);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Failed to check for updates. Status: {StatusCode}", response.StatusCode);
+                    _logger.LogWarning("Failed to check for updates. Status: {StatusCode} ({StatusMessage}). Rate limit headers: {RateLimitRemaining}/{RateLimitLimit}, Reset: {RateLimitReset}", 
+                        response.StatusCode, 
+                        response.ReasonPhrase,
+                        response.Headers.Contains("x-ratelimit-remaining") ? string.Join(",", response.Headers.GetValues("x-ratelimit-remaining")) : "N/A",
+                        response.Headers.Contains("x-ratelimit-limit") ? string.Join(",", response.Headers.GetValues("x-ratelimit-limit")) : "N/A",
+                        response.Headers.Contains("x-ratelimit-reset") ? string.Join(",", response.Headers.GetValues("x-ratelimit-reset")) : "N/A");
                     return null;
                 }
 
@@ -209,7 +237,7 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        public async Task<bool> DownloadAndInstallUpdateAsync(UpdateInfo updateInfo, IProgress<UpdateProgress> progress = null)
+        public async Task<bool> DownloadAndInstallUpdateAsync(UpdateInfo updateInfo, IProgress<UpdateProgress>? progress = null)
         {
             try
             {
@@ -389,7 +417,6 @@ namespace BulkEditor.Infrastructure.Services
                 var scriptPath = Path.Combine(_appDataPath, "update_installer.ps1");
                 var currentExePath = Process.GetCurrentProcess().MainModule?.FileName;
                 var currentExeDir = Path.GetDirectoryName(currentExePath);
-                var appName = "BulkEditor";
 
                 var scriptContent = $@"
 # BulkEditor Update Installation Script

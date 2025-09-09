@@ -262,17 +262,17 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        public async Task<string> LookupTitleByContentIdAsync(string contentId, CancellationToken cancellationToken = default)
+        public async Task<string> LookupTitleByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
         {
             try
             {
-                var documentRecord = await LookupDocumentByContentIdAsync(contentId, cancellationToken).ConfigureAwait(false);
-                return documentRecord?.Title ?? $"Document {contentId}";
+                var documentRecord = await LookupDocumentByIdentifierAsync(identifier, cancellationToken).ConfigureAwait(false);
+                return documentRecord?.Title ?? $"Document {identifier}";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error looking up title for Content ID: {ContentId}", contentId);
-                return $"Document {contentId}"; // Fallback title
+                _logger.LogError(ex, "Error looking up title for identifier (Content_ID or Document_ID): {Identifier}", identifier);
+                return $"Document {identifier}"; // Fallback title
             }
         }
 
@@ -293,18 +293,18 @@ namespace BulkEditor.Infrastructure.Services
                     return result;
                 }
 
-                _logger.LogInformation("Processing API response for {Count} lookup identifiers (Document_ID or Content_ID)", lookupIds.Count());
+                _logger.LogInformation("Processing single API call for {Count} lookup identifiers (both Content_IDs and Document_IDs combined)", lookupIds.Count());
 
                 // CRITICAL FIX: Try real API first, fallback to simulation for testing (Issue #2)
                 string jsonResponse;
                 try
                 {
                     jsonResponse = await CallRealApiAsync(lookupIds, cancellationToken).ConfigureAwait(false);
-                    _logger.LogInformation("Successfully called real API for {Count} lookup identifiers", lookupIds.Count());
+                    _logger.LogInformation("Successfully called real API with single request for {Count} combined lookup identifiers (Content_IDs and Document_IDs)", lookupIds.Count());
                 }
                 catch (Exception apiEx)
                 {
-                    _logger.LogWarning("Real API call failed, falling back to simulation: {Error}", apiEx.Message);
+                    _logger.LogWarning("Real API call failed for combined lookup identifiers, falling back to simulation: {Error}", apiEx.Message);
                     jsonResponse = await SimulateApiCallAsync(lookupIds, cancellationToken).ConfigureAwait(false);
                 }
 
@@ -318,7 +318,7 @@ namespace BulkEditor.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing API response for lookup identifiers");
+                _logger.LogError(ex, "Error processing API response for combined lookup identifiers (Content_IDs and Document_IDs)");
                 result.HasError = true;
                 result.ErrorMessage = ex.Message;
                 return result;
@@ -340,7 +340,7 @@ namespace BulkEditor.Infrastructure.Services
                     Lookup_ID = lookupIds.ToArray() // Exact property name like VBA - case sensitive!
                 };
 
-                _logger.LogDebug("Calling real API with {Count} lookup identifiers: {LookupIds}",
+                _logger.LogDebug("Calling real API with single request for {Count} combined lookup identifiers (Content_IDs and Document_IDs): {LookupIds}",
                     lookupIds.Count(), string.Join(", ", lookupIds));
 
                 // CRITICAL FIX: Use proper JSON serialization options (Issue #7)
@@ -352,7 +352,7 @@ namespace BulkEditor.Infrastructure.Services
                 };
 
                 var jsonString = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
-                _logger.LogDebug("API request JSON: {JsonRequest}", jsonString);
+                _logger.LogInformation("Full HTTP API Request JSON: {JsonRequest}", jsonString);
 
                 // CRITICAL FIX: Use configured API endpoint from settings instead of hardcoded example
                 var apiEndpoint = GetConfiguredApiEndpoint();
@@ -366,13 +366,13 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                _logger.LogDebug("Real API response received: {Response}", jsonResponse);
+                _logger.LogInformation("Full HTTP API Response JSON: {Response}", jsonResponse);
 
                 return jsonResponse;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling real API for lookup identifiers");
+                _logger.LogError(ex, "Error calling real API for combined lookup identifiers (Content_IDs and Document_IDs)");
                 throw;
             }
         }
@@ -586,31 +586,49 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// CRITICAL FIX: Safe JSON property extraction with case-insensitive fallback (Issue #6)
-        /// Handles both exact case matches and common case variations
+        /// Handles both exact case matches and common case variations with proper null/empty checks
         /// </summary>
         private string GetJsonPropertySafely(System.Text.Json.JsonElement element, string propertyName)
         {
             try
             {
+                // CRITICAL FIX: Add null/empty safety checks to prevent IndexOutOfRangeException
+                if (string.IsNullOrEmpty(propertyName))
+                {
+                    _logger.LogWarning("Property name is null or empty - cannot extract JSON property");
+                    return null;
+                }
+
                 // Try exact match first
                 if (element.TryGetProperty(propertyName, out var exactProperty))
                 {
                     return exactProperty.GetString();
                 }
 
-                // Try common case variations for VBA compatibility
-                var variations = new[]
+                // Try common case variations for VBA compatibility with safety checks
+                var variations = new List<string>
                 {
                     propertyName.ToLowerInvariant(),
-                    propertyName.ToUpperInvariant(),
-                    char.ToLowerInvariant(propertyName[0]) + propertyName.Substring(1), // camelCase
-                    propertyName.Replace("_", "").ToLowerInvariant(), // no underscores
-                    propertyName.Replace("_", "").ToUpperInvariant()
+                    propertyName.ToUpperInvariant()
                 };
+
+                // CRITICAL FIX: Only add camelCase variation if property name has more than 1 character
+                if (propertyName.Length > 1)
+                {
+                    variations.Add(char.ToLowerInvariant(propertyName[0]) + propertyName.Substring(1)); // camelCase
+                }
+
+                // CRITICAL FIX: Only add underscore variations if they result in non-empty strings
+                var withoutUnderscores = propertyName.Replace("_", "");
+                if (!string.IsNullOrEmpty(withoutUnderscores))
+                {
+                    variations.Add(withoutUnderscores.ToLowerInvariant()); // no underscores
+                    variations.Add(withoutUnderscores.ToUpperInvariant());
+                }
 
                 foreach (var variation in variations)
                 {
-                    if (element.TryGetProperty(variation, out var property))
+                    if (!string.IsNullOrEmpty(variation) && element.TryGetProperty(variation, out var property))
                     {
                         _logger.LogDebug("Found JSON property with case variation: {Original} -> {Found}", propertyName, variation);
                         return property.GetString();
@@ -734,15 +752,16 @@ namespace BulkEditor.Infrastructure.Services
         /// <summary>
         /// Looks up document by identifier - can be Document_ID or Content_ID following Base_File.vba methodology
         /// Uses flexible matching against API response to find the document record
+        /// CRITICAL: Single API call handles both Content_IDs and Document_IDs
         /// </summary>
-        public async Task<DocumentRecord> LookupDocumentByContentIdAsync(string identifier, CancellationToken cancellationToken = default)
+        public async Task<DocumentRecord> LookupDocumentByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(identifier))
                     return null;
 
-                _logger.LogDebug("Looking up document by identifier: {Identifier}", identifier);
+                _logger.LogDebug("Looking up document by identifier (Content_ID or Document_ID): {Identifier}", identifier);
 
                 // Use flexible API lookup with single identifier
                 var apiResult = await ProcessApiResponseAsync(new[] { identifier }, cancellationToken).ConfigureAwait(false);
@@ -833,7 +852,7 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 // CRITICAL FIX: Use flexible lookup - rule.ContentId can be Document_ID or Content_ID
-                var documentRecord = await LookupDocumentByContentIdAsync(rule.ContentId, cancellationToken).ConfigureAwait(false);
+                var documentRecord = await LookupDocumentByIdentifierAsync(rule.ContentId, cancellationToken).ConfigureAwait(false);
 
                 // Handle missing lookup identifier response (when server returns no response)
                 if (documentRecord == null)
@@ -1043,31 +1062,86 @@ namespace BulkEditor.Infrastructure.Services
                             throw new InvalidOperationException($"Generated base address is invalid: {targetAddress}");
                         }
 
-                        // CRITICAL FIX: Create relationship with proper URI structure like VBA (Issue #8)
-                        // VBA keeps Address and SubAddress SEPARATE - do NOT concatenate!
-                        // VBA: .Address = targetAddress, .SubAddress = targetSub
+                        // CRITICAL FIX: Follow OpenXML best practices for hyperlink relationship management
+                        // 1. Preserve the original relationship ID to maintain document integrity
+                        // 2. Properly handle external vs internal links with TargetMode
+                        // 3. Create complete URI with fragment for external links
 
-                        // CRITICAL FIX: Validate and sanitize the SubAddress to prevent XSD validation errors
-                        var safeSubAddress = ValidateAndSanitizeUrlFragment(targetSubAddress);
+                        // Build the complete external URL with fragment
+                        var completeUri = new Uri(targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress));
 
-                        var relationshipUri = new Uri(targetAddress);
-                        var newRelationship = mainPart.AddHyperlinkRelationship(relationshipUri, true, safeSubAddress);
-
-                        // Update the hyperlink element to use the new relationship ID
-                        openXmlHyperlink.Id = newRelationship.Id;
-
-                        // Safely delete the old relationship
+                        // CRITICAL FIX: Check if URL needs updating (detect HTML-encoded differences)
+                        string currentUrl = null;
+                        bool urlNeedsUpdate = true;
                         try
                         {
-                            mainPart.DeleteReferenceRelationship(relId);
+                            var currentRelationship = mainPart.GetReferenceRelationship(relId);
+                            currentUrl = currentRelationship.Uri.ToString();
+                            
+                            // Compare decoded URLs to detect HTML encoding differences
+                            var currentUrlDecoded = Uri.UnescapeDataString(currentUrl);
+                            var newUrlDecoded = Uri.UnescapeDataString(completeUri.ToString());
+                            
+                            urlNeedsUpdate = !string.Equals(currentUrlDecoded, newUrlDecoded, StringComparison.OrdinalIgnoreCase);
+                            
+                            // Log when HTML-encoded URLs are functionally equivalent but need updating
+                            if (!urlNeedsUpdate && !string.Equals(currentUrl, completeUri.ToString(), StringComparison.Ordinal))
+                            {
+                                _logger.LogInformation("Hyperlink URL has HTML encoding differences but is functionally equivalent: {CurrentUrl} -> {NewUrl}", 
+                                    currentUrl, completeUri.ToString());
+                            }
+                            else if (urlNeedsUpdate)
+                            {
+                                // Check if only encoding differences exist
+                                if (string.Equals(currentUrlDecoded, newUrlDecoded, StringComparison.OrdinalIgnoreCase) &&
+                                    !string.Equals(currentUrl, completeUri.ToString(), StringComparison.Ordinal))
+                                {
+                                    _logger.LogInformation("Updating hyperlink URL due to HTML encoding differences: {CurrentUrl} -> {NewUrl}", 
+                                        currentUrl, completeUri.ToString());
+                                }
+                                else
+                                {
+                                    _logger.LogDebug("Updating hyperlink URL: {CurrentUrl} -> {NewUrl}", 
+                                        currentUrl, completeUri.ToString());
+                                }
+                            }
                         }
                         catch (System.Collections.Generic.KeyNotFoundException)
                         {
-                            _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relId);
+                            _logger.LogDebug("No existing relationship found for {RelId}, will create new one", relId);
+                            currentUrl = "[No existing relationship]";
                         }
 
-                        _logger.LogDebug("Updated hyperlink with VBA-compatible Address/SubAddress: {Address}#{SubAddress}",
-                            targetAddress, targetSubAddress);
+                        // Only update URL if it actually needs changing
+                        if (urlNeedsUpdate)
+                        {
+                            // Safely delete the old relationship first
+                            try
+                            {
+                                mainPart.DeleteReferenceRelationship(relId);
+                            }
+                            catch (System.Collections.Generic.KeyNotFoundException)
+                            {
+                                _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relId);
+                            }
+
+                            // Create new relationship with the SAME ID to preserve document integrity
+                            var newRelationship = mainPart.AddHyperlinkRelationship(completeUri, true, relId);
+
+                            // Verify the relationship ID is preserved
+                            if (newRelationship.Id != relId)
+                            {
+                                _logger.LogWarning("Relationship ID changed from {OldId} to {NewId} - document integrity may be affected", relId, newRelationship.Id);
+                                openXmlHyperlink.Id = newRelationship.Id;
+                            }
+
+                            _logger.LogDebug("Updated hyperlink with VBA-compatible Address/SubAddress: {Address}#{SubAddress}",
+                                targetAddress, targetSubAddress);
+                        }
+                        else
+                        {
+                            _logger.LogDebug("Hyperlink URL unchanged, skipping relationship update for {RelId}", relId);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -1443,7 +1517,7 @@ namespace BulkEditor.Infrastructure.Services
                 if (!string.IsNullOrWhiteSpace(_appSettings.Api.BaseUrl))
                 {
                     var configuredUrl = _appSettings.Api.BaseUrl.TrimEnd('/');
-                    var endpoint = $"{configuredUrl}/lookup-documents";
+                    var endpoint = $"{configuredUrl}";
                     _logger.LogDebug("Using configured API endpoint from settings: {Endpoint}", endpoint);
                     return endpoint;
                 }

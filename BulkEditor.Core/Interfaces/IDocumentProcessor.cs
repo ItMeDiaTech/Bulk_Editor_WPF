@@ -44,7 +44,24 @@ namespace BulkEditor.Core.Interfaces
         public int TotalDocuments { get; set; }
         public int ProcessedDocuments { get; set; }
         public int FailedDocuments { get; set; }
+        public int SuccessfulDocuments { get; set; }
         public string CurrentDocument { get; set; } = string.Empty;
+        public string CurrentOperation { get; set; } = string.Empty;
+        public DateTime StartTime { get; set; }
+        public DateTime? EstimatedCompletionTime { get; set; }
+        public TimeSpan ElapsedTime => DateTime.Now - StartTime;
+        public TimeSpan? EstimatedTimeRemaining { get; set; }
+        public int TotalHyperlinksFound { get; set; }
+        public int TotalHyperlinksProcessed { get; set; }
+        public int TotalHyperlinksUpdated { get; set; }
+        public int TotalTextReplacements { get; set; }
+        public long TotalBytesProcessed { get; set; }
+        public double AverageProcessingTimePerDocument { get; set; }
+        public double CurrentDocumentProgress { get; set; }
+        public List<string> RecentErrors { get; set; } = new();
         public double PercentageComplete => TotalDocuments > 0 ? (double)ProcessedDocuments / TotalDocuments * 100 : 0;
+        public double OverallProgress => TotalDocuments > 0 ? ((double)ProcessedDocuments + (CurrentDocumentProgress / 100.0)) / TotalDocuments * 100 : 0;
+        public string FormattedElapsedTime => ElapsedTime.ToString(@"hh\:mm\:ss");
+        public string FormattedEstimatedTimeRemaining => EstimatedTimeRemaining?.ToString(@"hh\:mm\:ss") ?? "Calculating...";
     }
 }

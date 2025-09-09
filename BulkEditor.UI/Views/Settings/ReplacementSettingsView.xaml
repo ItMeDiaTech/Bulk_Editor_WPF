@@ -22,16 +22,6 @@
             <!-- General Settings -->
             <GroupBox Header="Replacement Settings">
                 <StackPanel>
-                    <CheckBox Content="Enable hyperlink replacement"
-                              IsChecked="{Binding EnableHyperlinkReplacement}"
-                              Margin="0,0,0,8"/>
-                    <CheckBox Content="Enable text replacement"
-                              IsChecked="{Binding EnableTextReplacement}"
-                              Margin="0,0,0,8"/>
-                    <CheckBox Content="Validate content IDs"
-                              IsChecked="{Binding ValidateContentIds}"
-                              Margin="0,0,0,8"/>
-
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -45,8 +35,7 @@
             </GroupBox>
 
             <!-- Hyperlink Replacement Rules -->
-            <GroupBox Header="Hyperlink Replacement Rules"
-                      IsEnabled="{Binding EnableHyperlinkReplacement}">
+            <GroupBox Header="Hyperlink Replacement Rules">
                 <StackPanel>
                     <TextBlock Text="Define rules to replace hyperlink titles with specific content IDs."
                                FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>
@@ -82,8 +71,7 @@
             </GroupBox>
 
             <!-- Text Replacement Rules -->
-            <GroupBox Header="Text Replacement Rules"
-                      IsEnabled="{Binding EnableTextReplacement}">
+            <GroupBox Header="Text Replacement Rules">
                 <StackPanel>
                     <TextBlock Text="Define rules to replace specific text patterns in documents."
                                FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>

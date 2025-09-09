@@ -75,6 +75,10 @@ namespace BulkEditor.UI.Services
             {
                 "light" => "pack://application:,,,/BulkEditor.UI;component/Themes/LightTheme.xaml",
                 "dark" => "pack://application:,,,/BulkEditor.UI;component/Themes/DarkTheme.xaml",
+                "purple" => "pack://application:,,,/BulkEditor.UI;component/Themes/PurpleTheme.xaml",
+                "pink" => "pack://application:,,,/BulkEditor.UI;component/Themes/PinkTheme.xaml",
+                "light blue" => "pack://application:,,,/BulkEditor.UI;component/Themes/LightBlueTheme.xaml",
+                "green" => "pack://application:,,,/BulkEditor.UI;component/Themes/GreenTheme.xaml",
                 "auto" => GetSystemTheme() == "Dark"
                     ? "pack://application:,,,/BulkEditor.UI;component/Themes/DarkTheme.xaml"
                     : "pack://application:,,,/BulkEditor.UI;component/Themes/LightTheme.xaml",

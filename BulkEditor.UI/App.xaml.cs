@@ -19,6 +19,8 @@ namespace BulkEditor.UI
     public partial class App : System.Windows.Application
     {
         private ServiceProvider? _serviceProvider;
+
+        public ServiceProvider? ServiceProvider => _serviceProvider;
         private BulkEditor.Application.Services.UpdateManager? _updateManager;
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -44,22 +46,34 @@ namespace BulkEditor.UI
                 services.AddSingleton<IConfigurationService>(configService);
                 services.AddSingleton(appSettings);
 
+                // CRITICAL FIX: Register IOptions<AppSettings> for dependency injection
+                services.AddSingleton<Microsoft.Extensions.Options.IOptions<AppSettings>>(provider =>
+                    Microsoft.Extensions.Options.Options.Create(appSettings));
+
                 // Register infrastructure services
                 services.AddSingleton<BulkEditor.Core.Interfaces.ILoggingService, BulkEditor.Infrastructure.Services.SerilogService>();
                 services.AddSingleton<BulkEditor.Core.Interfaces.IFileService, BulkEditor.Infrastructure.Services.FileService>();
+                services.AddSingleton<BulkEditor.Core.Services.IRetryPolicyService, BulkEditor.Infrastructure.Services.RetryPolicyService>();
+                services.AddSingleton<BulkEditor.Core.Services.IStructuredLoggingService, BulkEditor.Infrastructure.Services.StructuredLoggingService>();
+                services.AddSingleton<BulkEditor.Core.Services.IBackgroundTaskService, BulkEditor.Infrastructure.Services.BackgroundTaskService>();
 
                 // Configure HttpClient properly with all necessary headers and settings
                 services.AddSingleton<System.Net.Http.HttpClient>(provider =>
                 {
                     var httpClient = new HttpClient();
                     httpClient.Timeout = TimeSpan.FromSeconds(30);
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", "BulkEditor/1.0");
+                    // CRITICAL FIX: More specific User-Agent to comply with GitHub API guidelines
+                    var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", $"BulkEditor/{version} (+https://github.com/ItMeDiaTech/Bulk_Editor_WPF)");
                     httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
                     return httpClient;
                 });
 
                 services.AddSingleton<BulkEditor.Core.Interfaces.IHttpService, BulkEditor.Infrastructure.Services.HttpService>();
                 services.AddSingleton<BulkEditor.Core.Interfaces.ICacheService, BulkEditor.Infrastructure.Services.MemoryCacheService>();
+
+                // Database Service
+                services.AddSingleton<BulkEditor.Core.Services.IDatabaseService, BulkEditor.Infrastructure.Services.SqliteService>();
 
                 // Document Processing Services
                 services.AddScoped<BulkEditor.Core.Interfaces.IDocumentProcessor, BulkEditor.Infrastructure.Services.DocumentProcessor>();
@@ -102,6 +116,10 @@ namespace BulkEditor.UI
 
                 // Build service provider
                 _serviceProvider = services.BuildServiceProvider();
+
+                // Initialize database
+                var databaseService = _serviceProvider.GetRequiredService<BulkEditor.Core.Services.IDatabaseService>();
+                await databaseService.InitializeAsync();
 
                 // Initialize update manager
                 _updateManager = _serviceProvider.GetRequiredService<BulkEditor.Application.Services.UpdateManager>();
@@ -155,7 +173,7 @@ namespace BulkEditor.UI
             }
         }
 
-        private void OnUpdateRequiresRestart(object sender, EventArgs e)
+        private void OnUpdateRequiresRestart(object? sender, EventArgs e)
         {
             Log.Information("Update requires application restart");
             Dispatcher.BeginInvoke(() =>
@@ -249,7 +267,7 @@ namespace BulkEditor.UI
             };
         }
 
-        private void ConfigureSerilog(AppSettings appSettings = null)
+        private void ConfigureSerilog(AppSettings? appSettings = null)
         {
             var logDirectory = appSettings?.Logging?.LogDirectory ??
                               Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BulkEditor", "Logs");

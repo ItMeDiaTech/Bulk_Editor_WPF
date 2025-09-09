@@ -36,6 +36,20 @@ namespace BulkEditor.UI.ViewModels.Settings
         [ObservableProperty]
         private string _gitHubRepository = string.Empty;
 
+        // Default hardcoded repository settings
+        private const string DEFAULT_GITHUB_OWNER = "ItMeDiaTech";
+        private const string DEFAULT_GITHUB_REPOSITORY = "Bulk_Editor_WPF";
+
+        /// <summary>
+        /// Gets the effective GitHub owner (uses default if field is empty)
+        /// </summary>
+        public string EffectiveGitHubOwner => string.IsNullOrWhiteSpace(GitHubOwner) ? DEFAULT_GITHUB_OWNER : GitHubOwner;
+
+        /// <summary>
+        /// Gets the effective GitHub repository (uses default if field is empty)
+        /// </summary>
+        public string EffectiveGitHubRepository => string.IsNullOrWhiteSpace(GitHubRepository) ? DEFAULT_GITHUB_REPOSITORY : GitHubRepository;
+
         // Version Information
         [ObservableProperty]
         private string _currentVersion = string.Empty;
@@ -47,7 +61,7 @@ namespace BulkEditor.UI.ViewModels.Settings
         private bool _updateAvailable = false;
 
         [ObservableProperty]
-        private string _updateCheckStatus = "Click 'Check for Updates' to check for the latest version";
+        private string _updateCheckStatus = "Loading version information...";
 
         [ObservableProperty]
         private string _releaseNotes = string.Empty;
@@ -83,7 +97,8 @@ namespace BulkEditor.UI.ViewModels.Settings
                     return;
                 }
 
-                var updateInfo = await _updateService.CheckForUpdatesAsync();
+                // CRITICAL FIX: Bypass rate limiting for manual update checks
+                var updateInfo = await _updateService.CheckForUpdatesAsync(bypassRateLimit: true);
                 if (updateInfo != null)
                 {
                     // Update available
@@ -93,7 +108,7 @@ namespace BulkEditor.UI.ViewModels.Settings
                     ReleaseNotes = updateInfo.ReleaseNotes ?? "No release notes available.";
 
                     _logger?.LogInformation("Update available: Version {Version}", updateInfo.Version);
-                    _logger?.LogInformation("Release notes: {ReleaseNotes}", updateInfo.ReleaseNotes);
+                    _logger?.LogInformation("Release notes: {ReleaseNotes}", updateInfo.ReleaseNotes ?? "None");
 
                     // Prompt user for installation
                     await PromptUserForUpdateInstallationAsync(updateInfo);
@@ -140,8 +155,9 @@ namespace BulkEditor.UI.ViewModels.Settings
 
                 var currentVer = _updateService.GetCurrentVersion();
                 CurrentVersion = currentVer.ToString();
-                LatestVersion = "Unknown - check for updates";
+                LatestVersion = currentVer.ToString(); // Set latest version to current version initially
                 UpdateAvailable = false;
+                UpdateCheckStatus = $"Current version: {currentVer}. Click 'Check for Updates' to check for newer versions.";
                 _logger?.LogDebug("Loaded version information - Current: {Version}", currentVer);
             }
             catch (Exception ex)
@@ -149,6 +165,7 @@ namespace BulkEditor.UI.ViewModels.Settings
                 CurrentVersion = "Unknown";
                 LatestVersion = "Unknown";
                 UpdateAvailable = false;
+                UpdateCheckStatus = "Failed to load version information. Click 'Check for Updates' to try again.";
                 _logger?.LogError(ex, "Failed to load version information");
             }
         }

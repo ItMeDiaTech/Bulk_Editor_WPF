@@ -4,7 +4,7 @@
   <Package Id="BulkEditor.Package"
            Name="Bulk Document Editor"
            Language="1033"
-           Version="1.0.0.0"
+           Version="1.9.4.0"
            Manufacturer="DiaTech"
            UpgradeCode="12345678-1234-1234-1234-123456789012"
            InstallerVersion="500"
@@ -22,7 +22,13 @@
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="CompanyFolder" Name="DiaTech">
         <Directory Id="INSTALLFOLDER" Name="BulkEditor">
-          <Directory Id="BinFolder" Name="bin" />
+          <Directory Id="BinFolder" Name="bin">
+            <Directory Id="RuntimesFolder" Name="runtimes">
+              <Directory Id="WinX64Folder" Name="win-x64">
+                <Directory Id="NativeFolder" Name="native" />
+              </Directory>
+            </Directory>
+          </Directory>
         </Directory>
       </Directory>
     </StandardDirectory>
@@ -122,6 +128,28 @@
       <Component Id="SystemIOPackaging" Directory="BinFolder">
         <File Source="..\Output\Publish\System.IO.Packaging.dll" KeyPath="yes" />
       </Component>
+
+      <!-- SQLite Components -->
+      <Component Id="MicrosoftDataSqlite" Directory="BinFolder">
+        <File Source="..\Output\Publish\Microsoft.Data.Sqlite.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="SQLitePCLRawBatteries" Directory="BinFolder">
+        <File Source="..\Output\Publish\SQLitePCLRaw.batteries_v2.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="SQLitePCLRawCore" Directory="BinFolder">
+        <File Source="..\Output\Publish\SQLitePCLRaw.core.dll" KeyPath="yes" />
+      </Component>
+
+      <Component Id="SQLitePCLRawProvider" Directory="BinFolder">
+        <File Source="..\Output\Publish\SQLitePCLRaw.provider.e_sqlite3.dll" KeyPath="yes" />
+      </Component>
+
+      <!-- Native SQLite Library -->
+      <Component Id="NativeSQLite" Directory="NativeFolder">
+        <File Source="..\Output\Publish\runtimes\win-x64\native\e_sqlite3.dll" KeyPath="yes" />
+      </Component>
     </ComponentGroup>
 
     <!-- Registry Configuration -->
@@ -140,7 +168,7 @@
                        Key="Software\DiaTech\BulkEditor"
                        Name="Version"
                        Type="string"
-                       Value="1.0.0"
+                       Value="1.9.4.0"
                        KeyPath="yes" />
       </Component>
 

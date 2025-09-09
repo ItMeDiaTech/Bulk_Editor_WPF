@@ -2,6 +2,7 @@ using BulkEditor.Application.Services;
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using BulkEditor.UI.Services;
 using BulkEditor.UI.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -32,10 +34,74 @@ namespace BulkEditor.UI.ViewModels
         private readonly IUndoService _undoService;
         private readonly ISessionManager _sessionManager;
         private readonly IBackupService _backupService;
-        private CancellationTokenSource? _cancellationTokenSource;
+        private readonly IBackgroundTaskService _backgroundTaskService;
+        private readonly BulkEditor.Application.Services.UpdateManager _updateManager;
+        private string? _currentTaskId;
 
         [ObservableProperty]
         private ObservableCollection<DocumentViewModel> _documents = new();
+
+        [ObservableProperty]
+        private ObservableCollection<ProcessingResultViewModel> _processingResults = new();
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasDocuments))]
+        private ObservableCollection<DocumentListItemViewModel> _documentItems = new();
+
+        private ObservableCollection<DocumentListItemViewModel> _allDocumentItems = new();
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasSearchText))]
+        private string _searchText = string.Empty;
+
+        public bool HasSearchText => !string.IsNullOrEmpty(SearchText);
+
+        partial void OnSearchTextChanged(string value)
+        {
+            FilterDocuments();
+        }
+        
+        private void FilterDocuments()
+        {
+            try
+            {
+                // CRITICAL FIX: Ensure we're on the UI thread when modifying ObservableCollection
+                if (!System.Windows.Application.Current?.Dispatcher?.CheckAccess() == true)
+                {
+                    System.Windows.Application.Current?.Dispatcher?.Invoke(() => FilterDocuments());
+                    return;
+                }
+                
+                DocumentItems.Clear();
+                
+                if (string.IsNullOrEmpty(SearchText))
+                {
+                    // Show all documents when search is empty
+                    foreach (var item in _allDocumentItems)
+                    {
+                        DocumentItems.Add(item);
+                    }
+                }
+                else
+                {
+                    // Filter documents by title or content ID
+                    var searchTerm = SearchText.ToLowerInvariant();
+                    var filteredItems = _allDocumentItems.Where(item => 
+                        item.Title.ToLowerInvariant().Contains(searchTerm) ||
+                        item.Location.ToLowerInvariant().Contains(searchTerm)
+                    );
+                    
+                    foreach (var item in filteredItems)
+                    {
+                        DocumentItems.Add(item);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error filtering documents with search term: {SearchTerm}", SearchText);
+            }
+        }
 
         [ObservableProperty]
         private DocumentViewModel? _selectedDocument;
@@ -82,9 +148,61 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private bool _isRevertEnabled;
 
+        [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
+        private string _busyMessage = "Loading...";
+
+        [ObservableProperty]
+        private string _currentOperation = string.Empty;
+
+        [ObservableProperty]
+        private string _elapsedTime = "00:00:00";
+
+        [ObservableProperty]
+        private string _estimatedTimeRemaining = "Calculating...";
+
+        [ObservableProperty]
+        private double _currentDocumentProgress = 0;
+
+        [ObservableProperty]
+        private int _totalHyperlinksFound = 0;
+
+        [ObservableProperty]
+        private int _totalHyperlinksProcessed = 0;
+
+        [ObservableProperty]
+        private int _totalHyperlinksUpdated = 0;
+
+        [ObservableProperty]
+        private int _totalTextReplacements = 0;
+
+        [ObservableProperty]
+        private string _averageProcessingTime = "0.00s";
+
+        [ObservableProperty]
+        private ObservableCollection<string> _recentErrors = new();
+
+        [ObservableProperty]
+        private ObservableCollection<BackgroundTaskInfo> _activeTasks = new();
+
+        [ObservableProperty]
+        private double _overallProgress = 0;
+
+        [RelayCommand]
+        private void ClearSearch()
+        {
+            SearchText = string.Empty;
+        }
+
+        public bool HasProcessingResults => ProcessingResults.Any();
+
+        public bool HasDocuments => DocumentItems.Any();
+
         public INotificationService NotificationService => _notificationService;
 
-        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService)
+        public MainWindowViewModel(IApplicationService applicationService, ILoggingService logger, INotificationService notificationService, IServiceProvider serviceProvider, AppSettings appSettings, IUndoService undoService, ISessionManager sessionManager, IBackupService backupService, IBackgroundTaskService backgroundTaskService, BulkEditor.Application.Services.UpdateManager updateManager)
         {
             _applicationService = applicationService ?? throw new ArgumentNullException(nameof(applicationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -94,15 +212,34 @@ namespace BulkEditor.UI.ViewModels
             _undoService = undoService;
             _sessionManager = sessionManager;
             _backupService = backupService;
+            _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
+            _updateManager = updateManager ?? throw new ArgumentNullException(nameof(updateManager));
 
             Title = "Bulk Document Editor";
             SetStatusReady();
+
+            // Subscribe to background task status changes
+            _backgroundTaskService.TaskStatusChanged += OnBackgroundTaskStatusChanged;
+
+            // CRITICAL FIX: Subscribe to update manager events for automatic notifications
+            _updateManager.UpdateAvailable += OnUpdateAvailable;
 
             // Subscribe to collection changes to update command states
             Documents.CollectionChanged += (s, e) =>
             {
                 ProcessDocumentsCommand.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(Documents));
+            };
+
+            ProcessingResults.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(HasProcessingResults));
+            };
+
+            DocumentItems.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(HasDocuments));
+                ClearDocumentsCommand.NotifyCanExecuteChanged();
             };
         }
 
@@ -161,6 +298,8 @@ namespace BulkEditor.UI.ViewModels
         {
             try
             {
+                _logger.LogInformation("Starting file selection dialog");
+                
                 var openFileDialog = new OpenFileDialog
                 {
                     Title = "Select Word Documents",
@@ -171,14 +310,29 @@ namespace BulkEditor.UI.ViewModels
 
                 if (openFileDialog.ShowDialog() == true)
                 {
+                    _logger.LogInformation("Files selected: {FileCount}", openFileDialog.FileNames.Length);
                     await AddFilesAsync(openFileDialog.FileNames);
+                }
+                else
+                {
+                    _logger.LogInformation("File selection was cancelled by user");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error selecting files");
-                _notificationService.ShowError("File Selection Error", "Failed to select files for processing.", ex);
-                SetStatusError($"Error selecting files: {ex.Message}");
+                _logger.LogError(ex, "CRITICAL ERROR in SelectFilesAsync: {ErrorMessage}", ex.Message);
+                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogError("Thread ID: {ThreadId}", System.Threading.Thread.CurrentThread.ManagedThreadId);
+                
+                try
+                {
+                    _notificationService.ShowError("File Selection Error", "Failed to select files for processing. Please try again or restart the application.", ex);
+                    SetStatusError($"Error selecting files: {ex.Message}");
+                }
+                catch (Exception innerEx)
+                {
+                    _logger.LogError(innerEx, "CRITICAL: Error in error handling for SelectFilesAsync");
+                }
             }
         }
 
@@ -187,21 +341,149 @@ namespace BulkEditor.UI.ViewModels
         {
             try
             {
+                _logger.LogInformation("Starting file addition process for {Count} files", filePaths?.Length ?? 0);
+                
+                if (filePaths == null || filePaths.Length == 0)
+                {
+                    _logger.LogWarning("No files provided for addition");
+                    SetStatusError("No files were provided");
+                    return;
+                }
+
                 SetStatusProcessing("Validating selected files...");
 
                 var validation = await _applicationService.ValidateFilesAsync(filePaths);
+                _logger.LogInformation("Validation completed: {ValidCount} valid, {InvalidCount} invalid files", 
+                    validation.ValidFiles.Count, validation.InvalidFiles.Count);
 
                 foreach (var filePath in validation.ValidFiles)
                 {
                     if (!Documents.Any(d => d.FilePath == filePath))
                     {
+                        // Create Document entity with proper initialization
+                        var document = new Document
+                        {
+                            FilePath = filePath,
+                            FileName = Path.GetFileName(filePath),
+                            Status = DocumentStatus.Pending,
+                            ChangeLog = new ChangeLog(),
+                            ProcessingErrors = new List<ProcessingError>(),
+                            CreatedAt = DateTime.Now
+                        };
+
+                        // Add to original Documents collection
                         Documents.Add(new DocumentViewModel
                         {
                             FilePath = filePath,
                             FileName = Path.GetFileName(filePath),
-                            Status = DocumentStatus.Pending
+                            Status = DocumentStatus.Pending,
+                            Document = document
+                        });
+
+                        // Add to new DocumentItems collection for display with comprehensive error handling
+                        try
+                        {
+                            _logger.LogInformation("Creating DocumentListItemViewModel for: {FilePath}", filePath);
+                            
+                            // CRITICAL FIX: Wrap DocumentListItemViewModel creation in additional safety
+                            DocumentListItemViewModel? documentItem = null;
+                            try
+                            {
+                                documentItem = new DocumentListItemViewModel(
+                                    document, 
+                                    RemoveDocumentFromList,
+                                    ViewDocumentDetails,
+                                    OpenDocumentLocation
+                                );
+                                _logger.LogInformation("Successfully created DocumentListItemViewModel for: {FilePath}", filePath);
+                            }
+                            catch (Exception createEx)
+                            {
+                                _logger.LogError(createEx, "Failed to create DocumentListItemViewModel for: {FilePath}", filePath);
+                                throw new InvalidOperationException($"Failed to create document list item for {filePath}", createEx);
+                            }
+                            
+                            // CRITICAL FIX: Ensure thread-safe collection access with additional validation
+                            if (documentItem != null)
+                            {
+                                try
+                                {
+                                    if (System.Windows.Application.Current?.Dispatcher != null)
+                                    {
+                                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => 
+                                        {
+                                            try
+                                            {
+                                                _allDocumentItems.Add(documentItem);
+                                                _logger.LogInformation("Added DocumentListItemViewModel to collection: {FilePath}", filePath);
+                                            }
+                                            catch (Exception addEx)
+                                            {
+                                                _logger.LogError(addEx, "Failed to add document item to collection: {FilePath}", filePath);
+                                                throw;
+                                            }
+                                        });
+                                    }
+                                    else
+                                    {
+                                        _allDocumentItems.Add(documentItem);
+                                        _logger.LogInformation("Added DocumentListItemViewModel to collection (no dispatcher): {FilePath}", filePath);
+                                    }
+                                }
+                                catch (Exception collectionEx)
+                                {
+                                    _logger.LogError(collectionEx, "Failed to add DocumentListItemViewModel to collection: {FilePath}", filePath);
+                                    throw new InvalidOperationException($"Failed to add document to collection: {filePath}", collectionEx);
+                                }
+                            }
+                            else
+                            {
+                                _logger.LogError("DocumentListItemViewModel is null for: {FilePath}", filePath);
+                                throw new InvalidOperationException($"Document item creation returned null for {filePath}");
+                            }
+                        }
+                        catch (Exception docItemEx)
+                        {
+                            _logger.LogError(docItemEx, "CRITICAL: Complete failure creating/adding DocumentListItemViewModel for file: {FilePath}", filePath);
+                            // Don't rethrow here - continue with other files but log the failure
+                            _notificationService.ShowWarning("Document Display Error", 
+                                $"Failed to add {Path.GetFileName(filePath)} to the document list. It has been added to processing but may not display correctly.");
+                        }
+                    }
+                }
+
+                // CRITICAL FIX: Apply filter to refresh DocumentItems display after adding files
+                // Ensure this runs on the UI thread to prevent crashes
+                try
+                {
+                    _logger.LogInformation("Applying FilterDocuments to refresh UI display");
+                    if (System.Windows.Application.Current?.Dispatcher != null)
+                    {
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => 
+                        {
+                            try
+                            {
+                                FilterDocuments();
+                                _logger.LogInformation("Successfully applied FilterDocuments via Dispatcher");
+                            }
+                            catch (Exception filterEx)
+                            {
+                                _logger.LogError(filterEx, "Error in FilterDocuments via Dispatcher");
+                                throw;
+                            }
                         });
                     }
+                    else
+                    {
+                        FilterDocuments();
+                        _logger.LogInformation("Successfully applied FilterDocuments without Dispatcher");
+                    }
+                }
+                catch (Exception filterDocEx)
+                {
+                    _logger.LogError(filterDocEx, "CRITICAL: Failed to apply FilterDocuments - documents may not display");
+                    _notificationService.ShowWarning("Display Update Error", 
+                        "Documents were added successfully but may not appear in the list immediately. Try refreshing or restarting the application.");
                 }
 
                 if (validation.InvalidFiles.Any())
@@ -234,8 +516,15 @@ namespace BulkEditor.UI.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding files");
-                _notificationService.ShowError("File Validation Error", "Failed to validate selected files.", ex);
+                _logger.LogError(ex, "Error adding files: {ErrorMessage}", ex.Message);
+                _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
+                
+                // Additional logging for debugging thread safety issues
+                _logger.LogError("Application dispatcher availability: {DispatcherAvailable}", 
+                    System.Windows.Application.Current?.Dispatcher != null);
+                _logger.LogError("Current thread ID: {ThreadId}", System.Threading.Thread.CurrentThread.ManagedThreadId);
+                
+                _notificationService.ShowError("File Validation Error", "Failed to validate selected files. Check logs for details.", ex);
                 SetStatusError($"Error adding files: {ex.Message}");
             }
         }
@@ -245,7 +534,10 @@ namespace BulkEditor.UI.ViewModels
         {
             if (IsProcessing) return;
 
-            _cancellationTokenSource = new CancellationTokenSource();
+            // Register background task
+            _currentTaskId = _backgroundTaskService.RegisterTask(
+                "Document Processing", 
+                $"Processing {Documents.Count} documents");
 
             try
             {
@@ -254,29 +546,34 @@ namespace BulkEditor.UI.ViewModels
                 FailedDocuments = 0;
                 ProgressValue = 0;
 
-                // Start a new session for this processing job
-                var session = _sessionManager.StartSession();
-                _logger.LogInformation("Processing session {SessionId} started.", session.SessionId);
-                IsRevertEnabled = false; // Disable revert until processing is complete
-
-                SetStatusProcessing("Backing up files before processing...");
-                var filePaths = Documents.Select(d => d.FilePath).ToList();
-
-                // Create backups before processing
-                foreach (var filePath in filePaths)
+                // Start background task
+                var results = await _backgroundTaskService.StartTaskAsync(_currentTaskId, async (cancellationToken) =>
                 {
-                    var backupPath = await _backupService.CreateBackupAsync(filePath, session);
-                    _sessionManager.AddFileToSession(filePath, backupPath);
-                }
+                    // Start a new session for this processing job
+                    var session = _sessionManager.StartSession();
+                    _logger.LogInformation("Processing session {SessionId} started.", session.SessionId);
+                    IsRevertEnabled = false; // Disable revert until processing is complete
 
-                SetStatusProcessing("Starting document processing...");
+                    SetStatusProcessing("Backing up files before processing...");
+                    var filePaths = Documents.Select(d => d.FilePath).ToList();
 
-                var progress = new Progress<BatchProcessingProgress>(OnBatchProgressChanged);
+                    // Create backups before processing
+                    foreach (var filePath in filePaths)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var backupPath = await _backupService.CreateBackupAsync(filePath, session);
+                        _sessionManager.AddFileToSession(filePath, backupPath);
+                    }
 
-                var results = await _applicationService.ProcessDocumentsBatchAsync(
-                    filePaths,
-                    progress,
-                    _cancellationTokenSource.Token);
+                    SetStatusProcessing("Starting document processing...");
+
+                    var progress = new Progress<BatchProcessingProgress>(OnBatchProgressChanged);
+
+                    return await _applicationService.ProcessDocumentsBatchAsync(
+                        filePaths,
+                        progress,
+                        cancellationToken);
+                });
 
                 // Update document ViewModels with results
                 foreach (var result in results)
@@ -286,6 +583,13 @@ namespace BulkEditor.UI.ViewModels
                     {
                         UpdateDocumentViewModel(documentVM, result);
                     }
+                }
+
+                // Update ProcessingResults for the modern tree view
+                ProcessingResults.Clear();
+                foreach (var result in results)
+                {
+                    ProcessingResults.Add(new ProcessingResultViewModel(result));
                 }
 
                 ProcessingStatistics = _applicationService.GetProcessingStatistics(results);
@@ -323,8 +627,7 @@ namespace BulkEditor.UI.ViewModels
             finally
             {
                 IsProcessing = false;
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = null;
+                _currentTaskId = null;
                 IsRevertEnabled = _undoService.CanUndo();
             }
         }
@@ -334,11 +637,15 @@ namespace BulkEditor.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanCancel))]
         private void CancelProcessing()
         {
-            _cancellationTokenSource?.Cancel();
-            SetStatusWarning("Cancelling processing...");
+            if (!string.IsNullOrEmpty(_currentTaskId))
+            {
+                _backgroundTaskService.CancelTask(_currentTaskId);
+                SetStatusWarning("Cancelling processing...");
+                _logger.LogInformation("User requested cancellation of background task: {TaskId}", _currentTaskId);
+            }
         }
 
-        private bool CanCancel() => IsProcessing && _cancellationTokenSource != null;
+        private bool CanCancel() => IsProcessing && !string.IsNullOrEmpty(_currentTaskId);
 
         [RelayCommand]
         private void ClearDocuments()
@@ -351,6 +658,8 @@ namespace BulkEditor.UI.ViewModels
             }
 
             Documents.Clear();
+            DocumentItems.Clear();
+            ProcessingResults.Clear();
             SelectedDocument = null;
             TotalDocuments = 0;
             ProcessedDocuments = 0;
@@ -453,12 +762,43 @@ namespace BulkEditor.UI.ViewModels
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
+                // Update basic progress
                 TotalDocuments = progress.TotalDocuments;
                 ProcessedDocuments = progress.ProcessedDocuments;
                 FailedDocuments = progress.FailedDocuments;
                 ProgressValue = progress.PercentageComplete;
-                ProgressMessage = $"Processing: {progress.CurrentDocument}";
-                SetStatusProcessing($"Processing {progress.ProcessedDocuments}/{progress.TotalDocuments} documents...");
+                OverallProgress = progress.OverallProgress;
+                
+                // Update detailed progress information
+                CurrentOperation = progress.CurrentOperation;
+                CurrentDocumentProgress = progress.CurrentDocumentProgress;
+                ElapsedTime = progress.FormattedElapsedTime;
+                EstimatedTimeRemaining = progress.FormattedEstimatedTimeRemaining;
+                
+                // Update processing statistics
+                TotalHyperlinksFound = progress.TotalHyperlinksFound;
+                TotalHyperlinksProcessed = progress.TotalHyperlinksProcessed;
+                TotalHyperlinksUpdated = progress.TotalHyperlinksUpdated;
+                TotalTextReplacements = progress.TotalTextReplacements;
+                AverageProcessingTime = $"{progress.AverageProcessingTimePerDocument:F2}s";
+                
+                // Update recent errors (keep only last 5)
+                RecentErrors.Clear();
+                foreach (var error in progress.RecentErrors.TakeLast(5))
+                {
+                    RecentErrors.Add(error);
+                }
+                
+                // Update progress message with more detail
+                var currentDoc = !string.IsNullOrEmpty(progress.CurrentDocument) 
+                    ? Path.GetFileName(progress.CurrentDocument) 
+                    : "Unknown";
+                
+                ProgressMessage = string.IsNullOrEmpty(progress.CurrentOperation)
+                    ? $"Processing: {currentDoc}"
+                    : $"{progress.CurrentOperation}: {currentDoc}";
+                
+                SetStatusProcessing($"Processing {progress.ProcessedDocuments}/{progress.TotalDocuments} documents - {progress.FormattedElapsedTime} elapsed");
             });
         }
 
@@ -471,6 +811,21 @@ namespace BulkEditor.UI.ViewModels
             documentVM.UpdatedHyperlinks = result.Hyperlinks.Count(h => h.ActionTaken == HyperlinkAction.Updated);
             documentVM.ErrorCount = result.ProcessingErrors.Count;
             documentVM.HasErrors = result.ProcessingErrors.Any();
+
+            // Also update the corresponding DocumentListItemViewModel
+            var documentListItem = DocumentItems.FirstOrDefault(item => item.Document.Id == result.Id);
+            if (documentListItem != null)
+            {
+                // Update the document reference and refresh the view model
+                documentListItem.Document.Status = result.Status;
+                documentListItem.Document.ProcessedAt = result.ProcessedAt;
+                documentListItem.Document.ProcessingErrors = result.ProcessingErrors;
+                documentListItem.Document.ChangeLog = result.ChangeLog;
+                documentListItem.Document.BackupPath = result.BackupPath;
+                
+                // Trigger property updates on the list item
+                documentListItem.UpdateFromDocument();
+            }
         }
 
         partial void OnSelectedDocumentChanged(DocumentViewModel? value)
@@ -485,10 +840,46 @@ namespace BulkEditor.UI.ViewModels
             _notificationService.ShowInfo("Application Ready", "Bulk Document Editor is ready for use.");
         }
 
+        private void OnBackgroundTaskStatusChanged(object? sender, BackgroundTaskStatusChangedEventArgs e)
+        {
+            try
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // Update active tasks collection
+                    var activeTasks = _backgroundTaskService.GetActiveTasks().ToList();
+                    ActiveTasks.Clear();
+                    foreach (var task in activeTasks)
+                    {
+                        ActiveTasks.Add(task);
+                    }
+
+                    // Update command states
+                    CancelProcessingCommand.NotifyCanExecuteChanged();
+                    ProcessDocumentsCommand.NotifyCanExecuteChanged();
+
+                    _logger.LogDebug("Background task {TaskId} status changed: {OldStatus} -> {NewStatus}",
+                        e.TaskId, e.OldStatus, e.NewStatus);
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling background task status change");
+            }
+        }
+
         public override void Cleanup()
         {
-            _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource?.Dispose();
+            // Unsubscribe from events
+            _backgroundTaskService.TaskStatusChanged -= OnBackgroundTaskStatusChanged;
+
+            // Cancel any running background tasks
+            if (!string.IsNullOrEmpty(_currentTaskId))
+            {
+                _backgroundTaskService.CancelTask(_currentTaskId);
+            }
+            _backgroundTaskService.CancelAllTasks();
+            
             base.Cleanup();
         }
 
@@ -527,6 +918,194 @@ namespace BulkEditor.UI.ViewModels
                 SetStatusError("Failed to open settings");
             }
         }
+
+        #region Document List Actions
+
+        /// <summary>
+        /// Removes a document from the processing list
+        /// </summary>
+        private void RemoveDocumentFromList(DocumentListItemViewModel documentItem)
+        {
+            try
+            {
+                // Remove from both collections
+                var documentViewModel = Documents.FirstOrDefault(d => d.Document?.Id == documentItem.Document.Id);
+                if (documentViewModel != null)
+                {
+                    Documents.Remove(documentViewModel);
+                }
+
+                DocumentItems.Remove(documentItem);
+
+                // Update counts
+                TotalDocuments = Documents.Count;
+
+                // Update status
+                if (Documents.Count == 0)
+                {
+                    SetStatusReady();
+                }
+                else
+                {
+                    SetStatusSuccess($"Ready - {Documents.Count} documents selected for processing");
+                }
+
+                _logger.LogInformation($"Document removed from list: {documentItem.Document.FileName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing document from list");
+                _notificationService.ShowError("Remove Error", "Failed to remove document from list.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Opens the document details popup window
+        /// </summary>
+        private void ViewDocumentDetails(DocumentListItemViewModel documentItem)
+        {
+            try
+            {
+                var detailsViewModel = new DocumentDetailsViewModel(
+                    documentItem.Document,
+                    _backupService,
+                    _logger,
+                    _notificationService);
+
+                var detailsWindow = new Views.DocumentDetailsWindow(detailsViewModel)
+                {
+                    Owner = System.Windows.Application.Current.MainWindow
+                };
+
+                detailsWindow.ShowDialog();
+
+                _logger.LogInformation($"Viewed details for document: {documentItem.Document.FileName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error viewing document details");
+                _notificationService.ShowError("View Details Error", "Failed to open document details.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Opens the dedicated processing options window
+        /// </summary>
+        [RelayCommand]
+        private void OpenProcessingSettings()
+        {
+            try
+            {
+                var processingOptionsViewModel = new SimpleProcessingOptionsViewModel(
+                    _logger,
+                    _notificationService);
+                
+                var processingOptionsWindow = new Views.ProcessingOptionsWindow(processingOptionsViewModel)
+                {
+                    Owner = System.Windows.Application.Current.MainWindow
+                };
+
+                var result = processingOptionsWindow.ShowDialog();
+
+                if (result == true)
+                {
+                    _notificationService.ShowSuccess("Processing Options Saved", "Processing options have been updated successfully.");
+                    SetStatusSuccess("Processing options updated successfully");
+                    _logger.LogInformation("Processing options updated by user");
+                }
+
+                _logger.LogInformation("Processing options window opened");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error opening processing options window");
+                _notificationService.ShowError("Processing Options Error", "Failed to open processing options window.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Opens the file location in Windows Explorer
+        /// </summary>
+        private void OpenDocumentLocation(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    // Open Windows Explorer and select the file
+                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+                    _logger.LogInformation($"Opened location for: {filePath}");
+                }
+                else
+                {
+                    _notificationService.ShowWarning("File Not Found", 
+                        $"The file no longer exists at the specified location:\n{filePath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error opening document location");
+                _notificationService.ShowError("Open Location Error", "Failed to open document location.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Handle update availability notifications and show them to the user
+        /// </summary>
+        private void OnUpdateAvailable(object? sender, UpdateAvailableEventArgs e)
+        {
+            try
+            {
+                _logger.LogInformation("Update available: Version {Version}", e.UpdateInfo.Version);
+
+                // Show notification to user about available update  
+                var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+                var message = $"A new version ({e.UpdateInfo.Version}) of BulkEditor is available!\n\n" +
+                              $"Current version: {currentVersion}\n" +
+                              $"Release notes: {e.UpdateInfo.ReleaseNotes ?? "See GitHub for details"}\n\n" +
+                              "Would you like to download and install the update now?";
+
+                var result = System.Windows.MessageBox.Show(
+                    message,
+                    "Update Available",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Information);
+
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    // User wants to install the update
+                    _logger.LogInformation("User chose to install update {Version}", e.UpdateInfo.Version);
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var updateService = _serviceProvider.GetRequiredService<IUpdateService>();
+                            await updateService.DownloadAndInstallUpdateAsync(e.UpdateInfo);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to download and install update");
+                            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                _notificationService.ShowError("Update Error", "Failed to download and install update. Please try again later.", ex);
+                            });
+                        }
+                    });
+                }
+                else
+                {
+                    _logger.LogInformation("User declined to install update {Version}", e.UpdateInfo.Version);
+                    _notificationService.ShowSuccess("Update Available", "A new version is available. You can check for updates later in Settings.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling update available notification");
+                _notificationService.ShowError("Update Notification Error", "Failed to process update notification.", ex);
+            }
+        }
+
+        #endregion
     }
 
     /// <summary>

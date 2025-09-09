@@ -1,4 +1,7 @@
-﻿using BulkEditor.UI.ViewModels;
+﻿using BulkEditor.Core.Configuration;
+using BulkEditor.UI.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -25,8 +28,15 @@ namespace BulkEditor.UI
             // Initialize the ViewModel
             Loaded += async (s, e) => await viewModel.InitializeAsync();
 
-            // Cleanup when closing
-            Closing += (s, e) => viewModel.Cleanup();
+            // Load window position
+            LoadWindowSettings();
+
+            // Cleanup and save window position when closing
+            Closing += (s, e) => 
+            {
+                SaveWindowSettings();
+                viewModel.Cleanup();
+            };
         }
 
         #region Drag & Drop Event Handlers
@@ -122,6 +132,109 @@ namespace BulkEditor.UI
             }
 
             e.Handled = true;
+        }
+
+        #endregion
+
+        #region Window Position Management
+
+        private void LoadWindowSettings()
+        {
+            try
+            {
+                // Get AppSettings from DI container through Application
+                var app = System.Windows.Application.Current as App;
+                var serviceProvider = app?.ServiceProvider;
+                var appSettings = serviceProvider?.GetService<AppSettings>();
+                
+                if (appSettings?.UI?.Window != null)
+                {
+                    var windowSettings = appSettings.UI.Window;
+                    
+                    // Set window size
+                    if (windowSettings.Width > 0 && windowSettings.Height > 0)
+                    {
+                        Width = windowSettings.Width;
+                        Height = windowSettings.Height;
+                    }
+                    
+                    // Set window position (ensure it's on screen)
+                    if (IsPositionOnScreen(windowSettings.Left, windowSettings.Top, windowSettings.Width, windowSettings.Height))
+                    {
+                        Left = windowSettings.Left;
+                        Top = windowSettings.Top;
+                    }
+                    else
+                    {
+                        // Center window if saved position is off-screen
+                        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    }
+                    
+                    // Set window state
+                    if (windowSettings.Maximized)
+                    {
+                        WindowState = WindowState.Maximized;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // If loading fails, use default centering
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                System.Diagnostics.Debug.WriteLine($"Failed to load window settings: {ex.Message}");
+            }
+        }
+        
+        private void SaveWindowSettings()
+        {
+            try
+            {
+                // Get AppSettings from DI container through Application
+                var app = System.Windows.Application.Current as App;
+                var serviceProvider = app?.ServiceProvider;
+                var appSettings = serviceProvider?.GetService<AppSettings>();
+                
+                if (appSettings?.UI?.Window != null)
+                {
+                    var windowSettings = appSettings.UI.Window;
+                    
+                    // Save maximized state
+                    windowSettings.Maximized = WindowState == WindowState.Maximized;
+                    
+                    // Save position and size (but only if not maximized)
+                    if (WindowState == WindowState.Normal)
+                    {
+                        windowSettings.Width = ActualWidth;
+                        windowSettings.Height = ActualHeight;
+                        windowSettings.Left = Left;
+                        windowSettings.Top = Top;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save window settings: {ex.Message}");
+            }
+        }
+        
+        private bool IsPositionOnScreen(double left, double top, double width, double height)
+        {
+            try
+            {
+                // Simple bounds check against primary screen working area
+                var workingArea = SystemParameters.WorkArea;
+                
+                // Check if at least part of the window would be visible
+                return left < workingArea.Right - 100 && 
+                       top < workingArea.Bottom - 100 && 
+                       left + width > workingArea.Left + 100 && 
+                       top + height > workingArea.Top + 100;
+            }
+            catch
+            {
+                // If we can't determine, assume it's safe
+                return true;
+            }
         }
 
         #endregion

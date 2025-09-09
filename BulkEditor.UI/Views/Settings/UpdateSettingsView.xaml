@@ -43,8 +43,18 @@
             </GroupBox>
 
             <!-- GitHub Repository Settings -->
-            <GroupBox Header="Repository Settings">
+            <GroupBox Header="Override Repository Settings">
                 <StackPanel>
+                    <TextBlock Text="Application defaults: ItMeDiaTech / Bulk_Editor_WPF"
+                               FontStyle="Italic" 
+                               Foreground="Gray" 
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="Only modify these fields to override the default application settings."
+                               FontStyle="Italic" 
+                               Foreground="Orange" 
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,12"/>
+                               
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>

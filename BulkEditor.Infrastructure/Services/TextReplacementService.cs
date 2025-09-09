@@ -29,7 +29,7 @@ namespace BulkEditor.Infrastructure.Services
         /// <summary>
         /// NEW METHOD: Processes text replacements using an already opened WordprocessingDocument to prevent corruption
         /// </summary>
-        public async Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, CoreDocument document, IEnumerable<TextReplacementRule> rules, CancellationToken cancellationToken = default)
+        public Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, CoreDocument document, IEnumerable<TextReplacementRule> rules, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -38,7 +38,7 @@ namespace BulkEditor.Infrastructure.Services
                 if (!activeRules.Any())
                 {
                     _logger.LogDebug("No active text replacement rules found for document: {FileName}", document.FileName);
-                    return 0;
+                    return Task.FromResult(0);
                 }
 
                 _logger.LogInformation("Processing {Count} text replacement rules in session for document: {FileName}", activeRules.Count, document.FileName);
@@ -47,7 +47,7 @@ namespace BulkEditor.Infrastructure.Services
                 if (mainPart?.Document?.Body == null)
                 {
                     _logger.LogWarning("No document body found for text replacement: {FileName}", document.FileName);
-                    return 0;
+                    return Task.FromResult(0);
                 }
 
                 var totalReplacements = 0;
@@ -100,7 +100,7 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 _logger.LogInformation("Text replacement processing completed in session for document: {FileName}, replacements made: {Count}", document.FileName, totalReplacements);
-                return totalReplacements;
+                return Task.FromResult(totalReplacements);
             }
             catch (Exception ex)
             {

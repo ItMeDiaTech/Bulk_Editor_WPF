@@ -97,7 +97,7 @@ namespace BulkEditor.Application.Services
         /// <summary>
         /// Manually check for updates
         /// </summary>
-        public async Task<UpdateInfo> CheckForUpdatesAsync()
+        public async Task<UpdateInfo?> CheckForUpdatesAsync()
         {
             try
             {
@@ -189,7 +189,7 @@ namespace BulkEditor.Application.Services
             return _updateService.GetCurrentVersion();
         }
 
-        private async void OnUpdateCheckTimerElapsed(object sender, ElapsedEventArgs e)
+        private async void OnUpdateCheckTimerElapsed(object? sender, ElapsedEventArgs e)
         {
             try
             {
@@ -250,9 +250,9 @@ namespace BulkEditor.Application.Services
     {
         public bool Success { get; }
         public UpdateInfo UpdateInfo { get; }
-        public string ErrorMessage { get; }
+        public string? ErrorMessage { get; }
 
-        public UpdateCompletedEventArgs(bool success, UpdateInfo updateInfo, string errorMessage = null)
+        public UpdateCompletedEventArgs(bool success, UpdateInfo updateInfo, string? errorMessage = null)
         {
             Success = success;
             UpdateInfo = updateInfo;

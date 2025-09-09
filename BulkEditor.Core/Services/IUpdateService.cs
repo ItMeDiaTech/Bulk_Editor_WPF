@@ -11,7 +11,7 @@ namespace BulkEditor.Core.Services
         /// <summary>
         /// Check if an update is available on GitHub
         /// </summary>
-        Task<UpdateInfo> CheckForUpdatesAsync();
+        Task<UpdateInfo> CheckForUpdatesAsync(bool bypassRateLimit = false);
 
         /// <summary>
         /// Download and install the latest update
