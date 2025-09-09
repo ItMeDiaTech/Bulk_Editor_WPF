@@ -1,83 +1,262 @@
-[2025-09-09 16:30:24.166 -04:00 INF] Update manager started successfully
-[2025-09-09 16:30:24.166 -04:00 INF] Application started successfully
-[2025-09-09 16:31:52.567 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.0132845 seconds
-[2025-09-09 16:33:32.561 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 99.9919731 seconds
-[2025-09-09 16:35:02.571 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.0090214 seconds
-[2025-09-09 16:36:42.565 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 99.9945041 seconds
-[2025-09-09 16:38:12.568 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.0026392 seconds
-[2025-09-09 16:39:52.564 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 99.9947366 seconds
-[2025-09-09 16:41:20.948 -04:00 INF] Starting file selection dialog
-[2025-09-09 16:41:24.483 -04:00 INF] Files selected: 1
-[2025-09-09 16:41:24.486 -04:00 INF] Starting file addition process for 1 files
-[2025-09-09 16:41:24.490 -04:00 INF] File validation completed: 1 valid, 0 invalid
-[2025-09-09 16:41:24.493 -04:00 INF] Validation completed: 1 valid, 0 invalid files
-[2025-09-09 16:41:24.495 -04:00 INF] Creating DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:24.497 -04:00 INF] Successfully created DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:24.497 -04:00 INF] Added DocumentListItemViewModel to collection: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:24.498 -04:00 INF] Applying FilterDocuments to refresh UI display
-[2025-09-09 16:41:24.499 -04:00 INF] Successfully applied FilterDocuments via Dispatcher
-[2025-09-09 16:41:24.500 -04:00 INF] Success notification: Files Added - Successfully added 1 document(s) for processing.
-[2025-09-09 16:41:28.936 -04:00 INF] Registered background task: Document Processing (ID: 26404c70-83f2-4fef-8cb7-ae97ea8dab28)
-[2025-09-09 16:41:28.940 -04:00 INF] Starting background task: Document Processing (ID: 26404c70-83f2-4fef-8cb7-ae97ea8dab28)
-[2025-09-09 16:41:28.942 -04:00 INF] Started new session: "6271532e-b63e-486d-99ce-1babd13e5542"
-[2025-09-09 16:41:28.944 -04:00 INF] Processing session "6271532e-b63e-486d-99ce-1babd13e5542" started.
-[2025-09-09 16:41:28.950 -04:00 INF] Successfully created backup for C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx at C:\Users\C551465\AppData\Local\BulkEditor\backups\6271532e-b63e-486d-99ce-1babd13e5542\TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:28.954 -04:00 INF] Starting batch processing of 1 files
-[2025-09-09 16:41:28.955 -04:00 INF] File validation completed: 1 valid, 0 invalid
-[2025-09-09 16:41:28.958 -04:00 INF] Starting batch processing of 1 documents
-[2025-09-09 16:41:28.960 -04:00 INF] Starting document processing: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:28.988 -04:00 INF] Copied file from C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx to C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (22) - Copy_backup_20250909_164128.docx
-[2025-09-09 16:41:28.989 -04:00 INF] Created backup: C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (22) - Copy_backup_20250909_164128.docx
-[2025-09-09 16:41:28.996 -04:00 INF] Processing document in single session with enhanced corruption prevention: TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:29.457 -04:00 WRN] Hyperlink replacement is enabled but no rules are configured
-[2025-09-09 16:41:29.457 -04:00 WRN] Text replacement is enabled but no rules are configured
-[2025-09-09 16:41:29.536 -04:00 INF] Starting hyperlink processing for TestDoc3_Backup - Copy (22) - Copy.docx: 9 hyperlinks found, UpdateHyperlinks=true, ValidateHyperlinks=true
-[2025-09-09 16:41:29.537 -04:00 INF] Starting VBA-compatible hyperlink processing workflow for: TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:29.538 -04:00 INF] Found 3 unique identifiers (Content_IDs and Document_IDs) for Lookup_ID API array
-[2025-09-09 16:41:29.539 -04:00 INF] Processing single API call for 3 lookup identifiers (both Content_IDs and Document_IDs combined)
-[2025-09-09 16:41:29.542 -04:00 INF] Full HTTP API Request JSON: {"Lookup_ID":["8f2f198d-df40-4667-b72c-6f2d2141a91c","CMS-PRD1-062568","TSRC-PROD-066440"]}
-[2025-09-09 16:41:29.547 -04:00 INF] HTTP Request: POST https://prod-11.westus.logic.azure.com:443/workflows/DUMMY/triggers/manual/paths/DUMMY | Size: 91 bytes | Operation: ApiLookupRequest | CorrelationId: 5d42dbee-33c3-4094-902e-44cc192f512c
-[2025-09-09 16:41:46.463 -04:00 INF] HTTP Response: 200 OK | Duration: 16917.292ms | Size: 1095 bytes | Operation: ApiLookupRequest | CorrelationId: 5d42dbee-33c3-4094-902e-44cc192f512c
-[2025-09-09 16:41:46.464 -04:00 INF] Full HTTP API Response JSON: {"Results":[{"Document_ID":"3e2ce332-8254-4a5f-a7d3-9043ef02c6b9","Content_ID":"CMS-PRD1-062568","Title":"Aetna - Requests for Formularies and Member Materials","Status":"Released"},{"Document_ID":"8f2f198d-df40-4667-b72c-6f2d2141a91c","Content_ID":"TSRC-PROD-064131","Title":"Aetna Compass - Requests for Formularies and Member Materials","Status":"Released"},{"Document_ID":"910a5039-91f5-4424-9036-0842d5c1b8b5","Content_ID":"TSRC-PROD-066440","Title":"Aetna Senior Team Compass - Copay Overrides","Status":"Released"}],"Version":"2.1","Changes":"-Download \"UpdateHyperlinksfromAPI\" from:\\n    https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=d0c394f6-a2eb-45fb-b15e-7a896d7dec97\\n-Follow section \"Updating the Macro\" in above Work Instructions\\n\\nChanges:\\n    1. Fixed error that occured when running macro on a document with no work instruction links\\n           a. Old versions of this Macro will still run\\n           b. Please update as time allows.\\n           c. Pop-up saying \"No Valid Look_Up IDs\" is not an error and not what this change is referencing"}
-[2025-09-09 16:41:46.464 -04:00 INF] API Call Performance: Duration=16923.4902ms, Status="OK", ResponseLength=1095 chars
-[2025-09-09 16:41:46.464 -04:00 INF] Successfully called real API with single request for 3 combined lookup identifiers (Content_IDs and Document_IDs)
-[2025-09-09 16:41:46.470 -04:00 WRN] JSON property not found with any case variation: Lookup_ID
-[2025-09-09 16:41:46.471 -04:00 WRN] JSON property not found with any case variation: Lookup_ID
-[2025-09-09 16:41:46.471 -04:00 WRN] JSON property not found with any case variation: Lookup_ID
-[2025-09-09 16:41:46.471 -04:00 INF] Dictionary built with 6 entries, found 3 active, 0 expired, 0 missing
-[2025-09-09 16:41:46.471 -04:00 INF] API response processing completed: 3 found, 0 expired, 0 missing (0.0% success rate)
-[2025-09-09 16:41:46.474 -04:00 INF] Updated hyperlink: URL Updated for 
-[2025-09-09 16:41:46.474 -04:00 INF] Appended Content_ID to hyperlink: 062568
-[2025-09-09 16:41:46.474 -04:00 INF] Detected title difference: Current=' (062568)', API='Aetna - Requests for Formularies and Member Materials'
-[2025-09-09 16:41:46.474 -04:00 INF] Updated hyperlink: URL Updated, Appended Content ID for 
-[2025-09-09 16:41:46.474 -04:00 INF] Appended Content_ID to hyperlink: 066440
-[2025-09-09 16:41:46.474 -04:00 INF] Detected title difference: Current='Aetna Senior Compass - Copay Overrides', API='Aetna Senior Team Compass - Copay Overrides'
-[2025-09-09 16:41:46.474 -04:00 INF] Updated hyperlink: URL Updated, Appended Content ID for 
-[2025-09-09 16:41:46.474 -04:00 INF] Hyperlink processing summary for TestDoc3_Backup - Copy (22) - Copy.docx: Total: 3, Found: 3, Expired: 0, Not Found: 0, Success Rate: 100.0%, API Response Rate: 3 found + 0 expired from 0 API IDs
-[2025-09-09 16:41:46.474 -04:00 INF] Completed VBA-compatible hyperlink processing workflow for: TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:46.476 -04:00 INF] Updating 3 hyperlinks in document session using atomic VBA logic: TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:46.477 -04:00 INF] Updated hyperlink atomically with VBA logic: rId5 -> https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c, Display: 'Aetna Compass - Requests for Formularies and Member Materials (064131)'
-[2025-09-09 16:41:46.477 -04:00 INF] Updated hyperlink atomically with VBA logic: rId6 -> file:///C:/Users/PD988/Downloads/CMS-PRD1-062568, Display: ''
-[2025-09-09 16:41:46.477 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> file:///C:/Users/c551465/Downloads/TSRC-PROD-066440, Display: 'Aetna Senior Compass - Copay Overrides'
-[2025-09-09 16:41:46.477 -04:00 INF] Hyperlink updates completed atomically in session for document: TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:46.477 -04:00 INF] Hyperlink processing completed for TestDoc3_Backup - Copy (22) - Copy.docx: Duration=16941.9106ms
-[2025-09-09 16:41:46.504 -04:00 INF] Starting replacement processing for TestDoc3_Backup - Copy (22) - Copy.docx: HyperlinkReplacement=true (0 rules), TextReplacement=true (0 rules)
-[2025-09-09 16:41:46.505 -04:00 INF] Starting replacement processing in session for document: TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:46.505 -04:00 INF] SESSION-BASED REPLACEMENT PROCESSING COMPLETED for document: TestDoc3_Backup - Copy (22) - Copy.docx, TOTAL REPLACEMENTS: 0
-[2025-09-09 16:41:46.505 -04:00 INF] Replacement processing completed for TestDoc3_Backup - Copy (22) - Copy.docx: Duration=1.3824ms
-[2025-09-09 16:41:46.535 -04:00 INF] Text optimization skipped for TestDoc3_Backup - Copy (22) - Copy.docx: OptimizeText disabled in settings
-[2025-09-09 16:41:46.562 -04:00 INF] Starting document save operation for: TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:46.598 -04:00 INF] DOCUMENT SAVE COMPLETED SUCCESSFULLY: TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:46.696 -04:00 INF] Document processed successfully with comprehensive validation: TestDoc3_Backup - Copy (22) - Copy.docx, Total Duration: 17699.6575ms, Hyperlinks: 9, Changes: 5
-[2025-09-09 16:41:46.697 -04:00 INF] Document processing completed successfully: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:41:46.698 -04:00 INF] Batch processing completed: 1 successful, 0 failed
-[2025-09-09 16:41:46.698 -04:00 INF] Batch processing completed in "00:00:17.7433993": 1 files, 1 successful
-[2025-09-09 16:41:46.704 -04:00 INF] Background task completed successfully: Document Processing (ID: 26404c70-83f2-4fef-8cb7-ae97ea8dab28)
-[2025-09-09 16:41:46.712 -04:00 INF] Processing statistics calculated: 1/1 successful
-[2025-09-09 16:41:46.713 -04:00 INF] Success notification: Processing Complete - Successfully processed all 1 documents.
-[2025-09-09 16:41:46.713 -04:00 INF] Batch processing completed successfully
-[2025-09-09 16:41:53.524 -04:00 INF] Opened location for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (22) - Copy.docx
-[2025-09-09 16:43:22.561 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 95.8526485 seconds
-[2025-09-09 16:44:52.569 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.008026 seconds
-[2025-09-09 16:46:32.564 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 99.9944939 seconds
-[2025-09-09 16:48:02.571 -04:00 WRN] FREEZE DETECTION: UI appears unresponsive for 90.0073277 seconds
+[2025-09-09 17:15:42.686 -04:00 INF] Checking for application updates...
+[2025-09-09 17:15:42.688 -04:00 INF] Checking for updates from GitHub...
+[2025-09-09 17:15:42.977 -04:00 INF] No updates available. Current: 2.4.0.0, Latest: 2.4.0.0
+[2025-09-09 17:15:42.979 -04:00 INF] No updates available
+[2025-09-09 17:15:42.979 -04:00 INF] Update manager started successfully
+[2025-09-09 17:15:42.980 -04:00 INF] Application started successfully
+[2025-09-09 17:15:45.807 -04:00 INF] Starting file selection dialog
+[2025-09-09 17:15:49.612 -04:00 INF] Files selected: 1
+[2025-09-09 17:15:49.615 -04:00 INF] Starting file addition process for 1 files
+[2025-09-09 17:15:49.619 -04:00 INF] File validation completed: 1 valid, 0 invalid
+[2025-09-09 17:15:49.623 -04:00 INF] Validation completed: 1 valid, 0 invalid files
+[2025-09-09 17:15:49.625 -04:00 INF] Creating DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:15:49.626 -04:00 INF] Successfully created DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:15:49.627 -04:00 INF] Added DocumentListItemViewModel to collection: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:15:49.627 -04:00 INF] Applying FilterDocuments to refresh UI display
+[2025-09-09 17:15:49.629 -04:00 INF] Successfully applied FilterDocuments via Dispatcher
+[2025-09-09 17:15:49.631 -04:00 INF] Success notification: Files Added - Successfully added 1 document(s) for processing.
+[2025-09-09 17:15:51.914 -04:00 INF] Processing options initialized with default settings
+[2025-09-09 17:16:01.711 -04:00 INF] Processing options window opened successfully
+[2025-09-09 17:16:03.036 -04:00 INF] Processing options initialized with default settings
+[2025-09-09 17:16:05.564 -04:00 INF] Processing options window opened successfully
+[2025-09-09 17:16:08.397 -04:00 INF] Registered background task: Document Processing (ID: 20d8c8f6-88c9-4c1a-81ee-830c6720bd4b)
+[2025-09-09 17:16:08.400 -04:00 INF] Starting background task: Document Processing (ID: 20d8c8f6-88c9-4c1a-81ee-830c6720bd4b)
+[2025-09-09 17:16:08.402 -04:00 INF] Started new session: "0db7e4f0-664a-47d5-9fee-240fd0f98981"
+[2025-09-09 17:16:08.403 -04:00 INF] Processing session "0db7e4f0-664a-47d5-9fee-240fd0f98981" started.
+[2025-09-09 17:16:08.426 -04:00 INF] Successfully created backup for C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx at C:\Users\C551465\AppData\Local\BulkEditor\backups\0db7e4f0-664a-47d5-9fee-240fd0f98981\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:08.430 -04:00 INF] Starting batch processing of 1 files
+[2025-09-09 17:16:08.430 -04:00 INF] File validation completed: 1 valid, 0 invalid
+[2025-09-09 17:16:08.432 -04:00 INF] Starting batch processing of 1 documents
+[2025-09-09 17:16:08.435 -04:00 INF] Starting document processing: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:08.444 -04:00 INF] Copied file from C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx to C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (23) - Copy_backup_20250909_171608.docx
+[2025-09-09 17:16:08.445 -04:00 INF] Created backup: C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (23) - Copy_backup_20250909_171608.docx
+[2025-09-09 17:16:08.450 -04:00 INF] Processing document in single session with enhanced corruption prevention: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:08.816 -04:00 WRN] Hyperlink replacement is enabled but no rules are configured
+[2025-09-09 17:16:08.817 -04:00 WRN] Text replacement is enabled but no rules are configured
+[2025-09-09 17:16:08.863 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.863 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.868 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'CMS-PRD1-062568' from URL: file:///C:/Users/PD988/Downloads/CMS-PRD1-062568
+[2025-09-09 17:16:08.868 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'CMS-PRD1-062568' from URL: file:///C:/Users/PD988/Downloads/CMS-PRD1-062568
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.868 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.868 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] Initial hyperlink extraction found 9 hyperlinks in document: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:08.869 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.869 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.869 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'CMS-PRD1-062568' from URL: file:///C:/Users/PD988/Downloads/CMS-PRD1-062568
+[2025-09-09 17:16:08.869 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'CMS-PRD1-062568' from URL: file:///C:/Users/PD988/Downloads/CMS-PRD1-062568
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.869 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.869 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.870 -04:00 INF] Pre-cleanup: Found valid lookup ID '8f2f198d-df40-4667-b72c-6f2d2141a91c' in hyperlink with display text: 'Aetna Compass - Requests for Formularies and Member Materials (064131)'
+[2025-09-09 17:16:08.870 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'CMS-PRD1-062568' from URL: file:///C:/Users/PD988/Downloads/CMS-PRD1-062568
+[2025-09-09 17:16:08.870 -04:00 INF] Pre-cleanup: Found valid lookup ID 'CMS-PRD1-062568' in hyperlink with display text: ''
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.870 -04:00 INF] Pre-cleanup: Found valid lookup ID 'TSRC-PROD-066440' in hyperlink with display text: 'Aetna Senior Compass - Copay Overrides'
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.870 -04:00 INF] Pre-cleanup analysis: Found 3 valid lookup IDs from 9 hyperlinks
+[2025-09-09 17:16:08.872 -04:00 INF] Analyzing 17 hyperlinks for invisible link cleanup in document: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:08.873 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.873 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.873 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.873 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.873 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.873 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.873 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.873 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'CMS-PRD1-062568' from URL: file:///C:/Users/PD988/Downloads/CMS-PRD1-062568
+[2025-09-09 17:16:08.873 -04:00 INF] ✓ Deleting invisible hyperlink with lookup ID 'CMS-PRD1-062568' (already extracted for API): file:///C:/Users/PD988/Downloads/CMS-PRD1-062568
+[2025-09-09 17:16:08.874 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.874 -04:00 INF] Invisible hyperlink cleanup completed for TestDoc3_Backup - Copy (23) - Copy.docx: 1 empty hyperlinks removed (lookup IDs already extracted for API processing)
+[2025-09-09 17:16:08.875 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.875 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.875 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.875 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.876 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.876 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.876 -04:00 INF] After cleanup: 8 hyperlinks remain in document: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:08.893 -04:00 INF] Starting hyperlink processing for TestDoc3_Backup - Copy (23) - Copy.docx: 8 hyperlinks found, UpdateHyperlinks=true, ValidateHyperlinks=true
+[2025-09-09 17:16:08.895 -04:00 INF] Starting VBA-compatible hyperlink processing workflow for: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:08.895 -04:00 INF] Analyzing 8 hyperlinks for valid lookup identifiers
+[2025-09-09 17:16:08.895 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:08.895 -04:00 INF] Added unique identifier from URL: 8f2f198d-df40-4667-b72c-6f2d2141a91c for hyperlink: Aetna Compass - Requests for Formularies and Member Materials (064131)
+[2025-09-09 17:16:08.895 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.896 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:08.896 -04:00 INF] Added unique identifier from URL: TSRC-PROD-066440 for hyperlink: Aetna Senior Compass - Copay Overrides
+[2025-09-09 17:16:08.896 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.896 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.896 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.896 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.896 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:08.896 -04:00 INF] Hyperlink Analysis Results for TestDoc3_Backup - Copy (23) - Copy.docx:
+[2025-09-09 17:16:08.896 -04:00 INF]   Hyperlink 1: Hyperlink URL: 'https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c', Display: 'Aetna Compass - Requests for Formularies and Member Materials (064131)', ExtractedID: '8f2f198d-df40-4667-b72c-6f2d2141a91c', ADDED to lookup array
+[2025-09-09 17:16:08.896 -04:00 INF]   Hyperlink 2: Hyperlink URL: 'https://thesource.cvshealth.com/nuxeo/thesource/', Display: 'Aetna - GPS - Locating Plan in GPS', ExtractedID: '', NO VALID ID FOUND - will be skipped from API call
+[2025-09-09 17:16:08.896 -04:00 INF]   Hyperlink 3: Hyperlink URL: 'file:///C:/Users/c551465/Downloads/TSRC-PROD-066440', Display: 'Aetna Senior Compass - Copay Overrides', ExtractedID: 'TSRC-PROD-066440', ADDED to lookup array
+[2025-09-09 17:16:08.896 -04:00 INF]   Hyperlink 4: Hyperlink URL: 'https://thesource.cvshealth.com/nuxeo/thesource/', Display: 'Aetna Med D - Handling Prior Authorization Inquiries (867530)', ExtractedID: '', NO VALID ID FOUND - will be skipped from API call
+[2025-09-09 17:16:08.896 -04:00 INF]   Hyperlink 5: Hyperlink URL: 'https://thesource.cvshealth.com/nuxeo/thesource/', Display: 'Specialty CRU Appeal vs Peer to Peer (P2P)', ExtractedID: '', NO VALID ID FOUND - will be skipped from API call
+[2025-09-09 17:16:08.896 -04:00 INF]   Hyperlink 6: Hyperlink URL: 'https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011', Display: 'CALL-0011 Authenticating Callers', ExtractedID: '', NO VALID ID FOUND - will be skipped from API call
+[2025-09-09 17:16:08.896 -04:00 INF]   Hyperlink 7: Hyperlink URL: 'https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049', Display: 'CALL-0049 Customer Care Internal and External Call Handling', ExtractedID: '', NO VALID ID FOUND - will be skipped from API call
+[2025-09-09 17:16:08.896 -04:00 INF]   Hyperlink 8: Hyperlink URL: 'https://thesource.cvshealth.com/nuxeo/thesource/', Display: 'Customer Care Abbreviations, Definitions, and Terms', ExtractedID: '', NO VALID ID FOUND - will be skipped from API call
+[2025-09-09 17:16:08.896 -04:00 INF] Successfully collected 2 unique identifiers from 8 hyperlinks for Lookup_ID API array
+[2025-09-09 17:16:08.898 -04:00 INF] Processing single API call for 2 lookup identifiers (both Content_IDs and Document_IDs combined)
+[2025-09-09 17:16:08.901 -04:00 INF] Full HTTP API Request JSON: {"Lookup_ID":["8f2f198d-df40-4667-b72c-6f2d2141a91c","TSRC-PROD-066440"]}
+[2025-09-09 17:16:08.913 -04:00 INF] HTTP Request: POST https://prod-11.westus.logic.azure.com:443/workflows/37DUMMY/triggers/manual/paths/DUMMY | Size: 73 bytes | Operation: ApiLookupRequest | CorrelationId: e42cb3bd-83ca-496d-8700-5ef75664888b
+[2025-09-09 17:16:23.532 -04:00 INF] HTTP Response: 200 OK | Duration: 14621.397ms | Size: 925 bytes | Operation: ApiLookupRequest | CorrelationId: e42cb3bd-83ca-496d-8700-5ef75664888b
+[2025-09-09 17:16:23.533 -04:00 INF] Full HTTP API Response JSON: {"Results":[{"Document_ID":"8f2f198d-df40-4667-b72c-6f2d2141a91c","Content_ID":"TSRC-PROD-064131","Title":"Aetna Compass - Requests for Formularies and Member Materials","Status":"Released"},{"Document_ID":"910a5039-91f5-4424-9036-0842d5c1b8b5","Content_ID":"TSRC-PROD-066440","Title":"Aetna Senior Team Compass - Copay Overrides","Status":"Released"}],"Version":"2.1","Changes":"-Download \"UpdateHyperlinksfromAPI\" from:\\n    https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=d0c394f6-a2eb-45fb-b15e-7a896d7dec97\\n-Follow section \"Updating the Macro\" in above Work Instructions\\n\\nChanges:\\n    1. Fixed error that occured when running macro on a document with no work instruction links\\n           a. Old versions of this Macro will still run\\n           b. Please update as time allows.\\n           c. Pop-up saying \"No Valid Look_Up IDs\" is not an error and not what this change is referencing"}
+[2025-09-09 17:16:23.533 -04:00 INF] API Call Performance: Duration=14634.1029ms, Status="OK", ResponseLength=925 chars
+[2025-09-09 17:16:23.533 -04:00 INF] Successfully called real API with single request for 2 combined lookup identifiers (Content_IDs and Document_IDs)
+[2025-09-09 17:16:23.534 -04:00 WRN] JSON property not found with any case variation: Lookup_ID
+[2025-09-09 17:16:23.535 -04:00 WRN] JSON property not found with any case variation: Lookup_ID
+[2025-09-09 17:16:23.535 -04:00 INF] Dictionary built with 4 entries, found 2 active, 0 expired, 0 missing
+[2025-09-09 17:16:23.535 -04:00 INF] API response processing completed: 2 found, 0 expired, 0 missing (0.0% success rate)
+[2025-09-09 17:16:23.536 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
+[2025-09-09 17:16:23.537 -04:00 INF] Updated hyperlink: URL Updated for 
+[2025-09-09 17:16:23.537 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:23.537 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
+[2025-09-09 17:16:23.537 -04:00 INF] Appended Content_ID to hyperlink: 066440
+[2025-09-09 17:16:23.537 -04:00 INF] Detected title difference: Current='Aetna Senior Compass - Copay Overrides', API='Aetna Senior Team Compass - Copay Overrides'
+[2025-09-09 17:16:23.537 -04:00 INF] Updated hyperlink: URL Updated, Appended Content ID for 
+[2025-09-09 17:16:23.537 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:23.537 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:23.537 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:23.537 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
+[2025-09-09 17:16:23.537 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://thesource.cvshealth.com/nuxeo/thesource/ - this hyperlink will be excluded from API call
+[2025-09-09 17:16:23.537 -04:00 INF] Hyperlink processing summary for TestDoc3_Backup - Copy (23) - Copy.docx: Total: 2, Found: 2, Expired: 0, Not Found: 0, Success Rate: 100.0%, API Response Rate: 2 found + 0 expired from 0 API IDs
+[2025-09-09 17:16:23.537 -04:00 INF] Completed VBA-compatible hyperlink processing workflow for: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.539 -04:00 INF] Updating 2 hyperlinks in document session using atomic VBA logic: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.541 -04:00 INF] Updated hyperlink atomically with VBA logic: rId5 -> https://thesource.cvshealth.com/nuxeo/thesource/%23!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c, Display: 'Aetna Compass - Requests for Formularies and Member Materials (064131)'
+[2025-09-09 17:16:23.541 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> file:///C:/Users/c551465/Downloads/TSRC-PROD-066440, Display: 'Aetna Senior Compass - Copay Overrides'
+[2025-09-09 17:16:23.541 -04:00 INF] Hyperlink updates completed atomically in session for document: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.541 -04:00 INF] Hyperlink processing completed for TestDoc3_Backup - Copy (23) - Copy.docx: Duration=14647.9434ms
+[2025-09-09 17:16:23.559 -04:00 INF] Starting replacement processing for TestDoc3_Backup - Copy (23) - Copy.docx: HyperlinkReplacement=true (0 rules), TextReplacement=true (0 rules)
+[2025-09-09 17:16:23.560 -04:00 INF] Starting replacement processing in session for document: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.560 -04:00 INF] SESSION-BASED REPLACEMENT PROCESSING COMPLETED for document: TestDoc3_Backup - Copy (23) - Copy.docx, TOTAL REPLACEMENTS: 0
+[2025-09-09 17:16:23.561 -04:00 INF] Replacement processing completed for TestDoc3_Backup - Copy (23) - Copy.docx: Duration=1.2589ms
+[2025-09-09 17:16:23.577 -04:00 INF] Text optimization skipped for TestDoc3_Backup - Copy (23) - Copy.docx: OptimizeText disabled in settings
+[2025-09-09 17:16:23.596 -04:00 INF] Starting enhanced document save operation for: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.629 -04:00 INF] ✓ DOCUMENT SAVE COMPLETED SUCCESSFULLY: TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.809 -04:00 ERR] CRITICAL: Final verification failed - document may not be properly saved: TestDoc3_Backup - Copy (23) - Copy.docx
+System.IO.IOException: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.FileStreamHelpers.ChooseStrategyCore(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.File.Open(String path, FileMode mode, FileAccess access, FileShare share)
+   at DocumentFormat.OpenXml.Features.FilePackageFeature.CreateStream(String path, PackageOpenMode openMode)
+   at DocumentFormat.OpenXml.Features.FilePackageFeature..ctor(String path, PackageOpenMode mode)
+   at DocumentFormat.OpenXml.Builder.OpenXmlPackageBuilderExtensions.Open[TPackage](IPackageFactory`1 builder, String file, PackageOpenMode mode)
+   at DocumentFormat.OpenXml.Builder.OpenXmlPackageBuilderExtensions.Open[TPackage](IPackageFactory`1 builder, String file, Boolean isEditing)
+   at DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(String path, Boolean isEditable, OpenSettings openSettings)
+   at DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(String path, Boolean isEditable)
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+[2025-09-09 17:16:23.821 -04:00 ERR] Critical error saving document: TestDoc3_Backup - Copy (23) - Copy.docx
+System.InvalidOperationException: Document save verification failed: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+ ---> System.IO.IOException: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.FileStreamHelpers.ChooseStrategyCore(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.File.Open(String path, FileMode mode, FileAccess access, FileShare share)
+   at DocumentFormat.OpenXml.Features.FilePackageFeature.CreateStream(String path, PackageOpenMode openMode)
+   at DocumentFormat.OpenXml.Features.FilePackageFeature..ctor(String path, PackageOpenMode mode)
+   at DocumentFormat.OpenXml.Builder.OpenXmlPackageBuilderExtensions.Open[TPackage](IPackageFactory`1 builder, String file, PackageOpenMode mode)
+   at DocumentFormat.OpenXml.Builder.OpenXmlPackageBuilderExtensions.Open[TPackage](IPackageFactory`1 builder, String file, Boolean isEditing)
+   at DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(String path, Boolean isEditable, OpenSettings openSettings)
+   at DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(String path, Boolean isEditable)
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+[2025-09-09 17:16:23.827 -04:00 ERR] Error in single session document processing with rollback attempt: TestDoc3_Backup - Copy (23) - Copy.docx
+System.InvalidOperationException: Failed to save document safely: Document save verification failed: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+ ---> System.InvalidOperationException: Document save verification failed: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+ ---> System.IO.IOException: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.FileStreamHelpers.ChooseStrategyCore(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.File.Open(String path, FileMode mode, FileAccess access, FileShare share)
+   at DocumentFormat.OpenXml.Features.FilePackageFeature.CreateStream(String path, PackageOpenMode openMode)
+   at DocumentFormat.OpenXml.Features.FilePackageFeature..ctor(String path, PackageOpenMode mode)
+   at DocumentFormat.OpenXml.Builder.OpenXmlPackageBuilderExtensions.Open[TPackage](IPackageFactory`1 builder, String file, PackageOpenMode mode)
+   at DocumentFormat.OpenXml.Builder.OpenXmlPackageBuilderExtensions.Open[TPackage](IPackageFactory`1 builder, String file, Boolean isEditing)
+   at DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(String path, Boolean isEditable, OpenSettings openSettings)
+   at DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(String path, Boolean isEditable)
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.ProcessDocumentInSingleSessionAsync(Document document, IProgress`1 progress, CancellationToken cancellationToken)
+[2025-09-09 17:16:23.829 -04:00 WRN] Attempting document recovery from backup due to error: Failed to save document safely: Document save verification failed: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+[2025-09-09 17:16:23.872 -04:00 INF] Copied file from C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (23) - Copy_backup_20250909_171608.docx to C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.872 -04:00 INF] Restored file from backup: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.896 -04:00 INF] Successfully recovered document from backup: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.897 -04:00 ERR] Error processing document: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+System.InvalidOperationException: Failed to save document safely: Document save verification failed: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+ ---> System.InvalidOperationException: Document save verification failed: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+ ---> System.IO.IOException: The process cannot access the file 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx' because it is being used by another process.
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.FileStreamHelpers.ChooseStrategyCore(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.File.Open(String path, FileMode mode, FileAccess access, FileShare share)
+   at DocumentFormat.OpenXml.Features.FilePackageFeature.CreateStream(String path, PackageOpenMode openMode)
+   at DocumentFormat.OpenXml.Features.FilePackageFeature..ctor(String path, PackageOpenMode mode)
+   at DocumentFormat.OpenXml.Builder.OpenXmlPackageBuilderExtensions.Open[TPackage](IPackageFactory`1 builder, String file, PackageOpenMode mode)
+   at DocumentFormat.OpenXml.Builder.OpenXmlPackageBuilderExtensions.Open[TPackage](IPackageFactory`1 builder, String file, Boolean isEditing)
+   at DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(String path, Boolean isEditable, OpenSettings openSettings)
+   at DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(String path, Boolean isEditable)
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.ProcessDocumentInSingleSessionAsync(Document document, IProgress`1 progress, CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.ProcessDocumentInSingleSessionAsync(Document document, IProgress`1 progress, CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.DocumentProcessor.ProcessDocumentAsync(String filePath, IProgress`1 progress, CancellationToken cancellationToken)
+[2025-09-09 17:16:23.904 -04:00 INF] Copied file from C:\Users\C551465\Documents\TestFolder\Backups\TestDoc3_Backup - Copy (23) - Copy_backup_20250909_171608.docx to C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.904 -04:00 INF] Restored file from backup: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.904 -04:00 INF] Restored corrupted document from backup: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (23) - Copy.docx
+[2025-09-09 17:16:23.906 -04:00 INF] Batch processing completed: 0 successful, 1 failed
+[2025-09-09 17:16:23.906 -04:00 INF] Batch processing completed in "00:00:15.4760994": 1 files, 0 successful
+[2025-09-09 17:16:23.907 -04:00 INF] Background task completed successfully: Document Processing (ID: 20d8c8f6-88c9-4c1a-81ee-830c6720bd4b)
+[2025-09-09 17:16:23.913 -04:00 INF] Processing statistics calculated: 0/1 successful
+[2025-09-09 17:16:23.913 -04:00 WRN] Warning notification: Processing Complete with Errors - Processed 0 documents successfully, 1 failed.
+[2025-09-09 17:16:23.914 -04:00 INF] Batch processing completed successfully
