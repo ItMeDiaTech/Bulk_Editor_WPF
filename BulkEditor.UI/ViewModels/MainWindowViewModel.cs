@@ -311,7 +311,7 @@ namespace BulkEditor.UI.ViewModels
                 if (openFileDialog.ShowDialog() == true)
                 {
                     _logger.LogInformation("Files selected: {FileCount}", openFileDialog.FileNames.Length);
-                    await AddFilesAsync(openFileDialog.FileNames).ConfigureAwait(false);
+                    await AddFilesAsync(openFileDialog.FileNames);
                 }
                 else
                 {
@@ -321,7 +321,7 @@ namespace BulkEditor.UI.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "CRITICAL ERROR in SelectFilesAsync: {ErrorMessage}", ex.Message);
-                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace ?? "No stack trace available");
                 _logger.LogError("Thread ID: {ThreadId}", System.Threading.Thread.CurrentThread.ManagedThreadId);
                 
                 try
@@ -355,7 +355,7 @@ namespace BulkEditor.UI.ViewModels
                 // Add timeout protection for file validation to prevent hanging on network drives
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 
-                var validation = await _applicationService.ValidateFilesAsync(filePaths, timeoutCts.Token).ConfigureAwait(false);
+                var validation = await _applicationService.ValidateFilesAsync(filePaths, timeoutCts.Token);
                 _logger.LogInformation("Validation completed: {ValidCount} valid, {InvalidCount} invalid files", 
                     validation.ValidFiles.Count, validation.InvalidFiles.Count);
 
@@ -527,7 +527,7 @@ namespace BulkEditor.UI.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding files: {ErrorMessage}", ex.Message);
-                _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace ?? "No stack trace available");
                 
                 // Additional logging for debugging thread safety issues
                 _logger.LogError("Application dispatcher availability: {DispatcherAvailable}", 

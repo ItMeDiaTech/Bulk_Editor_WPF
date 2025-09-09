@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace BulkEditor.Tests.Infrastructure.Services
 {
@@ -45,22 +46,23 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Fact]
-        public async Task ProcessReplacementsAsync_WhenNoReplacementsEnabled_ShouldNotCallServices()
+        public async Task ProcessReplacementsInSessionAsync_WhenNoReplacementsEnabled_ShouldNotCallServices()
         {
             // Arrange
             var document = new Document { FileName = "test.docx" };
+            var mockWordDoc = new Mock<WordprocessingDocument>();
 
             // Act
-            var result = await _service.ProcessReplacementsAsync(document, CancellationToken.None);
+            var result = await _service.ProcessReplacementsInSessionAsync(mockWordDoc.Object, document, CancellationToken.None);
 
             // Assert
-            Assert.Same(document, result);
-            _mockHyperlinkService.Verify(x => x.ProcessHyperlinkReplacementsAsync(It.IsAny<Document>(), It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Never);
-            _mockTextService.Verify(x => x.ProcessTextReplacementsAsync(It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Never);
+            Assert.Equal(0, result);
+            _mockHyperlinkService.Verify(x => x.ProcessHyperlinkReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Never);
+            _mockTextService.Verify(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
-        public async Task ProcessReplacementsAsync_WhenHyperlinkReplacementEnabled_ShouldCallHyperlinkService()
+        public async Task ProcessReplacementsInSessionAsync_WhenHyperlinkReplacementEnabled_ShouldCallHyperlinkService()
         {
             // Arrange
             var document = new Document { FileName = "test.docx" };
@@ -71,19 +73,20 @@ namespace BulkEditor.Tests.Infrastructure.Services
                 ContentId = "123456"
             });
 
-            _mockHyperlinkService.Setup(x => x.ProcessHyperlinkReplacementsAsync(It.IsAny<Document>(), It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(document);
+            _mockHyperlinkService.Setup(x => x.ProcessHyperlinkReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+            var mockWordDoc = new Mock<WordprocessingDocument>();
 
             // Act
-            var result = await _service.ProcessReplacementsAsync(document, CancellationToken.None);
+            var result = await _service.ProcessReplacementsInSessionAsync(mockWordDoc.Object, document, CancellationToken.None);
 
             // Assert
-            Assert.Same(document, result);
-            _mockHyperlinkService.Verify(x => x.ProcessHyperlinkReplacementsAsync(document, It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Once);
+            Assert.Equal(1, result);
+            _mockHyperlinkService.Verify(x => x.ProcessHyperlinkReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), document, It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
-        public async Task ProcessReplacementsAsync_WhenTextReplacementEnabled_ShouldCallTextService()
+        public async Task ProcessReplacementsInSessionAsync_WhenTextReplacementEnabled_ShouldCallTextService()
         {
             // Arrange
             var document = new Document { FileName = "test.docx" };
@@ -94,15 +97,16 @@ namespace BulkEditor.Tests.Infrastructure.Services
                 ReplacementText = "new text"
             });
 
-            _mockTextService.Setup(x => x.ProcessTextReplacementsAsync(It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(document);
+            _mockTextService.Setup(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+            var mockWordDoc = new Mock<WordprocessingDocument>();
 
             // Act
-            var result = await _service.ProcessReplacementsAsync(document, CancellationToken.None);
+            var result = await _service.ProcessReplacementsInSessionAsync(mockWordDoc.Object, document, CancellationToken.None);
 
             // Assert
-            Assert.Same(document, result);
-            _mockTextService.Verify(x => x.ProcessTextReplacementsAsync(document, It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Once);
+            Assert.Equal(1, result);
+            _mockTextService.Verify(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), document, It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]

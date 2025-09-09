@@ -156,7 +156,7 @@ namespace BulkEditor.Infrastructure.Services
                 _logger.LogInformation("Settings backed up to: {Path}", backupPath);
 
                 // Clean up old backups (keep last 10)
-                await CleanupOldBackupsAsync();
+                CleanupOldBackups();
             }
             catch (Exception ex)
             {
@@ -348,7 +348,7 @@ namespace BulkEditor.Infrastructure.Services
             };
         }
 
-        private async Task CleanupOldBackupsAsync()
+        private void CleanupOldBackups()
         {
             try
             {

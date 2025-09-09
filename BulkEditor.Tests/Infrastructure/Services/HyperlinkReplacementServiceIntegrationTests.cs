@@ -122,11 +122,11 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Theory]
-        [InlineData("123456", "123456", "6-digit Content ID should remain unchanged")]
-        [InlineData("12345", "012345", "5-digit Content ID should be padded with leading zero")]
-        [InlineData("TSRC-PROD-123456", "123456", "Should extract 6-digit from lookup ID")]
-        [InlineData("CMS-TEST-654321", "654321", "Should extract 6-digit from CMS lookup ID")]
-        public void FormatContentIdForDisplay_ShouldFollowVbaMethodology(string input, string expected, string reason)
+        [InlineData("123456", "123456")]
+        [InlineData("12345", "012345")]
+        [InlineData("TSRC-PROD-123456", "123456")]
+        [InlineData("CMS-TEST-654321", "654321")]
+        public void FormatContentIdForDisplay_ShouldFollowVbaMethodology(string input, string expected)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("FormatContentIdForDisplay",
@@ -140,12 +140,12 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Theory]
-        [InlineData("doc<span>123</span>", "doc123", "Should remove HTML tags")]
-        [InlineData("doc&amp;test", "doc&test", "Should decode HTML entities")]
-        [InlineData("doc&lt;test&gt;", "doc<test>", "Should decode angle bracket entities")]
-        [InlineData("doc&quot;test&quot;", "doctest", "Should remove quotes after decoding")]
-        [InlineData("normal-doc-id", "normal-doc-id", "Should leave clean IDs unchanged")]
-        public void FilterHtmlElementsFromUrl_ShouldCleanUrls(string input, string expected, string reason)
+        [InlineData("doc<span>123</span>", "doc123")]
+        [InlineData("doc&amp;test", "doc&test")]
+        [InlineData("doc&lt;test&gt;", "doc<test>")]
+        [InlineData("doc&quot;test&quot;", "doctest")]
+        [InlineData("normal-doc-id", "normal-doc-id")]
+        public void FilterHtmlElementsFromUrl_ShouldCleanUrls(string input, string expected)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("FilterHtmlElementsFromUrl",
@@ -159,11 +159,11 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Theory]
-        [InlineData("TSRC-PROD-123456", "123456", "Should extract 6-digit from TSRC")]
-        [InlineData("CMS-TEST-654321", "654321", "Should extract 6-digit from CMS")]
-        [InlineData("TSRC-VERYLONGNAME-789012", "789012", "Should handle long middle parts")]
-        [InlineData("invalid-format", "invalid-format", "Should return original for invalid format")]
-        public void ExtractContentIdFromLookupId_ShouldFollowVbaPattern(string input, string expected, string reason)
+        [InlineData("TSRC-PROD-123456", "123456")]
+        [InlineData("CMS-TEST-654321", "654321")]
+        [InlineData("TSRC-VERYLONGNAME-789012", "789012")]
+        [InlineData("invalid-format", "invalid-format")]
+        public void ExtractContentIdFromLookupId_ShouldFollowVbaPattern(string input, string expected)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("ExtractContentIdFromLookupId",
@@ -208,13 +208,13 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Theory]
-        [InlineData("", false, "Empty URL should be invalid")]
-        [InlineData("not-a-url", false, "Plain text should be invalid")]
-        [InlineData("ftp://example.com", false, "FTP URLs should be invalid")]
-        [InlineData("http://example.com", true, "HTTP URLs should be valid")]
-        [InlineData("https://example.com", true, "HTTPS URLs should be valid")]
-        [InlineData("https://thesource.cvshealth.com/test", true, "CVS Health URLs should be valid")]
-        public void IsValidUrl_ShouldValidateUrlsCorrectly(string url, bool expected, string reason)
+        [InlineData("", false)]
+        [InlineData("not-a-url", false)]
+        [InlineData("ftp://example.com", false)]
+        [InlineData("http://example.com", true)]
+        [InlineData("https://example.com", true)]
+        [InlineData("https://thesource.cvshealth.com/test", true)]
+        public void IsValidUrl_ShouldValidateUrlsCorrectly(string url, bool expected)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("IsValidUrl",
@@ -324,12 +324,12 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
         [Theory]
-        [InlineData("!/view?docid=test", "Fragment with exclamation mark")]
-        [InlineData("<script>alert('test')</script>", "Fragment with angle brackets")]
-        [InlineData("test&param=value", "Fragment with ampersand")]
-        [InlineData("test\"quoted\"", "Fragment with quotes")]
-        [InlineData("test'quoted'", "Fragment with single quotes")]
-        public void ValidateAndSanitizeUrlFragment_WithSpecialCharacters_ShouldEncodeCorrectly(string input, string description)
+        [InlineData("!/view?docid=test")]
+        [InlineData("<script>alert('test')</script>")]
+        [InlineData("test&param=value")]
+        [InlineData("test\"quoted\"")]
+        [InlineData("test'quoted'")]
+        public void ValidateAndSanitizeUrlFragment_WithSpecialCharacters_ShouldEncodeCorrectly(string input)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("ValidateAndSanitizeUrlFragment",

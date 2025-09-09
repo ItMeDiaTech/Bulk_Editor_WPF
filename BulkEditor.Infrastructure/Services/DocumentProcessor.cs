@@ -1082,7 +1082,7 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                string statusSuffix = null;
+                string? statusSuffix = null;
                 ChangeType changeType = ChangeType.Information;
 
                 // Determine status suffix based on hyperlink status
@@ -1521,7 +1521,7 @@ namespace BulkEditor.Infrastructure.Services
 
             try
             {
-                var openXmlHyperlinks = mainPart.Document.Body.Descendants<OpenXmlHyperlink>().ToList();
+                var openXmlHyperlinks = mainPart.Document.Body?.Descendants<OpenXmlHyperlink>().ToList() ?? new List<OpenXmlHyperlink>();
 
                 foreach (var openXmlHyperlink in openXmlHyperlinks)
                 {
@@ -1590,7 +1590,7 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 var invisibleLinksRemoved = 0;
-                var hyperlinks = mainPart.Document.Body.Descendants<OpenXmlHyperlink>().ToList();
+                var hyperlinks = mainPart.Document.Body?.Descendants<OpenXmlHyperlink>().ToList() ?? new List<OpenXmlHyperlink>();
 
                 // Process hyperlinks from end to beginning to avoid index issues when deleting
                 for (int i = hyperlinks.Count - 1; i >= 0; i--)
@@ -1725,7 +1725,7 @@ namespace BulkEditor.Infrastructure.Services
 
                 _logger.LogInformation("Updating {Count} hyperlinks in document session using atomic VBA logic: {FileName}", hyperlinksToUpdate.Count, document.FileName);
 
-                var hyperlinks = mainPart.Document.Body.Descendants<OpenXmlHyperlink>().ToList();
+                var hyperlinks = mainPart.Document.Body?.Descendants<OpenXmlHyperlink>().ToList() ?? new List<OpenXmlHyperlink>();
                 var processedRelationships = new HashSet<string>();
 
                 foreach (var openXmlHyperlink in hyperlinks)

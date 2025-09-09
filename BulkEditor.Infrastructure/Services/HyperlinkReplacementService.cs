@@ -618,7 +618,7 @@ namespace BulkEditor.Infrastructure.Services
         /// CRITICAL FIX: Safe JSON property extraction with case-insensitive fallback (Issue #6)
         /// Handles both exact case matches and common case variations with proper null/empty checks
         /// </summary>
-        private string GetJsonPropertySafely(System.Text.Json.JsonElement element, string propertyName)
+        private string? GetJsonPropertySafely(System.Text.Json.JsonElement element, string propertyName)
         {
             try
             {
@@ -784,7 +784,7 @@ namespace BulkEditor.Infrastructure.Services
         /// Uses flexible matching against API response to find the document record
         /// CRITICAL: Single API call handles both Content_IDs and Document_IDs
         /// </summary>
-        public async Task<DocumentRecord> LookupDocumentByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
+        public async Task<DocumentRecord?> LookupDocumentByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -1108,7 +1108,7 @@ namespace BulkEditor.Infrastructure.Services
                         var completeUri = new Uri(targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress));
 
                         // CRITICAL FIX: Check if URL needs updating (detect HTML-encoded differences)
-                        string currentUrl = null;
+                        string? currentUrl = null;
                         bool urlNeedsUpdate = true;
                         try
                         {
@@ -1208,7 +1208,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     Type = ChangeType.HyperlinkUpdated,
                     Description = "Hyperlink updated using flexible Base_File.vba methodology",
-                    OldValue = result.OriginalTitle,
+                    OldValue = result.OriginalTitle ?? string.Empty,
                     NewValue = newDisplayText,
                     ElementId = result.HyperlinkId,
                     Details = $"Content ID: {displayContentId}, Document ID: {cleanDocumentId}, URL: {newUrl}, API Status: {documentRecord.Status}, Lookup: {rule.ContentId}"
@@ -1312,7 +1312,7 @@ namespace BulkEditor.Infrastructure.Services
         /// Simulates document lookup with proper status handling following Base_File.vba methodology
         /// Includes proper handling for expired status, missing lookup IDs, and realistic API behavior
         /// </summary>
-        private async Task<DocumentRecord> SimulateDocumentLookupAsync(string contentId, CancellationToken cancellationToken)
+        private async Task<DocumentRecord?> SimulateDocumentLookupAsync(string contentId, CancellationToken cancellationToken)
         {
             try
             {

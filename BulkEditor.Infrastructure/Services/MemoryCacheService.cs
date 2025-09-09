@@ -62,10 +62,10 @@ namespace BulkEditor.Infrastructure.Services
             return value;
         }
 
-        public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+        public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(key))
-                return default;
+                return Task.FromResult(default(T?));
 
             if (_cache.TryGetValue(key, out var cachedEntry) && !cachedEntry.IsExpired)
             {
@@ -73,16 +73,15 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     IncrementHitCount();
                     _logger.LogDebug("Cache hit for key: {Key}", key);
-                    return typedValue;
+                    return Task.FromResult((T?)typedValue);
                 }
             }
 
             IncrementMissCount();
-            await Task.CompletedTask;
-            return default;
+            return Task.FromResult(default(T?));
         }
 
-        public async Task SetAsync<T>(string key, T value, TimeSpan? expiry = null, CancellationToken cancellationToken = default)
+        public Task SetAsync<T>(string key, T value, TimeSpan? expiry = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentException("Cache key cannot be null or empty", nameof(key));
@@ -97,20 +96,20 @@ namespace BulkEditor.Infrastructure.Services
             IncrementTotalEntries();
 
             _logger.LogDebug("Cached value for key: {Key}", key);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
-        public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+        public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
         {
             if (!string.IsNullOrEmpty(key))
             {
                 _cache.TryRemove(key, out _);
                 _logger.LogDebug("Removed cache entry for key: {Key}", key);
             }
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
-        public async Task ClearAsync(CancellationToken cancellationToken = default)
+        public Task ClearAsync(CancellationToken cancellationToken = default)
         {
             _cache.Clear();
 
@@ -123,7 +122,7 @@ namespace BulkEditor.Infrastructure.Services
             }
 
             _logger.LogInformation("Cache cleared");
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         public CacheStatistics GetStatistics()

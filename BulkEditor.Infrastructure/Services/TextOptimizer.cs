@@ -360,7 +360,7 @@ namespace BulkEditor.Infrastructure.Services
         private async Task<int> OptimizeWhitespaceInDocumentAsync(MainDocumentPart mainPart, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
             var changesMade = 0;
-            var textElements = mainPart.Document.Body.Descendants<Text>().ToList();
+            var textElements = mainPart.Document.Body?.Descendants<Text>().ToList() ?? new List<Text>();
 
             foreach (var textElement in textElements)
             {
@@ -382,7 +382,7 @@ namespace BulkEditor.Infrastructure.Services
 
         private async Task<int> RemoveEmptyParagraphsAsync(MainDocumentPart mainPart, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
-            var paragraphs = mainPart.Document.Body.Elements<Paragraph>().ToList();
+            var paragraphs = mainPart.Document.Body?.Elements<Paragraph>().ToList() ?? new List<Paragraph>();
             var removedCount = 0;
 
             foreach (var paragraph in paragraphs)
@@ -401,7 +401,7 @@ namespace BulkEditor.Infrastructure.Services
         private async Task<int> StandardizeLineBreaksAsync(MainDocumentPart mainPart, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
             var changesMade = 0;
-            var breaks = mainPart.Document.Body.Descendants<Break>().ToList();
+            var breaks = mainPart.Document.Body?.Descendants<Break>().ToList() ?? new List<Break>();
 
             // Remove excessive line breaks
             var consecutiveBreaks = 0;
@@ -433,7 +433,7 @@ namespace BulkEditor.Infrastructure.Services
 
         private async Task<int> OptimizeTableFormattingAsync(MainDocumentPart mainPart, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
-            var tables = mainPart.Document.Body.Descendants<Table>().ToList();
+            var tables = mainPart.Document.Body?.Descendants<Table>().ToList() ?? new List<Table>();
             var changesMade = 0;
 
             foreach (var table in tables)
@@ -461,7 +461,7 @@ namespace BulkEditor.Infrastructure.Services
         private async Task<int> OptimizeListFormattingAsync(MainDocumentPart mainPart, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
             var changesMade = 0;
-            var paragraphs = mainPart.Document.Body.Elements<Paragraph>().ToList();
+            var paragraphs = mainPart.Document.Body?.Elements<Paragraph>().ToList() ?? new List<Paragraph>();
 
             foreach (var paragraph in paragraphs)
             {
@@ -601,7 +601,8 @@ namespace BulkEditor.Infrastructure.Services
 
                 if (sectionProperties != null && IsUnnecessarySectionBreak(sectionProperties))
                 {
-                    properties.SectionProperties = null;
+                    if (properties != null)
+                        properties.SectionProperties = null;
                     changesMade++;
                 }
             }
