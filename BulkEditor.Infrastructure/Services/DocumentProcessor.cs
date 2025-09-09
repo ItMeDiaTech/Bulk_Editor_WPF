@@ -588,15 +588,18 @@ namespace BulkEditor.Infrastructure.Services
                             try
                             {
                                 var relationship = mainPart.GetReferenceRelationship(relId);
-                                var url = relationship.Uri.ToString();
+
+                                // CRITICAL FIX: Get the complete URL and decode any URL encoding
+                                var rawUrl = relationship.Uri.ToString();
+                                var completeUrl = Uri.UnescapeDataString(rawUrl);
                                 var displayText = openXmlHyperlink.InnerText;
 
                                 var hyperlink = new Hyperlink
                                 {
-                                    OriginalUrl = url,
+                                    OriginalUrl = completeUrl, // Use decoded complete URL
                                     DisplayText = displayText,
-                                    LookupId = _hyperlinkValidator.ExtractLookupId(url),
-                                    RequiresUpdate = ShouldAutoValidateHyperlink(url, displayText)
+                                    LookupId = _hyperlinkValidator.ExtractLookupId(completeUrl),
+                                    RequiresUpdate = ShouldAutoValidateHyperlink(completeUrl, displayText)
                                 };
 
                                 hyperlinks.Add(hyperlink);
@@ -1628,15 +1631,20 @@ namespace BulkEditor.Infrastructure.Services
                         try
                         {
                             var relationship = mainPart.GetReferenceRelationship(relId);
-                            var url = relationship.Uri.ToString();
+
+                            // CRITICAL FIX: Get the complete URL and decode any URL encoding
+                            var rawUrl = relationship.Uri.ToString();
+                            var completeUrl = Uri.UnescapeDataString(rawUrl);
                             var displayText = openXmlHyperlink.InnerText;
+
+                            _logger.LogDebug("Extracted hyperlink: Raw='{RawUrl}', Decoded='{CompleteUrl}'", rawUrl, completeUrl);
 
                             var hyperlink = new Hyperlink
                             {
-                                OriginalUrl = url,
+                                OriginalUrl = completeUrl, // Use decoded complete URL
                                 DisplayText = displayText,
-                                LookupId = ExtractIdentifierFromUrl(url, ""), // CRITICAL FIX: Use full URL directly
-                                RequiresUpdate = ShouldAutoValidateHyperlink(url, displayText)
+                                LookupId = ExtractIdentifierFromUrl(completeUrl, ""), // Use complete URL for extraction
+                                RequiresUpdate = ShouldAutoValidateHyperlink(completeUrl, displayText)
                             };
 
                             hyperlinks.Add(hyperlink);
@@ -1690,27 +1698,30 @@ namespace BulkEditor.Infrastructure.Services
                         try
                         {
                             var relationship = mainPart.GetReferenceRelationship(relId);
-                            var url = relationship.Uri.ToString();
+
+                            // CRITICAL FIX: Get the complete URL and decode any URL encoding
+                            var rawUrl = relationship.Uri.ToString();
+                            var completeUrl = Uri.UnescapeDataString(rawUrl);
                             var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
 
-                            // CRITICAL FIX: Check if hyperlink has valid lookup ID - use full URL
-                            var lookupId = ExtractIdentifierFromUrl(url, "");
+                            // CRITICAL FIX: Check if hyperlink has valid lookup ID - use complete URL
+                            var lookupId = ExtractIdentifierFromUrl(completeUrl, "");
                             bool hasLookupId = !string.IsNullOrEmpty(lookupId);
 
                             // CRITICAL FIX: Always remove hyperlinks with empty display text (VBA methodology)
                             // VBA: If Trim$(links(i).TextToDisplay) = "" And Len(links(i).Address) > 0 Then
-                            bool shouldRemove = string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url);
+                            bool shouldRemove = string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(completeUrl);
 
                             if (shouldRemove)
                             {
                                 // Log what we're removing for tracking
                                 if (hasLookupId)
                                 {
-                                    _logger.LogInformation("✓ Deleting invisible hyperlink with lookup ID '{LookupId}' (already extracted for API): {Url}", lookupId, url);
+                                    _logger.LogInformation("✓ Deleting invisible hyperlink with lookup ID '{LookupId}' (already extracted for API): {Url}", lookupId, completeUrl);
                                 }
                                 else
                                 {
-                                    _logger.LogInformation("✓ Deleting invisible hyperlink (no lookup ID): {Url}", url);
+                                    _logger.LogInformation("✓ Deleting invisible hyperlink (no lookup ID): {Url}", completeUrl);
                                 }
 
                                 // Remove the hyperlink element
@@ -1733,14 +1744,14 @@ namespace BulkEditor.Infrastructure.Services
                                 {
                                     Type = ChangeType.HyperlinkRemoved,
                                     Description = hasLookupId ? "Deleted Invisible Hyperlink (lookup ID preserved for API)" : "Deleted Invisible Hyperlink",
-                                    OldValue = url,
+                                    OldValue = completeUrl,
                                     NewValue = string.Empty,
                                     ElementId = Guid.NewGuid().ToString(),
                                     Details = hasLookupId ? $"Hyperlink had empty display text but lookup ID '{lookupId}' was already extracted for API processing" : "Hyperlink had empty display text and no valid lookup ID"
                                 });
 
                                 // Remove from document.Hyperlinks collection
-                                var hyperlinkToRemove = document.Hyperlinks.FirstOrDefault(h => h.OriginalUrl == url);
+                                var hyperlinkToRemove = document.Hyperlinks.FirstOrDefault(h => h.OriginalUrl == completeUrl);
                                 if (hyperlinkToRemove != null)
                                 {
                                     document.Hyperlinks.Remove(hyperlinkToRemove);
@@ -1819,7 +1830,10 @@ namespace BulkEditor.Infrastructure.Services
                     try
                     {
                         var relationship = mainPart.GetReferenceRelationship(hyperlinkRelId);
-                        var currentUrl = relationship.Uri.ToString();
+
+                        // CRITICAL FIX: Get the complete URL and decode any URL encoding
+                        var rawUrl = relationship.Uri.ToString();
+                        var currentUrl = Uri.UnescapeDataString(rawUrl);
                         var currentDisplayText = openXmlHyperlink.InnerText ?? string.Empty;
 
                         var hyperlinkToUpdate = hyperlinksToUpdate.FirstOrDefault(h => h.OriginalUrl == currentUrl);
