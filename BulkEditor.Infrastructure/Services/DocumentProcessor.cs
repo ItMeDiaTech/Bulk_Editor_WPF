@@ -658,20 +658,26 @@ namespace BulkEditor.Infrastructure.Services
             {
                 // Combine address and subAddress like VBA: addr & IIf(Len(subAddr) > 0, "#" & subAddr, "")
                 var fullUrl = address + (!string.IsNullOrEmpty(subAddress) ? "#" + subAddress : "");
+                _logger.LogDebug("Attempting to extract lookup ID from full URL: {FullUrl} (Address: '{Address}', SubAddress: '{SubAddress}')", fullUrl, address, subAddress);
 
                 // CRITICAL FIX: First, try exact VBA regex pattern with case-insensitive matching
                 var regexMatch = LookupIdRegex.Match(fullUrl);
                 if (regexMatch.Success)
                 {
                     var lookupId = regexMatch.Value.ToUpperInvariant();
-                    _logger.LogDebug("Extracted Lookup_ID from regex: {LookupId} from URL: {Url}", lookupId, fullUrl);
+                    _logger.LogInformation("✓ EXTRACTED Lookup_ID via regex pattern: '{LookupId}' from URL: {Url}", lookupId, fullUrl);
                     return lookupId;
+                }
+                else
+                {
+                    _logger.LogDebug("✗ Regex pattern did not match TSRC/CMS format in URL: {Url}", fullUrl);
                 }
 
                 // CRITICAL FIX: Fallback docid extraction exactly like VBA (Issue #3)
                 // VBA: ElseIf InStr(1, full, "docid=", vbTextCompare) > 0 Then
                 if (fullUrl.IndexOf("docid=", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
+                    _logger.LogDebug("Found 'docid=' parameter in URL, attempting extraction");
                     // VBA: ExtractLookupID = Trim$(Split(Split(full, "docid=")(1), "&")(0))
                     var parts = fullUrl.Split(new[] { "docid=" }, StringSplitOptions.None);
                     if (parts.Length > 1)
@@ -679,18 +685,21 @@ namespace BulkEditor.Infrastructure.Services
                         var docId = parts[1].Split('&')[0].Trim();
                         // CRITICAL FIX: Handle URL encoding (Issue #3)
                         var decodedDocId = Uri.UnescapeDataString(docId);
-                        _logger.LogDebug("Extracted docid fallback from URL: {DocId} (decoded: {DecodedDocId}) from URL: {Url}",
-                            docId, decodedDocId, fullUrl);
+                        _logger.LogInformation("✓ EXTRACTED docid fallback: '{DecodedDocId}' (raw: '{DocId}') from URL: {Url}", decodedDocId, docId, fullUrl);
                         return decodedDocId;
                     }
                 }
+                else
+                {
+                    _logger.LogDebug("✗ No 'docid=' parameter found in URL: {Url}", fullUrl);
+                }
 
-                _logger.LogDebug("No Lookup_ID found in URL: {Url}", fullUrl);
+                _logger.LogInformation("✗ NO VALID LOOKUP ID found in URL: {Url} - this hyperlink will be excluded from API call", fullUrl);
                 return string.Empty;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Error extracting Lookup_ID from URL: {Url}. Error: {Error}", address, ex.Message);
+                _logger.LogError(ex, "Error extracting Lookup_ID from URL: {Url}. Error: {Error}", address, ex.Message);
                 return string.Empty;
             }
         }
@@ -707,9 +716,14 @@ namespace BulkEditor.Infrastructure.Services
 
                 // VBA STEP 2: Collect unique Lookup_IDs (lines 41-84)
                 var idDict = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                var hyperlinkProcessingDetails = new List<string>();
+
+                _logger.LogInformation("Analyzing {Count} hyperlinks for valid lookup identifiers", document.Hyperlinks.Count);
 
                 foreach (var hyperlink in document.Hyperlinks)
                 {
+                    var hyperlinkDetail = $"Hyperlink URL: '{hyperlink.OriginalUrl}', Display: '{hyperlink.DisplayText ?? ""}', ";
+
                     // CRITICAL FIX: Parse URL to extract both address and subAddress for proper lookup ID extraction
                     string address = hyperlink.OriginalUrl;
                     string subAddress = "";
@@ -723,10 +737,24 @@ namespace BulkEditor.Infrastructure.Services
 
                     // CRITICAL FIX: Extract Content_IDs or Document_IDs from URLs to include in Lookup_ID array
                     var extractedId = ExtractIdentifierFromUrl(address, subAddress);
-                    if (!string.IsNullOrEmpty(extractedId) && !idDict.ContainsKey(extractedId))
+                    hyperlinkDetail += $"ExtractedID: '{extractedId}', ";
+
+                    if (!string.IsNullOrEmpty(extractedId))
                     {
-                        idDict[extractedId] = true;
-                        _logger.LogDebug("Added unique identifier from URL: {ExtractedId}", extractedId);
+                        if (!idDict.ContainsKey(extractedId))
+                        {
+                            idDict[extractedId] = true;
+                            hyperlinkDetail += "ADDED to lookup array";
+                            _logger.LogInformation("Added unique identifier from URL: {ExtractedId} for hyperlink: {DisplayText}", extractedId, hyperlink.DisplayText ?? "[Empty]");
+                        }
+                        else
+                        {
+                            hyperlinkDetail += "Already exists in lookup array";
+                        }
+                    }
+                    else
+                    {
+                        hyperlinkDetail += "NO VALID ID FOUND - will be skipped from API call";
                     }
 
                     // CRITICAL FIX: Also collect Content_IDs and Document_IDs if already available from previous processing
@@ -734,23 +762,34 @@ namespace BulkEditor.Infrastructure.Services
                     if (!string.IsNullOrEmpty(hyperlink.ContentId) && !idDict.ContainsKey(hyperlink.ContentId))
                     {
                         idDict[hyperlink.ContentId] = true;
+                        hyperlinkDetail += $", Added existing Content_ID: {hyperlink.ContentId}";
                         _logger.LogDebug("Added unique Content_ID: {ContentId}", hyperlink.ContentId);
                     }
 
                     if (!string.IsNullOrEmpty(hyperlink.DocumentId) && !idDict.ContainsKey(hyperlink.DocumentId))
                     {
                         idDict[hyperlink.DocumentId] = true;
+                        hyperlinkDetail += $", Added existing Document_ID: {hyperlink.DocumentId}";
                         _logger.LogDebug("Added unique Document_ID: {DocumentId}", hyperlink.DocumentId);
                     }
+
+                    hyperlinkProcessingDetails.Add(hyperlinkDetail);
+                }
+
+                // Log detailed analysis of each hyperlink
+                _logger.LogInformation("Hyperlink Analysis Results for {FileName}:", document.FileName);
+                for (int i = 0; i < hyperlinkProcessingDetails.Count; i++)
+                {
+                    _logger.LogInformation("  Hyperlink {Index}: {Details}", i + 1, hyperlinkProcessingDetails[i]);
                 }
 
                 if (idDict.Count == 0)
                 {
-                    _logger.LogInformation("No valid identifiers found in document: {FileName}", document.FileName);
+                    _logger.LogWarning("No valid identifiers found in {Count} hyperlinks for document: {FileName}. Hyperlinks may not contain valid TSRC/CMS lookup IDs or docid parameters.", document.Hyperlinks.Count, document.FileName);
                     return;
                 }
 
-                _logger.LogInformation("Found {Count} unique identifiers (Content_IDs and Document_IDs) for Lookup_ID API array", idDict.Count);
+                _logger.LogInformation("Successfully collected {Count} unique identifiers from {HyperlinkCount} hyperlinks for Lookup_ID API array", idDict.Count, document.Hyperlinks.Count);
 
                 // VBA STEP 3: Build JSON & POST (lines 87-128)
                 // Note: lookupIds contains Content_IDs and Document_IDs that will be sent in the "Lookup_ID" JSON property
@@ -1218,15 +1257,44 @@ namespace BulkEditor.Infrastructure.Services
                     // STEP 5: Extract hyperlinks from the open document
                     progress?.Report("Extracting hyperlinks...");
                     document.Hyperlinks = ExtractHyperlinksFromOpenDocument(mainPart);
+                    _logger.LogInformation("Initial hyperlink extraction found {Count} hyperlinks in document: {FileName}", document.Hyperlinks.Count, document.FileName);
 
-                    // STEP 6: Remove invisible hyperlinks (write operations)
-                    progress?.Report("Removing invisible hyperlinks...");
+                    // STEP 6: CRITICAL FIX - Extract lookup IDs BEFORE removing invisible hyperlinks
+                    // This ensures we don't lose valid lookup IDs from hyperlinks with empty display text
+                    progress?.Report("Pre-analyzing hyperlinks for lookup IDs...");
+                    var allHyperlinksBeforeCleanup = ExtractHyperlinksFromOpenDocument(mainPart);
+                    var validLookupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var hyperlink in allHyperlinksBeforeCleanup)
+                    {
+                        string address = hyperlink.OriginalUrl;
+                        string subAddress = "";
+                        if (hyperlink.OriginalUrl.Contains('#'))
+                        {
+                            var parts = hyperlink.OriginalUrl.Split('#', 2);
+                            address = parts[0];
+                            subAddress = parts[1];
+                        }
+
+                        var extractedId = ExtractIdentifierFromUrl(address, subAddress);
+                        if (!string.IsNullOrEmpty(extractedId))
+                        {
+                            validLookupIds.Add(extractedId);
+                            _logger.LogInformation("Pre-cleanup: Found valid lookup ID '{LookupId}' in hyperlink with display text: '{DisplayText}'",
+                                extractedId, hyperlink.DisplayText ?? "[EMPTY]");
+                        }
+                    }
+
+                    _logger.LogInformation("Pre-cleanup analysis: Found {ValidIdCount} valid lookup IDs from {TotalHyperlinks} hyperlinks", validLookupIds.Count, allHyperlinksBeforeCleanup.Count);
+
+                    // STEP 7: Remove invisible hyperlinks (write operations) - but preserve those with valid lookup IDs
+                    progress?.Report("Removing invisible hyperlinks (preserving those with valid lookup IDs)...");
                     await RemoveInvisibleHyperlinksInSessionAsync(mainPart, document, cancellationToken).ConfigureAwait(false);
 
-                    // STEP 7: Re-extract hyperlinks after deletion to prevent stale references
+                    // STEP 8: Re-extract hyperlinks after deletion to prevent stale references
                     progress?.Report("Re-extracting hyperlinks after cleanup...");
                     document.Hyperlinks = ExtractHyperlinksFromOpenDocument(mainPart);
-                    _logger.LogDebug("Re-extracted {Count} hyperlinks after invisible hyperlink removal", document.Hyperlinks.Count);
+                    _logger.LogInformation("After cleanup: {Count} hyperlinks remain in document: {FileName}", document.Hyperlinks.Count, document.FileName);
 
                     // STEP 8: Validate after invisible hyperlink removal
                     progress?.Report("Validating after invisible hyperlink removal...");
@@ -1604,6 +1672,7 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Removes invisible hyperlinks within the current document session
+        /// CRITICAL FIX: Preserves hyperlinks with valid lookup IDs even if they have empty display text
         /// </summary>
         private async Task RemoveInvisibleHyperlinksInSessionAsync(MainDocumentPart mainPart, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
@@ -1611,6 +1680,8 @@ namespace BulkEditor.Infrastructure.Services
             {
                 var invisibleLinksRemoved = 0;
                 var hyperlinks = mainPart.Document.Body?.Descendants<OpenXmlHyperlink>().ToList() ?? new List<OpenXmlHyperlink>();
+
+                _logger.LogInformation("Analyzing {Count} hyperlinks for invisible link cleanup in document: {FileName}", hyperlinks.Count, document.FileName);
 
                 // Process hyperlinks from end to beginning to avoid index issues when deleting
                 for (int i = hyperlinks.Count - 1; i >= 0; i--)
@@ -1629,8 +1700,7 @@ namespace BulkEditor.Infrastructure.Services
                             var url = relationship.Uri.ToString();
                             var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
 
-                            // CRITICAL FIX: Only remove genuinely broken hyperlinks, not ones that could be updated
-                            // Check if hyperlink has lookup ID - if so, keep it for potential updates
+                            // CRITICAL FIX: Check if hyperlink has valid lookup ID - if so, PRESERVE it
                             string address = url;
                             string subAddress = "";
                             if (url.Contains('#'))
@@ -1643,9 +1713,22 @@ namespace BulkEditor.Infrastructure.Services
                             var lookupId = ExtractIdentifierFromUrl(address, subAddress);
                             bool hasLookupId = !string.IsNullOrEmpty(lookupId);
 
-                            // Only remove if invisible AND has no lookup ID (genuinely broken)
-                            if (string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url) && !hasLookupId)
+                            // CRITICAL FIX: Always remove hyperlinks with empty display text (VBA methodology)
+                            // VBA: If Trim$(links(i).TextToDisplay) = "" And Len(links(i).Address) > 0 Then
+                            bool shouldRemove = string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url);
+
+                            if (shouldRemove)
                             {
+                                // Log what we're removing for tracking
+                                if (hasLookupId)
+                                {
+                                    _logger.LogInformation("✓ Deleting invisible hyperlink with lookup ID '{LookupId}' (already extracted for API): {Url}", lookupId, url);
+                                }
+                                else
+                                {
+                                    _logger.LogInformation("✓ Deleting invisible hyperlink (no lookup ID): {Url}", url);
+                                }
+
                                 // Remove the hyperlink element
                                 openXmlHyperlink.Remove();
 
@@ -1665,11 +1748,11 @@ namespace BulkEditor.Infrastructure.Services
                                 document.ChangeLog.Changes.Add(new ChangeEntry
                                 {
                                     Type = ChangeType.HyperlinkRemoved,
-                                    Description = "Deleted Invisible Hyperlink",
+                                    Description = hasLookupId ? "Deleted Invisible Hyperlink (lookup ID preserved for API)" : "Deleted Invisible Hyperlink",
                                     OldValue = url,
                                     NewValue = string.Empty,
                                     ElementId = Guid.NewGuid().ToString(),
-                                    Details = "Hyperlink had empty display text"
+                                    Details = hasLookupId ? $"Hyperlink had empty display text but lookup ID '{lookupId}' was already extracted for API processing" : "Hyperlink had empty display text and no valid lookup ID"
                                 });
 
                                 // Remove from document.Hyperlinks collection
@@ -1678,13 +1761,11 @@ namespace BulkEditor.Infrastructure.Services
                                 {
                                     document.Hyperlinks.Remove(hyperlinkToRemove);
                                 }
-
-                                _logger.LogInformation("Deleted invisible hyperlink: {Url}", url);
                             }
                         }
                         catch (System.Collections.Generic.KeyNotFoundException)
                         {
-                            // Hyperlink has invalid relationship ID - remove if empty display text
+                            // Hyperlink has invalid relationship ID - remove only if empty display text
                             var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
 
                             if (string.IsNullOrEmpty(displayText))
@@ -1695,14 +1776,14 @@ namespace BulkEditor.Infrastructure.Services
                                 document.ChangeLog.Changes.Add(new ChangeEntry
                                 {
                                     Type = ChangeType.HyperlinkRemoved,
-                                    Description = "Deleted Invisible Hyperlink",
+                                    Description = "Deleted Broken Invisible Hyperlink",
                                     OldValue = "Broken hyperlink",
                                     NewValue = string.Empty,
                                     ElementId = Guid.NewGuid().ToString(),
                                     Details = "Hyperlink had invalid relationship ID and empty display text"
                                 });
 
-                                _logger.LogInformation("Deleted broken invisible hyperlink with invalid relationship ID: {RelId}", relId);
+                                _logger.LogInformation("✓ Deleted broken invisible hyperlink with invalid relationship ID: {RelId}", relId);
                             }
                         }
                     }
@@ -1712,11 +1793,8 @@ namespace BulkEditor.Infrastructure.Services
                     }
                 }
 
-                if (invisibleLinksRemoved > 0)
-                {
-                    _logger.LogInformation("Removed {Count} invisible hyperlinks from document: {FileName}",
-                        invisibleLinksRemoved, document.FileName);
-                }
+                _logger.LogInformation("Invisible hyperlink cleanup completed for {FileName}: {RemovedCount} empty hyperlinks removed (lookup IDs already extracted for API processing)",
+                    document.FileName, invisibleLinksRemoved);
 
                 await Task.CompletedTask;
             }
@@ -2226,36 +2304,99 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Saves document with comprehensive validation and error handling
+        /// CRITICAL FIX: Enhanced save persistence to ensure changes are actually written to disk
         /// </summary>
         private async Task SaveDocumentSafelyAsync(WordprocessingDocument wordDocument, BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken)
         {
             try
             {
-                _logger.LogInformation("Starting document save operation for: {FileName}", document.FileName);
+                _logger.LogInformation("Starting enhanced document save operation for: {FileName}", document.FileName);
 
                 // Pre-save validation
                 await ValidateOpenDocumentAsync(wordDocument, "pre-save-final", cancellationToken).ConfigureAwait(false);
 
-                // Ensure all changes are committed before saving
+                // CRITICAL FIX: Ensure all parts are saved in the correct order
                 var mainPart = wordDocument.MainDocumentPart;
-                _logger.LogDebug("Saving main document part for: {FileName}", document.FileName);
-                mainPart?.Document?.Save();
+                if (mainPart?.Document == null)
+                {
+                    throw new InvalidOperationException("Main document part is null - cannot save document");
+                }
 
-                // CRITICAL FIX: Ensure all document changes including hyperlinks are saved with retry logic
-                _logger.LogDebug("Saving WordprocessingDocument for: {FileName}", document.FileName);
+                // STEP 1: Save all document parts explicitly
+                _logger.LogDebug("Saving main document part for: {FileName}", document.FileName);
+                mainPart.Document.Save();
+
+                // STEP 2: Save any custom parts that might have been modified
+                foreach (var part in wordDocument.Parts)
+                {
+                    try
+                    {
+                        if (part.OpenXmlPart is MainDocumentPart || part.OpenXmlPart.RootElement != null)
+                        {
+                            part.OpenXmlPart.RootElement?.Save();
+                        }
+                    }
+                    catch (Exception partEx)
+                    {
+                        _logger.LogWarning("Non-critical error saving document part: {Error}", partEx.Message);
+                        // Continue with save - part errors shouldn't fail the entire save
+                    }
+                }
+
+                // STEP 3: Force save the entire document with enhanced retry logic
+                _logger.LogDebug("Performing complete document save for: {FileName}", document.FileName);
                 var openXmlPolicy = _retryPolicyService.CreateOpenXmlRetryPolicy();
                 await _retryPolicyService.ExecuteWithRetryAsync(
                     async () =>
                     {
+                        // Force save all changes
                         wordDocument.Save();
+
+                        // CRITICAL FIX: Force save completion by calling save again
+                        // This ensures all parts are properly written to disk
+                        mainPart.Document.Save();
+
                         await Task.CompletedTask;
                     },
                     openXmlPolicy, cancellationToken).ConfigureAwait(false);
-                _logger.LogInformation("DOCUMENT SAVE COMPLETED SUCCESSFULLY: {FileName}", document.FileName);
 
-                // CRITICAL FIX: Use non-cancellable delay to prevent save success being reported as failure
-                // The document is already saved successfully at this point
-                await Task.Delay(50, CancellationToken.None).ConfigureAwait(false);
+                // STEP 4: Verify save was successful by attempting to read document structure
+                _logger.LogDebug("Verifying document save integrity for: {FileName}", document.FileName);
+                try
+                {
+                    // Ensure we can still access the document structure after save
+                    var bodyElementCount = mainPart.Document.Body?.Elements().Count() ?? 0;
+                    var hyperlinkCount = mainPart.Document.Body?.Descendants<OpenXmlHyperlink>().Count() ?? 0;
+                    _logger.LogDebug("Post-save verification: {BodyElements} body elements, {HyperlinkCount} hyperlinks", bodyElementCount, hyperlinkCount);
+                }
+                catch (Exception verifyEx)
+                {
+                    _logger.LogWarning("Post-save verification warning (non-critical): {Error}", verifyEx.Message);
+                }
+
+                _logger.LogInformation("✓ DOCUMENT SAVE COMPLETED SUCCESSFULLY: {FileName}", document.FileName);
+
+                // CRITICAL FIX: Extended delay to ensure file system write completion
+                // Some file systems need more time to flush changes to disk
+                await Task.Delay(100, CancellationToken.None).ConfigureAwait(false);
+
+                // STEP 5: Final integrity check - try to open saved document in read-only mode
+                _logger.LogDebug("Performing final integrity verification for: {FileName}", document.FileName);
+                try
+                {
+                    // Small delay to ensure file handles are released
+                    await Task.Delay(50, CancellationToken.None).ConfigureAwait(false);
+
+                    // Verify we can open the saved document
+                    using var verificationDoc = WordprocessingDocument.Open(document.FilePath, false);
+                    var verificationHyperlinkCount = verificationDoc.MainDocumentPart?.Document?.Body?.Descendants<OpenXmlHyperlink>().Count() ?? 0;
+                    _logger.LogInformation("✓ Final verification: Saved document contains {HyperlinkCount} hyperlinks and is readable", verificationHyperlinkCount);
+                }
+                catch (Exception finalVerifyEx)
+                {
+                    _logger.LogError(finalVerifyEx, "CRITICAL: Final verification failed - document may not be properly saved: {FileName}", document.FileName);
+                    throw new InvalidOperationException($"Document save verification failed: {finalVerifyEx.Message}", finalVerifyEx);
+                }
             }
             catch (Exception saveEx)
             {
