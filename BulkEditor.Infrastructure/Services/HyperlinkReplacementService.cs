@@ -1,6 +1,7 @@
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using DocumentFormat.OpenXml.Packaging;
 using BulkEditor.Infrastructure.Utilities;
 using Microsoft.Extensions.Options;
@@ -371,13 +372,13 @@ namespace BulkEditor.Infrastructure.Services
                     WriteIndented = false
                 };
 
+                // CRITICAL FIX: Use configured API endpoint from settings instead of hardcoded example
+                var apiEndpoint = GetConfiguredApiEndpoint();
+
                 var jsonString = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
                 _logger.LogInformation("Full HTTP API Request JSON: {JsonRequest}", jsonString);
                 _logger.LogDebug("API Request Details: Endpoint={ApiEndpoint}, Timeout={TimeoutSeconds}s, LookupIds={LookupIds}", 
                     apiEndpoint, _appSettings.Api.Timeout.TotalSeconds, string.Join(", ", lookupIds));
-
-                // CRITICAL FIX: Use configured API endpoint from settings instead of hardcoded example
-                var apiEndpoint = GetConfiguredApiEndpoint();
 
                 var response = await _httpService.PostJsonAsync(apiEndpoint, requestBody, cancellationToken).ConfigureAwait(false);
 

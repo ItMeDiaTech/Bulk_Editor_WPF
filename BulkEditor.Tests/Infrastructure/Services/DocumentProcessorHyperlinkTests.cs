@@ -229,7 +229,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
         /// </summary>
         private string InvokeExtractLookupIdUsingVbaLogic(string address, string subAddress)
         {
-            var method = typeof(DocumentProcessor).GetMethod("ExtractLookupIdUsingVbaLogic",
+            var method = typeof(DocumentProcessor).GetMethod("ExtractIdentifierFromUrl",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
             return (string)method.Invoke(_documentProcessor, new object[] { address, subAddress });

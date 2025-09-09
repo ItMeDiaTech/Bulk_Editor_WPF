@@ -1,6 +1,7 @@
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using BulkEditor.Infrastructure.Services;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -20,12 +21,14 @@ namespace BulkEditor.Tests.Infrastructure.Services
     {
         private readonly Mock<IHttpService> _httpServiceMock;
         private readonly Mock<ILoggingService> _loggerMock;
+        private readonly Mock<IRetryPolicyService> _retryPolicyServiceMock;
         private readonly HyperlinkReplacementService _service;
 
         public HyperlinkReplacementServiceIntegrationTests()
         {
             _httpServiceMock = new Mock<IHttpService>();
             _loggerMock = new Mock<ILoggingService>();
+            _retryPolicyServiceMock = new Mock<IRetryPolicyService>();
 
             // Create default AppSettings for testing
             var appSettings = new AppSettings
@@ -37,7 +40,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             };
             var appSettingsOptions = Options.Create(appSettings);
 
-            _service = new HyperlinkReplacementService(_httpServiceMock.Object, _loggerMock.Object, appSettingsOptions);
+            _service = new HyperlinkReplacementService(_httpServiceMock.Object, _loggerMock.Object, appSettingsOptions, _retryPolicyServiceMock.Object);
         }
 
 
