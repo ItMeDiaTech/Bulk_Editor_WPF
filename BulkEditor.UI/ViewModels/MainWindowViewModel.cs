@@ -224,8 +224,8 @@ namespace BulkEditor.UI.ViewModels
             Title = "Bulk Document Editor";
             SetStatusReady();
 
-            // CRITICAL FIX: Initialize freeze detection timer
-            _freezeDetectionTimer = new System.Timers.Timer(5000); // Check every 5 seconds
+            // CRITICAL FIX: Initialize freeze detection timer with reasonable intervals
+            _freezeDetectionTimer = new System.Timers.Timer(10000); // Check every 10 seconds (less aggressive)
             _freezeDetectionTimer.Elapsed += OnFreezeDetectionCheck;
             _freezeDetectionTimer.AutoReset = true;
             _freezeDetectionTimer.Start();
@@ -1169,24 +1169,33 @@ namespace BulkEditor.UI.ViewModels
             {
                 var timeSinceLastUpdate = DateTime.UtcNow - _lastUIUpdateTime;
 
-                // If no UI activity for more than 30 seconds, log potential freeze
-                if (timeSinceLastUpdate.TotalSeconds > 30)
+                // CRITICAL FIX: More reasonable freeze detection timeout (90 seconds instead of 30)
+                // This allows for normal HTTP timeouts (60s) plus buffer for processing
+                if (timeSinceLastUpdate.TotalSeconds > 90)
                 {
                     _logger.LogWarning("FREEZE DETECTION: UI appears unresponsive for {Seconds} seconds",
                         timeSinceLastUpdate.TotalSeconds);
 
-                    // If freeze is detected during processing, try to recover
-                    if (IsProcessing)
+                    // Only intervene if freeze persists for more than 2 minutes
+                    if (timeSinceLastUpdate.TotalSeconds > 120 && IsProcessing)
                     {
-                        _logger.LogError("FREEZE DETECTED during processing - attempting recovery");
+                        _logger.LogError("SEVERE FREEZE DETECTED after 2+ minutes - attempting recovery");
 
-                        // Try to cancel current operation
+                        // Try to cancel current operation as last resort
                         try
                         {
                             if (!string.IsNullOrEmpty(_currentTaskId))
                             {
                                 _backgroundTaskService.CancelTask(_currentTaskId);
-                                _logger.LogInformation("Cancelled background task {TaskId} due to freeze detection", _currentTaskId);
+                                _logger.LogInformation("Cancelled background task {TaskId} due to severe freeze detection", _currentTaskId);
+
+                                // Show user notification about the recovery attempt
+                                System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
+                                {
+                                    _notificationService.ShowWarning("Processing Recovery",
+                                        "The application detected an unresponsive operation and attempted automatic recovery. " +
+                                        "If this continues, please restart the application.");
+                                });
                             }
                         }
                         catch (Exception ex)

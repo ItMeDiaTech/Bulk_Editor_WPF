@@ -179,7 +179,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                     var docStartTime = DateTime.Now;
-                    
+
                     try
                     {
                         // Update progress for current document
@@ -188,13 +188,13 @@ namespace BulkEditor.Infrastructure.Services
                         batchProgress.CurrentDocumentProgress = 0;
                         progress?.Report(batchProgress);
 
-                        var document = await ProcessDocumentAsync(filePath, 
-                            new Progress<string>(msg => 
+                        var document = await ProcessDocumentAsync(filePath,
+                            new Progress<string>(msg =>
                             {
                                 batchProgress.CurrentOperation = msg;
                                 batchProgress.CurrentDocumentProgress = Math.Min(batchProgress.CurrentDocumentProgress + 10, 90);
                                 progress?.Report(batchProgress);
-                            }), 
+                            }),
                             cancellationToken);
 
                         var docProcessingTime = DateTime.Now - docStartTime;
@@ -202,7 +202,7 @@ namespace BulkEditor.Infrastructure.Services
                         lock (results)
                         {
                             results.Add(document);
-                            
+
                             if (document.Status == DocumentStatus.Completed)
                             {
                                 Interlocked.Increment(ref processed);
@@ -211,7 +211,7 @@ namespace BulkEditor.Infrastructure.Services
                             else
                             {
                                 Interlocked.Increment(ref failed);
-                                
+
                                 // Add error to recent errors list
                                 var errorMessage = document.ProcessingErrors.LastOrDefault()?.Message ?? "Unknown error";
                                 if (batchProgress.RecentErrors.Count >= 5)
@@ -226,18 +226,18 @@ namespace BulkEditor.Infrastructure.Services
                             batchProgress.TotalHyperlinksFound += document.Hyperlinks.Count;
                             batchProgress.TotalHyperlinksProcessed += document.Hyperlinks.Count(h => !string.IsNullOrEmpty(h.UpdatedUrl));
                             batchProgress.TotalHyperlinksUpdated += document.Hyperlinks.Count(h => !string.IsNullOrEmpty(h.UpdatedUrl) && h.UpdatedUrl != h.OriginalUrl);
-                            
+
                             // Calculate average processing time
                             var totalProcessingTime = (DateTime.Now - startTime).TotalSeconds;
                             batchProgress.AverageProcessingTimePerDocument = totalProcessingTime / Math.Max(1, processed);
-                            
+
                             // Estimate remaining time
                             var remainingDocs = batchProgress.TotalDocuments - processed;
                             if (batchProgress.AverageProcessingTimePerDocument > 0 && remainingDocs > 0)
                             {
                                 batchProgress.EstimatedTimeRemaining = TimeSpan.FromSeconds(remainingDocs * batchProgress.AverageProcessingTimePerDocument);
                             }
-                            
+
                             batchProgress.CurrentDocumentProgress = 100;
                             batchProgress.CurrentOperation = "Document completed";
                             progress?.Report(batchProgress);
@@ -253,8 +253,8 @@ namespace BulkEditor.Infrastructure.Services
                             FilePath = filePath,
                             FileName = Path.GetFileName(filePath),
                             Status = DocumentStatus.Failed,
-                            ProcessingErrors = new List<ProcessingError> 
-                            { 
+                            ProcessingErrors = new List<ProcessingError>
+                            {
                                 new ProcessingError { Message = ex.Message, Severity = ErrorSeverity.Error }
                             }
                         };
@@ -263,11 +263,11 @@ namespace BulkEditor.Infrastructure.Services
                         {
                             results.Add(errorDoc);
                             Interlocked.Increment(ref failed);
-                            
+
                             if (batchProgress.RecentErrors.Count >= 5)
                                 batchProgress.RecentErrors.RemoveAt(0);
                             batchProgress.RecentErrors.Add($"{Path.GetFileName(filePath)}: {ex.Message}");
-                            
+
                             batchProgress.ProcessedDocuments = processed + failed;
                             batchProgress.FailedDocuments = failed;
                             progress?.Report(batchProgress);
@@ -301,7 +301,7 @@ namespace BulkEditor.Infrastructure.Services
                     batchProgress.RecentErrors.RemoveAt(0);
                 batchProgress.RecentErrors.Add($"Batch error: {ex.Message}");
                 progress?.Report(batchProgress);
-                
+
                 _logger.LogError(ex, "Error in batch processing");
                 throw;
             }
@@ -384,9 +384,29 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
-                await _fileService.CopyFileAsync(backupPath, filePath, cancellationToken);
+                // CRITICAL FIX: Use timeout instead of cancellation for backup restoration
+                // Backup restoration should complete to prevent data loss, but not hang indefinitely
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                await _fileService.CopyFileAsync(backupPath, filePath, timeoutCts.Token);
                 _logger.LogInformation("Restored file from backup: {FilePath}", filePath);
                 return true;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogWarning("Backup restoration was cancelled - attempting with timeout protection: {FilePath}", filePath);
+                try
+                {
+                    // Final attempt with timeout but no external cancellation
+                    using var finalTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                    await _fileService.CopyFileAsync(backupPath, filePath, finalTimeoutCts.Token);
+                    _logger.LogInformation("Restored file from backup on final attempt: {FilePath}", filePath);
+                    return true;
+                }
+                catch (Exception finalEx)
+                {
+                    _logger.LogError(finalEx, "Final backup restoration attempt failed: {FilePath}", filePath);
+                    return false;
+                }
             }
             catch (Exception ex)
             {
@@ -693,14 +713,14 @@ namespace BulkEditor.Infrastructure.Services
                     // CRITICAL FIX: Parse URL to extract both address and subAddress for proper lookup ID extraction
                     string address = hyperlink.OriginalUrl;
                     string subAddress = "";
-                    
+
                     if (hyperlink.OriginalUrl.Contains('#'))
                     {
                         var parts = hyperlink.OriginalUrl.Split('#', 2);
                         address = parts[0];
                         subAddress = parts[1];
                     }
-                    
+
                     // CRITICAL FIX: Extract Content_IDs or Document_IDs from URLs to include in Lookup_ID array
                     var extractedId = ExtractIdentifierFromUrl(address, subAddress);
                     if (!string.IsNullOrEmpty(extractedId) && !idDict.ContainsKey(extractedId))
@@ -746,10 +766,10 @@ namespace BulkEditor.Infrastructure.Services
                 // Create IOptions wrapper for AppSettings to match constructor requirements
                 var appSettingsOptions = Microsoft.Extensions.Options.Options.Create(_appSettings);
                 var hyperlinkService = new HyperlinkReplacementService(httpService, _logger, appSettingsOptions, _retryPolicyService);
-                // Add timeout protection for API call to prevent hanging
+                // CRITICAL FIX: Shorter timeout to prevent UI freezing - coordinated with HTTP timeout
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeoutCts.CancelAfter(TimeSpan.FromMinutes(2)); // 2-minute timeout for API call
-                
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(75)); // 75-second timeout (HTTP 60s + buffer)
+
                 var apiResult = await hyperlinkService.ProcessApiResponseAsync(lookupIds, timeoutCts.Token).ConfigureAwait(false);
 
                 if (apiResult.HasError)
@@ -760,7 +780,7 @@ namespace BulkEditor.Infrastructure.Services
 
                 // Check cancellation before hyperlink updates
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 // VBA STEP 5: Update hyperlinks using dictionary lookup (lines 186-318)
                 await UpdateHyperlinksUsingVbaDictionaryLogicAsync(document, apiResult, cancellationToken).ConfigureAwait(false);
 
@@ -814,7 +834,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     // Check cancellation in hyperlink processing loop to prevent hanging
                     cancellationToken.ThrowIfCancellationRequested();
-                    
+
                     var lookupId = ExtractIdentifierFromUrl(hyperlink.OriginalUrl, "");
                     if (string.IsNullOrEmpty(lookupId))
                         continue;
@@ -828,13 +848,13 @@ namespace BulkEditor.Infrastructure.Services
                     {
                         // VBA: If recDict.Exists(lookupID) Then Set rec = recDict(lookupID)
                         var rec = recDict[lookupId];
-                        
+
                         // Track found vs expired
                         if (rec.Status?.Equals("Expired", StringComparison.OrdinalIgnoreCase) == true)
                             expiredHyperlinks++;
                         else
                             foundHyperlinks++;
-                            
+
                         await ProcessHyperlinkWithVbaLogicAsync(hyperlink, rec, document, alreadyExpired, alreadyNotFound, cancellationToken).ConfigureAwait(false);
                     }
                     else if (!alreadyNotFound && !alreadyExpired)
@@ -843,7 +863,7 @@ namespace BulkEditor.Infrastructure.Services
                         // VBA: hl.TextToDisplay = hl.TextToDisplay & " - Not Found"
                         notFoundHyperlinks++;
                         missingIdTracker[lookupId] = $"Hyperlink: '{dispText}' - Missing from API response";
-                        
+
                         hyperlink.DisplayText += " - Not Found";
                         hyperlink.Status = HyperlinkStatus.NotFound;
                         hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
@@ -867,15 +887,15 @@ namespace BulkEditor.Infrastructure.Services
                 _logger.LogInformation("Hyperlink processing summary for {FileName}: " +
                     "Total: {Total}, Found: {Found}, Expired: {Expired}, Not Found: {NotFound}, " +
                     "Success Rate: {SuccessRate:F1}%, API Response Rate: {ApiFoundCount} found + {ApiExpiredCount} expired from {ApiTotalCount} API IDs",
-                    document.FileName, processedHyperlinks, foundHyperlinks, expiredHyperlinks, notFoundHyperlinks, 
+                    document.FileName, processedHyperlinks, foundHyperlinks, expiredHyperlinks, notFoundHyperlinks,
                     successRate, apiResult.FoundDocuments.Count, apiResult.ExpiredDocuments.Count, apiResult.TotalIdsProcessed);
 
                 // Log missing ID details if any
                 if (missingIdTracker.Any())
                 {
-                    _logger.LogWarning("Missing IDs details for {FileName}: {MissingDetails}", 
+                    _logger.LogWarning("Missing IDs details for {FileName}: {MissingDetails}",
                         document.FileName, string.Join("; ", missingIdTracker.Select(kvp => $"{kvp.Key}: {kvp.Value}")));
-                    
+
                     // Add summary changelog entry for missing IDs
                     document.ChangeLog.Changes.Add(new ChangeEntry
                     {
@@ -1022,7 +1042,7 @@ namespace BulkEditor.Infrastructure.Services
                 if ((changedURL || appended) && !hyperlink.RequiresUpdate)
                 {
                     hyperlink.RequiresUpdate = true;
-                    _logger.LogDebug("Safeguard: Marked hyperlink for update due to changes: URL={UrlChanged}, Content={ContentChanged}", 
+                    _logger.LogDebug("Safeguard: Marked hyperlink for update due to changes: URL={UrlChanged}, Content={ContentChanged}",
                         changedURL, appended);
                 }
 
@@ -1173,7 +1193,7 @@ namespace BulkEditor.Infrastructure.Services
                 // Open document once and perform ALL operations within this session with retry logic
                 var filePolicy = _retryPolicyService.CreateFileRetryPolicy();
                 using (var wordDocument = await _retryPolicyService.ExecuteWithRetryAsync(
-                    () => Task.FromResult(WordprocessingDocument.Open(document.FilePath, true)), 
+                    () => Task.FromResult(WordprocessingDocument.Open(document.FilePath, true)),
                     filePolicy, cancellationToken).ConfigureAwait(false))
                 {
                     var mainPart = wordDocument.MainDocumentPart;
@@ -1217,9 +1237,9 @@ namespace BulkEditor.Infrastructure.Services
                     if (_appSettings.Processing.UpdateHyperlinks && _appSettings.Processing.ValidateHyperlinks && document.Hyperlinks.Any())
                     {
                         progress?.Report("Processing hyperlinks using VBA methodology...");
-                        _logger.LogInformation("Starting hyperlink processing for {FileName}: {HyperlinkCount} hyperlinks found, UpdateHyperlinks={UpdateEnabled}, ValidateHyperlinks={ValidateEnabled}", 
+                        _logger.LogInformation("Starting hyperlink processing for {FileName}: {HyperlinkCount} hyperlinks found, UpdateHyperlinks={UpdateEnabled}, ValidateHyperlinks={ValidateEnabled}",
                             document.FileName, document.Hyperlinks.Count, _appSettings.Processing.UpdateHyperlinks, _appSettings.Processing.ValidateHyperlinks);
-                        
+
                         // Add cancellation check before expensive VBA workflow
                         cancellationToken.ThrowIfCancellationRequested();
                         await ProcessHyperlinksUsingVbaWorkflowAsync(document, cancellationToken).ConfigureAwait(false);
@@ -1227,9 +1247,9 @@ namespace BulkEditor.Infrastructure.Services
                         // STEP 10: Apply hyperlink updates in the document session
                         progress?.Report("Applying hyperlink updates to document...");
                         await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken).ConfigureAwait(false);
-                        
+
                         var hyperlinkDuration = DateTime.UtcNow - hyperlinkStepStart;
-                        _logger.LogInformation("Hyperlink processing completed for {FileName}: Duration={DurationMs}ms", 
+                        _logger.LogInformation("Hyperlink processing completed for {FileName}: Duration={DurationMs}ms",
                             document.FileName, hyperlinkDuration.TotalMilliseconds);
                     }
                     else if (!_appSettings.Processing.UpdateHyperlinks)
@@ -1254,14 +1274,14 @@ namespace BulkEditor.Infrastructure.Services
                     if (_appSettings.Replacement.EnableHyperlinkReplacement || _appSettings.Replacement.EnableTextReplacement)
                     {
                         progress?.Report("Processing replacements...");
-                        _logger.LogInformation("Starting replacement processing for {FileName}: HyperlinkReplacement={HyperlinkEnabled} ({HyperlinkRulesCount} rules), TextReplacement={TextEnabled} ({TextRulesCount} rules)", 
+                        _logger.LogInformation("Starting replacement processing for {FileName}: HyperlinkReplacement={HyperlinkEnabled} ({HyperlinkRulesCount} rules), TextReplacement={TextEnabled} ({TextRulesCount} rules)",
                             document.FileName, _appSettings.Replacement.EnableHyperlinkReplacement, _appSettings.Replacement.HyperlinkRules.Count,
                             _appSettings.Replacement.EnableTextReplacement, _appSettings.Replacement.TextRules.Count);
-                        
+
                         await _replacementService.ProcessReplacementsInSessionAsync(wordDocument, document, cancellationToken).ConfigureAwait(false);
-                        
+
                         var replacementDuration = DateTime.UtcNow - replacementStepStart;
-                        _logger.LogInformation("Replacement processing completed for {FileName}: Duration={DurationMs}ms", 
+                        _logger.LogInformation("Replacement processing completed for {FileName}: Duration={DurationMs}ms",
                             document.FileName, replacementDuration.TotalMilliseconds);
                     }
                     else
@@ -1279,11 +1299,11 @@ namespace BulkEditor.Infrastructure.Services
                     {
                         progress?.Report("Optimizing document text...");
                         _logger.LogInformation("Starting text optimization for {FileName}: OptimizeText=enabled", document.FileName);
-                        
+
                         await _textOptimizer.OptimizeDocumentTextInSessionAsync(wordDocument, document, cancellationToken).ConfigureAwait(false);
-                        
+
                         var textOptimizationDuration = DateTime.UtcNow - textOptimizationStart;
-                        _logger.LogInformation("Text optimization completed for {FileName}: Duration={DurationMs}ms", 
+                        _logger.LogInformation("Text optimization completed for {FileName}: Duration={DurationMs}ms",
                             document.FileName, textOptimizationDuration.TotalMilliseconds);
                     }
                     else
@@ -1307,8 +1327,8 @@ namespace BulkEditor.Infrastructure.Services
 
                 var totalProcessingDuration = DateTime.UtcNow - totalProcessingStart;
                 _logger.LogInformation("Document processed successfully with comprehensive validation: {FileName}, " +
-                    "Total Duration: {TotalDurationMs}ms, Hyperlinks: {HyperlinkCount}, Changes: {ChangeCount}", 
-                    document.FileName, totalProcessingDuration.TotalMilliseconds, 
+                    "Total Duration: {TotalDurationMs}ms, Hyperlinks: {HyperlinkCount}, Changes: {ChangeCount}",
+                    document.FileName, totalProcessingDuration.TotalMilliseconds,
                     document.Hyperlinks.Count, document.ChangeLog.TotalChanges);
             }
             catch (Exception ex)
@@ -1542,7 +1562,7 @@ namespace BulkEditor.Infrastructure.Services
                             // Parse URL to separate address and subAddress (fragment)
                             string address = url;
                             string subAddress = "";
-                            
+
                             if (url.Contains('#'))
                             {
                                 var parts = url.Split('#', 2);
@@ -1619,10 +1639,10 @@ namespace BulkEditor.Infrastructure.Services
                                 address = parts[0];
                                 subAddress = parts[1];
                             }
-                            
+
                             var lookupId = ExtractIdentifierFromUrl(address, subAddress);
                             bool hasLookupId = !string.IsNullOrEmpty(lookupId);
-                            
+
                             // Only remove if invisible AND has no lookup ID (genuinely broken)
                             if (string.IsNullOrEmpty(displayText) && !string.IsNullOrEmpty(url) && !hasLookupId)
                             {
@@ -2212,7 +2232,7 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 _logger.LogInformation("Starting document save operation for: {FileName}", document.FileName);
-                
+
                 // Pre-save validation
                 await ValidateOpenDocumentAsync(wordDocument, "pre-save-final", cancellationToken).ConfigureAwait(false);
 
@@ -2220,21 +2240,22 @@ namespace BulkEditor.Infrastructure.Services
                 var mainPart = wordDocument.MainDocumentPart;
                 _logger.LogDebug("Saving main document part for: {FileName}", document.FileName);
                 mainPart?.Document?.Save();
-                
+
                 // CRITICAL FIX: Ensure all document changes including hyperlinks are saved with retry logic
                 _logger.LogDebug("Saving WordprocessingDocument for: {FileName}", document.FileName);
                 var openXmlPolicy = _retryPolicyService.CreateOpenXmlRetryPolicy();
                 await _retryPolicyService.ExecuteWithRetryAsync(
-                    async () => 
+                    async () =>
                     {
                         wordDocument.Save();
                         await Task.CompletedTask;
-                    }, 
+                    },
                     openXmlPolicy, cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("DOCUMENT SAVE COMPLETED SUCCESSFULLY: {FileName}", document.FileName);
 
-                // Small delay to ensure file handles are properly released
-                await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+                // CRITICAL FIX: Use non-cancellable delay to prevent save success being reported as failure
+                // The document is already saved successfully at this point
+                await Task.Delay(50, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception saveEx)
             {
@@ -2304,8 +2325,9 @@ namespace BulkEditor.Infrastructure.Services
                     // Validate backup before restoration
                     await ValidateDocumentIntegrityAsync(document.BackupPath, "backup-validation", cancellationToken);
 
-                    // Restore from backup
-                    await RestoreFromBackupAsync(document.FilePath, document.BackupPath, cancellationToken);
+                    // CRITICAL FIX: Use non-cancellable token for backup restoration to prevent data loss
+                    // Recovery operations should complete even if main processing was cancelled
+                    await RestoreFromBackupAsync(document.FilePath, document.BackupPath, CancellationToken.None);
 
                     // Validate restoration
                     await ValidateDocumentIntegrityAsync(document.FilePath, "post-recovery", cancellationToken);

@@ -324,7 +324,7 @@ namespace BulkEditor.Infrastructure.Services
                 // Enhanced tracking completion
                 result.ProcessingDuration = DateTime.UtcNow - startTime;
                 result.TotalIdsFound = result.FoundDocuments.Count + result.ExpiredDocuments.Count;
-                
+
                 // Add details for missing IDs
                 foreach (var missingId in result.MissingLookupIds)
                 {
@@ -354,6 +354,10 @@ namespace BulkEditor.Infrastructure.Services
             var apiCallStart = DateTime.UtcNow;
             try
             {
+                // CRITICAL FIX: Add timeout protection to prevent UI freezing
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(45)); // 45-second timeout for API calls
+
                 // CRITICAL FIX: Build exact VBA JSON structure (Issue #4)
                 // VBA: jsonBody = "{""Lookup_ID"": [" & Join(arrIDs, ",") & "]}"
                 var requestBody = new
@@ -377,10 +381,10 @@ namespace BulkEditor.Infrastructure.Services
 
                 var jsonString = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
                 _logger.LogInformation("Full HTTP API Request JSON: {JsonRequest}", jsonString);
-                _logger.LogDebug("API Request Details: Endpoint={ApiEndpoint}, Timeout={TimeoutSeconds}s, LookupIds={LookupIds}", 
-                    apiEndpoint, _appSettings.Api.Timeout.TotalSeconds, string.Join(", ", lookupIds));
+                _logger.LogDebug("API Request Details: Endpoint={ApiEndpoint}, Timeout={TimeoutSeconds}s, LookupIds={LookupIds}",
+                    apiEndpoint, 45, string.Join(", ", lookupIds));
 
-                var response = await _httpService.PostJsonAsync(apiEndpoint, requestBody, cancellationToken).ConfigureAwait(false);
+                var response = await _httpService.PostJsonAsync(apiEndpoint, requestBody, timeoutCts.Token).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -390,9 +394,9 @@ namespace BulkEditor.Infrastructure.Services
 
                 var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 var apiCallDuration = DateTime.UtcNow - apiCallStart;
-                
+
                 _logger.LogInformation("Full HTTP API Response JSON: {Response}", jsonResponse);
-                _logger.LogInformation("API Call Performance: Duration={DurationMs}ms, Status={StatusCode}, ResponseLength={ResponseLength} chars", 
+                _logger.LogInformation("API Call Performance: Duration={DurationMs}ms, Status={StatusCode}, ResponseLength={ResponseLength} chars",
                     apiCallDuration.TotalMilliseconds, response.StatusCode, jsonResponse.Length);
 
                 return jsonResponse;
@@ -409,10 +413,14 @@ namespace BulkEditor.Infrastructure.Services
         /// </summary>
         private async Task<string> SimulateApiCallAsync(IEnumerable<string> lookupIds, CancellationToken cancellationToken)
         {
-            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-            
+            // CRITICAL FIX: Add timeout protection to simulation as well
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(30)); // 30-second timeout for simulation
+
+            await Task.Delay(100, timeoutCts.Token).ConfigureAwait(false);
+
             // Check cancellation early to prevent hanging
-            cancellationToken.ThrowIfCancellationRequested(); // Simulate network delay
+            timeoutCts.Token.ThrowIfCancellationRequested(); // Simulate network delay
 
             var responseBuilder = new System.Text.StringBuilder();
             responseBuilder.AppendLine("{");
@@ -796,7 +804,7 @@ namespace BulkEditor.Infrastructure.Services
                 // Use flexible API lookup with single identifier with timeout protection
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(30)); // 30-second timeout
-                
+
                 var apiResult = await ProcessApiResponseAsync(new[] { identifier }, timeoutCts.Token).ConfigureAwait(false);
 
                 if (apiResult.HasError)
@@ -887,7 +895,7 @@ namespace BulkEditor.Infrastructure.Services
                 // CRITICAL FIX: Use flexible lookup - rule.ContentId can be Document_ID or Content_ID
                 // Add cancellation check before expensive lookup operation
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 var documentRecord = await LookupDocumentByIdentifierAsync(rule.ContentId, cancellationToken).ConfigureAwait(false);
 
                 // Handle missing lookup identifier response (when server returns no response)
@@ -1114,17 +1122,17 @@ namespace BulkEditor.Infrastructure.Services
                         {
                             var currentRelationship = mainPart.GetReferenceRelationship(relId);
                             currentUrl = currentRelationship.Uri.ToString();
-                            
+
                             // Compare decoded URLs to detect HTML encoding differences
                             var currentUrlDecoded = Uri.UnescapeDataString(currentUrl);
                             var newUrlDecoded = Uri.UnescapeDataString(completeUri.ToString());
-                            
+
                             urlNeedsUpdate = !string.Equals(currentUrlDecoded, newUrlDecoded, StringComparison.OrdinalIgnoreCase);
-                            
+
                             // Log when HTML-encoded URLs are functionally equivalent but need updating
                             if (!urlNeedsUpdate && !string.Equals(currentUrl, completeUri.ToString(), StringComparison.Ordinal))
                             {
-                                _logger.LogInformation("Hyperlink URL has HTML encoding differences but is functionally equivalent: {CurrentUrl} -> {NewUrl}", 
+                                _logger.LogInformation("Hyperlink URL has HTML encoding differences but is functionally equivalent: {CurrentUrl} -> {NewUrl}",
                                     currentUrl, completeUri.ToString());
                             }
                             else if (urlNeedsUpdate)
@@ -1133,12 +1141,12 @@ namespace BulkEditor.Infrastructure.Services
                                 if (string.Equals(currentUrlDecoded, newUrlDecoded, StringComparison.OrdinalIgnoreCase) &&
                                     !string.Equals(currentUrl, completeUri.ToString(), StringComparison.Ordinal))
                                 {
-                                    _logger.LogInformation("Updating hyperlink URL due to HTML encoding differences: {CurrentUrl} -> {NewUrl}", 
+                                    _logger.LogInformation("Updating hyperlink URL due to HTML encoding differences: {CurrentUrl} -> {NewUrl}",
                                         currentUrl, completeUri.ToString());
                                 }
                                 else
                                 {
-                                    _logger.LogDebug("Updating hyperlink URL: {CurrentUrl} -> {NewUrl}", 
+                                    _logger.LogDebug("Updating hyperlink URL: {CurrentUrl} -> {NewUrl}",
                                         currentUrl, completeUri.ToString());
                                 }
                             }
@@ -1318,7 +1326,7 @@ namespace BulkEditor.Infrastructure.Services
             {
                 // Simulate API call delay
                 await Task.Delay(50, cancellationToken).ConfigureAwait(false);
-                
+
                 // Check cancellation to prevent hanging
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -1544,14 +1552,14 @@ namespace BulkEditor.Infrastructure.Services
             public List<DocumentRecord> FoundDocuments { get; set; } = new();
             public List<DocumentRecord> ExpiredDocuments { get; set; } = new();
             public List<string> MissingLookupIds { get; set; } = new();
-            
+
             // Enhanced tracking for better reporting
             public Dictionary<string, string> MissingIdDetails { get; set; } = new();
             public int TotalIdsProcessed { get; set; }
             public int TotalIdsFound { get; set; }
             public DateTime ProcessedAt { get; set; } = DateTime.UtcNow;
             public TimeSpan ProcessingDuration { get; set; }
-            
+
             // Computed properties for reporting
             public int TotalMissing => MissingLookupIds.Count;
             public double FoundPercentage => TotalIdsProcessed > 0 ? (double)TotalIdsFound / TotalIdsProcessed * 100 : 0;

@@ -42,8 +42,9 @@ namespace BulkEditor.Infrastructure.DependencyInjection
 
                 var client = new HttpClient(handler);
 
-                // CRITICAL FIX: Proper timeout configuration (Issue #23)
-                client.Timeout = TimeSpan.FromMinutes(5); // 5 minute timeout for API calls
+                // CRITICAL FIX: Reduced timeout to prevent UI freezing (Issue #23)
+                // API calls should complete within 60 seconds to prevent freeze detection issues
+                client.Timeout = TimeSpan.FromSeconds(60); // 60 second timeout for API calls
 
                 // CRITICAL FIX: Proper User-Agent for API compatibility
                 client.DefaultRequestHeaders.Add("User-Agent", "BulkEditor-WPF/1.0");
