@@ -942,6 +942,15 @@ namespace BulkEditor.Infrastructure.Services
                     _logger.LogInformation("Updated hyperlink: {Action} for {LookupId}", actionDescription, rec.Lookup_ID);
                 }
 
+                // CRITICAL FIX: Ensure RequiresUpdate is set if any changes were made
+                // This is a safeguard to catch any missed cases where changes occurred but flag wasn't set
+                if ((changedURL || appended) && !hyperlink.RequiresUpdate)
+                {
+                    hyperlink.RequiresUpdate = true;
+                    _logger.LogDebug("Safeguard: Marked hyperlink for update due to changes: URL={UrlChanged}, Content={ContentChanged}", 
+                        changedURL, appended);
+                }
+
                 await Task.CompletedTask;
             }
             catch (Exception ex)
@@ -1978,8 +1987,10 @@ namespace BulkEditor.Infrastructure.Services
                 // Ensure all changes are committed before saving
                 var mainPart = wordDocument.MainDocumentPart;
                 mainPart?.Document?.Save();
-
-                _logger.LogDebug("Document saved successfully with validation: {FileName}", document.FileName);
+                
+                // CRITICAL FIX: Ensure all document changes including hyperlinks are saved
+                wordDocument.Save();
+                _logger.LogDebug("Document saved successfully with comprehensive validation: {FileName}", document.FileName);
 
                 // Small delay to ensure file handles are properly released
                 await Task.Delay(50, cancellationToken).ConfigureAwait(false);

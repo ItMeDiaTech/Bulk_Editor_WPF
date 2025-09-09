@@ -586,31 +586,49 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// CRITICAL FIX: Safe JSON property extraction with case-insensitive fallback (Issue #6)
-        /// Handles both exact case matches and common case variations
+        /// Handles both exact case matches and common case variations with proper null/empty checks
         /// </summary>
         private string GetJsonPropertySafely(System.Text.Json.JsonElement element, string propertyName)
         {
             try
             {
+                // CRITICAL FIX: Add null/empty safety checks to prevent IndexOutOfRangeException
+                if (string.IsNullOrEmpty(propertyName))
+                {
+                    _logger.LogWarning("Property name is null or empty - cannot extract JSON property");
+                    return null;
+                }
+
                 // Try exact match first
                 if (element.TryGetProperty(propertyName, out var exactProperty))
                 {
                     return exactProperty.GetString();
                 }
 
-                // Try common case variations for VBA compatibility
-                var variations = new[]
+                // Try common case variations for VBA compatibility with safety checks
+                var variations = new List<string>
                 {
                     propertyName.ToLowerInvariant(),
-                    propertyName.ToUpperInvariant(),
-                    char.ToLowerInvariant(propertyName[0]) + propertyName.Substring(1), // camelCase
-                    propertyName.Replace("_", "").ToLowerInvariant(), // no underscores
-                    propertyName.Replace("_", "").ToUpperInvariant()
+                    propertyName.ToUpperInvariant()
                 };
+
+                // CRITICAL FIX: Only add camelCase variation if property name has more than 1 character
+                if (propertyName.Length > 1)
+                {
+                    variations.Add(char.ToLowerInvariant(propertyName[0]) + propertyName.Substring(1)); // camelCase
+                }
+
+                // CRITICAL FIX: Only add underscore variations if they result in non-empty strings
+                var withoutUnderscores = propertyName.Replace("_", "");
+                if (!string.IsNullOrEmpty(withoutUnderscores))
+                {
+                    variations.Add(withoutUnderscores.ToLowerInvariant()); // no underscores
+                    variations.Add(withoutUnderscores.ToUpperInvariant());
+                }
 
                 foreach (var variation in variations)
                 {
-                    if (element.TryGetProperty(variation, out var property))
+                    if (!string.IsNullOrEmpty(variation) && element.TryGetProperty(variation, out var property))
                     {
                         _logger.LogDebug("Found JSON property with case variation: {Original} -> {Found}", propertyName, variation);
                         return property.GetString();
