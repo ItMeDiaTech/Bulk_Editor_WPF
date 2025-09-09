@@ -25,7 +25,7 @@ namespace BulkEditor.Application.Services
         /// <summary>
         /// Validates selected files before processing
         /// </summary>
-        Task<ValidationResult> ValidateFilesAsync(IEnumerable<string> filePaths);
+        Task<ValidationResult> ValidateFilesAsync(IEnumerable<string> filePaths, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets processing statistics for completed operations

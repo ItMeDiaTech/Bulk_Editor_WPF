@@ -1,8 +1,8 @@
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Core.Services;
 using BulkEditor.Infrastructure.Services;
-using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -21,12 +21,14 @@ namespace BulkEditor.Tests.Infrastructure.Services
     {
         private readonly Mock<IHttpService> _httpServiceMock;
         private readonly Mock<ILoggingService> _loggerMock;
+        private readonly Mock<IRetryPolicyService> _retryPolicyServiceMock;
         private readonly HyperlinkReplacementService _service;
 
         public HyperlinkReplacementServiceIntegrationTests()
         {
             _httpServiceMock = new Mock<IHttpService>();
             _loggerMock = new Mock<ILoggingService>();
+            _retryPolicyServiceMock = new Mock<IRetryPolicyService>();
 
             // Create default AppSettings for testing
             var appSettings = new AppSettings
@@ -38,7 +40,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             };
             var appSettingsOptions = Options.Create(appSettings);
 
-            _service = new HyperlinkReplacementService(_httpServiceMock.Object, _loggerMock.Object, appSettingsOptions);
+            _service = new HyperlinkReplacementService(_httpServiceMock.Object, _loggerMock.Object, appSettingsOptions, _retryPolicyServiceMock.Object);
         }
 
 
@@ -63,19 +65,20 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.ProcessApiResponseAsync(lookupIds, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull();
-            result.IsSuccess.Should().BeTrue();
+            Assert.NotNull(result);
+            Assert.True(result.IsSuccess);
 
             // Based on simulation logic (15% chance of missing), some should be missing
             var totalReturned = result.FoundDocuments.Count + result.ExpiredDocuments.Count;
             var totalMissing = result.MissingLookupIds.Count;
 
-            (totalReturned + totalMissing).Should().Be(lookupIds.Length,
-                "Total returned plus missing should equal original lookup IDs");
+            Assert.Equal(lookupIds.Length, totalReturned + totalMissing);
 
             // Verify missing IDs are properly tracked
-            result.MissingLookupIds.Should().AllSatisfy(missingId =>
-                lookupIds.Should().Contain(missingId, "Missing ID should be from original list"));
+            foreach (var missingId in result.MissingLookupIds)
+            {
+                Assert.Contains(missingId, lookupIds);
+            }
         }
 
         [Fact]
@@ -88,11 +91,11 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.LookupDocumentByIdentifierAsync(contentId, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNull("Valid content ID should return document record");
-            result.Content_ID.Should().Be("123456", "Content ID should be properly formatted");
-            result.Document_ID.Should().NotBeNullOrEmpty("Document ID should be generated");
-            result.Title.Should().NotBeNullOrEmpty("Title should be generated");
-            result.Status.Should().BeOneOf("Released", "Expired", "Unknown", "Error handling statuses");
+            Assert.NotNull(result);
+            Assert.Equal("123456", result.Content_ID);
+            Assert.False(string.IsNullOrEmpty(result.Document_ID));
+            Assert.False(string.IsNullOrEmpty(result.Title));
+            Assert.Contains(result.Status, new[] { "Released", "Expired", "Unknown" });
         }
 
         [Fact]
@@ -109,21 +112,21 @@ namespace BulkEditor.Tests.Infrastructure.Services
             if (result == null)
             {
                 // This is expected for missing lookup IDs
-                result.Should().BeNull("Missing lookup IDs should return null");
+                Assert.Null(result);
             }
             else
             {
                 // If not null, should be valid
-                result.Should().NotBeNull();
+                Assert.NotNull(result);
             }
         }
 
         [Theory]
-        [InlineData("123456", "123456", "6-digit Content ID should remain unchanged")]
-        [InlineData("12345", "012345", "5-digit Content ID should be padded with leading zero")]
-        [InlineData("TSRC-PROD-123456", "123456", "Should extract 6-digit from lookup ID")]
-        [InlineData("CMS-TEST-654321", "654321", "Should extract 6-digit from CMS lookup ID")]
-        public void FormatContentIdForDisplay_ShouldFollowVbaMethodology(string input, string expected, string reason)
+        [InlineData("123456", "123456")]
+        [InlineData("12345", "012345")]
+        [InlineData("TSRC-PROD-123456", "123456")]
+        [InlineData("CMS-TEST-654321", "654321")]
+        public void FormatContentIdForDisplay_ShouldFollowVbaMethodology(string input, string expected)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("FormatContentIdForDisplay",
@@ -133,16 +136,16 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = (string)method.Invoke(_service, new object[] { input });
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
-        [InlineData("doc<span>123</span>", "doc123", "Should remove HTML tags")]
-        [InlineData("doc&amp;test", "doc&test", "Should decode HTML entities")]
-        [InlineData("doc&lt;test&gt;", "doc<test>", "Should decode angle bracket entities")]
-        [InlineData("doc&quot;test&quot;", "doctest", "Should remove quotes after decoding")]
-        [InlineData("normal-doc-id", "normal-doc-id", "Should leave clean IDs unchanged")]
-        public void FilterHtmlElementsFromUrl_ShouldCleanUrls(string input, string expected, string reason)
+        [InlineData("doc<span>123</span>", "doc123")]
+        [InlineData("doc&amp;test", "doc&test")]
+        [InlineData("doc&lt;test&gt;", "doc<test>")]
+        [InlineData("doc&quot;test&quot;", "doctest")]
+        [InlineData("normal-doc-id", "normal-doc-id")]
+        public void FilterHtmlElementsFromUrl_ShouldCleanUrls(string input, string expected)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("FilterHtmlElementsFromUrl",
@@ -152,15 +155,15 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = (string)method.Invoke(_service, new object[] { input });
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
-        [InlineData("TSRC-PROD-123456", "123456", "Should extract 6-digit from TSRC")]
-        [InlineData("CMS-TEST-654321", "654321", "Should extract 6-digit from CMS")]
-        [InlineData("TSRC-VERYLONGNAME-789012", "789012", "Should handle long middle parts")]
-        [InlineData("invalid-format", "invalid-format", "Should return original for invalid format")]
-        public void ExtractContentIdFromLookupId_ShouldFollowVbaPattern(string input, string expected, string reason)
+        [InlineData("TSRC-PROD-123456", "123456")]
+        [InlineData("CMS-TEST-654321", "654321")]
+        [InlineData("TSRC-VERYLONGNAME-789012", "789012")]
+        [InlineData("invalid-format", "invalid-format")]
+        public void ExtractContentIdFromLookupId_ShouldFollowVbaPattern(string input, string expected)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("ExtractContentIdFromLookupId",
@@ -170,7 +173,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = (string)method.Invoke(_service, new object[] { input });
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Fact]
@@ -183,10 +186,9 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.BuildUrlFromDocumentId(documentId);
 
             // Assert
-            result.Should().NotBeNullOrEmpty("URL should be generated");
-            result.Should().StartWith("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=",
-                "URL should follow CVS Health format");
-            result.Should().Contain(documentId, "URL should contain the document ID");
+            Assert.False(string.IsNullOrEmpty(result));
+            Assert.StartsWith("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=", result);
+            Assert.Contains(documentId, result);
         }
 
         [Fact]
@@ -199,20 +201,20 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.BuildUrlFromDocumentId(documentId);
 
             // Assert
-            result.Should().NotBeNullOrEmpty("URL should be generated");
-            result.Should().NotContain("&amp;", "HTML entities should be decoded");
-            result.Should().NotContain("&lt;", "HTML entities should be decoded");
-            result.Should().NotContain("&gt;", "HTML entities should be decoded");
+            Assert.False(string.IsNullOrEmpty(result));
+            Assert.DoesNotContain("&amp;", result);
+            Assert.DoesNotContain("&lt;", result);
+            Assert.DoesNotContain("&gt;", result);
         }
 
         [Theory]
-        [InlineData("", false, "Empty URL should be invalid")]
-        [InlineData("not-a-url", false, "Plain text should be invalid")]
-        [InlineData("ftp://example.com", false, "FTP URLs should be invalid")]
-        [InlineData("http://example.com", true, "HTTP URLs should be valid")]
-        [InlineData("https://example.com", true, "HTTPS URLs should be valid")]
-        [InlineData("https://thesource.cvshealth.com/test", true, "CVS Health URLs should be valid")]
-        public void IsValidUrl_ShouldValidateUrlsCorrectly(string url, bool expected, string reason)
+        [InlineData("", false)]
+        [InlineData("not-a-url", false)]
+        [InlineData("ftp://example.com", false)]
+        [InlineData("http://example.com", true)]
+        [InlineData("https://example.com", true)]
+        [InlineData("https://thesource.cvshealth.com/test", true)]
+        public void IsValidUrl_ShouldValidateUrlsCorrectly(string url, bool expected)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("IsValidUrl",
@@ -222,7 +224,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = (bool)method.Invoke(_service, new object[] { url });
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Fact]
@@ -240,15 +242,15 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var jsonResponse = await result;
 
             // Assert
-            jsonResponse.Should().NotBeNullOrEmpty("JSON response should be generated");
-            jsonResponse.Should().Contain("\"Version\":", "Should contain version field");
-            jsonResponse.Should().Contain("\"Changes\":", "Should contain changes field");
-            jsonResponse.Should().Contain("\"Results\":", "Should contain results array");
-            jsonResponse.Should().Contain("\"Lookup_ID\":", "Should contain lookup ID fields");
-            jsonResponse.Should().Contain("\"Document_ID\":", "Should contain document ID fields");
-            jsonResponse.Should().Contain("\"Content_ID\":", "Should contain content ID fields");
-            jsonResponse.Should().Contain("\"Title\":", "Should contain title fields");
-            jsonResponse.Should().Contain("\"Status\":", "Should contain status fields");
+            Assert.False(string.IsNullOrEmpty(jsonResponse));
+            Assert.Contains("\"Version\":", jsonResponse);
+            Assert.Contains("\"Changes\":", jsonResponse);
+            Assert.Contains("\"Results\":", jsonResponse);
+            Assert.Contains("\"Lookup_ID\":", jsonResponse);
+            Assert.Contains("\"Document_ID\":", jsonResponse);
+            Assert.Contains("\"Content_ID\":", jsonResponse);
+            Assert.Contains("\"Title\":", jsonResponse);
+            Assert.Contains("\"Status\":", jsonResponse);
         }
 
 
@@ -262,8 +264,8 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.LookupTitleByIdentifierAsync(contentId, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNullOrEmpty("Should return a title");
-            result.Should().Contain(contentId, "Title should contain the content ID");
+            Assert.False(string.IsNullOrEmpty(result));
+            Assert.Contains(contentId, result);
         }
 
         [Fact]
@@ -276,8 +278,8 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.LookupTitleByIdentifierAsync(contentId, CancellationToken.None);
 
             // Assert
-            result.Should().NotBeNullOrEmpty("Should always return a title, even for missing content");
-            result.Should().Contain(contentId, "Fallback title should contain the content ID");
+            Assert.False(string.IsNullOrEmpty(result));
+            Assert.Contains(contentId, result);
         }
 
         [Fact]
@@ -294,11 +296,11 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = (string)method.Invoke(_service, new object[] { fragmentWithExclamation });
 
             // Assert
-            result.Should().NotBeNull("Method should return a result");
-            result.Should().NotContain("!", "Exclamation mark should be URL encoded");
-            result.Should().Contain("%21", "Exclamation mark should be encoded as %21");
-            result.Should().Contain("view", "The rest of the URL should be preserved");
-            result.Should().Contain("docid", "The docid parameter should be preserved");
+            Assert.NotNull(result);
+            Assert.DoesNotContain("!", result);
+            Assert.Contains("%21", result);
+            Assert.Contains("view", result);
+            Assert.Contains("docid", result);
         }
 
         [Fact]
@@ -317,17 +319,17 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var safeResult = (bool)method.Invoke(_service, new object[] { safeFragment });
 
             // Assert
-            unsafeResult.Should().BeFalse("Fragment with exclamation mark should be unsafe for OpenXML");
-            safeResult.Should().BeTrue("Fragment without special characters should be safe for OpenXML");
+            Assert.False(unsafeResult);
+            Assert.True(safeResult);
         }
 
         [Theory]
-        [InlineData("!/view?docid=test", "Fragment with exclamation mark")]
-        [InlineData("<script>alert('test')</script>", "Fragment with angle brackets")]
-        [InlineData("test&param=value", "Fragment with ampersand")]
-        [InlineData("test\"quoted\"", "Fragment with quotes")]
-        [InlineData("test'quoted'", "Fragment with single quotes")]
-        public void ValidateAndSanitizeUrlFragment_WithSpecialCharacters_ShouldEncodeCorrectly(string input, string description)
+        [InlineData("!/view?docid=test")]
+        [InlineData("<script>alert('test')</script>")]
+        [InlineData("test&param=value")]
+        [InlineData("test\"quoted\"")]
+        [InlineData("test'quoted'")]
+        public void ValidateAndSanitizeUrlFragment_WithSpecialCharacters_ShouldEncodeCorrectly(string input)
         {
             // Use reflection to test private method
             var method = typeof(HyperlinkReplacementService).GetMethod("ValidateAndSanitizeUrlFragment",
@@ -337,13 +339,13 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = (string)method.Invoke(_service, new object[] { input });
 
             // Assert
-            result.Should().NotBeNull($"Method should return a result for: {description}");
-            result.Should().NotContain("!", "Exclamation marks should be encoded");
-            result.Should().NotContain("<", "Angle brackets should be encoded");
-            result.Should().NotContain(">", "Angle brackets should be encoded");
-            result.Should().NotContain("&", "Ampersands should be encoded (except for encoded sequences)");
-            result.Should().NotContain("\"", "Double quotes should be encoded");
-            result.Should().NotContain("'", "Single quotes should be encoded");
+            Assert.NotNull(result);
+            Assert.DoesNotContain("!", result);
+            Assert.DoesNotContain("<", result);
+            Assert.DoesNotContain(">", result);
+            Assert.DoesNotContain("&", result);
+            Assert.DoesNotContain("\"", result);
+            Assert.DoesNotContain("'", result);
         }
 
         [Fact]
@@ -356,10 +358,9 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.BuildUrlFromDocumentId(documentId);
 
             // Assert
-            result.Should().NotBeNullOrEmpty("URL should be generated");
-            result.Should().StartWith("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=",
-                "URL should follow the correct CVS Health format");
-            result.Should().EndWith(documentId, "URL should contain the document ID");
+            Assert.False(string.IsNullOrEmpty(result));
+            Assert.StartsWith("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=", result);
+            Assert.EndsWith(documentId, result);
         }
     }
 }

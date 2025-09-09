@@ -1,6 +1,5 @@
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Infrastructure.Services;
-using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -28,7 +27,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.ReplaceTextWithCapitalizationPreservation(sourceText, searchText, replacementText);
 
             // Assert
-            result.Should().Be(expected);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -42,7 +41,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.ReplaceTextWithCapitalizationPreservation(sourceText, searchText, replacementText);
 
             // Assert
-            result.Should().Be(expected);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -55,7 +54,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.ReplaceTextWithCapitalizationPreservation(sourceText, searchText, replacementText);
 
             // Assert
-            result.Should().Be(expected);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -69,7 +68,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.ReplaceTextWithCapitalizationPreservation(sourceText, searchText, replacementText);
 
             // Assert
-            result.Should().Be(expected);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -83,7 +82,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.ReplaceTextWithCapitalizationPreservation(sourceText, searchText, replacementText);
 
             // Assert
-            result.Should().Be(expected);
+            Assert.Equal(expected, result);
         }
 
         [Fact]
@@ -98,7 +97,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.ReplaceTextWithCapitalizationPreservation(sourceText, searchText, replacementText);
 
             // Assert
-            result.Should().Be(sourceText);
+            Assert.Equal(sourceText, result);
         }
 
         [Theory]
@@ -112,7 +111,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = _service.ReplaceTextWithCapitalizationPreservation(sourceText, searchText, replacementText);
 
             // Assert
-            result.Should().Be(expected);
+            Assert.Equal(expected, result);
         }
     }
 }

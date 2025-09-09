@@ -1,7 +1,6 @@
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Infrastructure.Services;
-using FluentAssertions;
 using Moq;
 using System;
 using System.Net;
@@ -63,33 +62,33 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var response = await _httpService.PostJsonAsync("Test", testData);
 
             // Assert
-            response.Should().NotBeNull();
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
-            response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
+            Assert.NotNull(response);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            responseContent.Should().NotBeNullOrEmpty();
+            Assert.False(string.IsNullOrEmpty(responseContent));
 
             // Verify the response matches VBA expected format
             var apiResponse = JsonSerializer.Deserialize<ApiResponse>(responseContent);
-            apiResponse.Should().NotBeNull();
-            apiResponse.Version.Should().Be("2.1");
-            apiResponse.Changes.Should().Be("Test mode - mock data response");
-            apiResponse.Results.Should().NotBeEmpty();
-            apiResponse.Results.Should().HaveCount(3);
+            Assert.NotNull(apiResponse);
+            Assert.Equal("2.1", apiResponse.Version);
+            Assert.Equal("Test mode - mock data response", apiResponse.Changes);
+            Assert.NotEmpty(apiResponse.Results);
+            Assert.Equal(3, apiResponse.Results.Count);
 
             // Verify each result has required fields
             foreach (var result in apiResponse.Results)
             {
-                result.Document_ID.Should().NotBeNullOrEmpty();
-                result.Content_ID.Should().NotBeNullOrEmpty();
-                result.Title.Should().NotBeNullOrEmpty();
-                result.Status.Should().NotBeNullOrEmpty();
+                Assert.False(string.IsNullOrEmpty(result.Document_ID));
+                Assert.False(string.IsNullOrEmpty(result.Content_ID));
+                Assert.False(string.IsNullOrEmpty(result.Title));
+                Assert.False(string.IsNullOrEmpty(result.Status));
             }
 
             // Verify status values - should have both "Released" and "Expired" for testing
-            apiResponse.Results.Should().Contain(r => r.Status == "Released");
-            apiResponse.Results.Should().Contain(r => r.Status == "Expired");
+            Assert.Contains(apiResponse.Results, r => r.Status == "Released");
+            Assert.Contains(apiResponse.Results, r => r.Status == "Expired");
         }
 
         [Fact]
@@ -104,9 +103,9 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var response3 = await _httpService.PostJsonAsync("Test", testData);
 
             // Assert
-            response1.StatusCode.Should().Be(HttpStatusCode.OK);
-            response2.StatusCode.Should().Be(HttpStatusCode.OK);
-            response3.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response3.StatusCode);
         }
 
         [Fact]
@@ -122,17 +121,17 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var response = await _httpService.PostJsonAsync("Test", testData);
 
             // Assert
-            response.Should().NotBeNull();
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            Assert.NotNull(response);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             var responseContent = await response.Content.ReadAsStringAsync();
             var apiResponse = JsonSerializer.Deserialize<ApiResponse>(responseContent);
 
             // Verify the test response structure matches what VBA expects
-            apiResponse.Should().NotBeNull();
-            apiResponse.Version.Should().NotBeNullOrEmpty();
-            apiResponse.Changes.Should().NotBeNullOrEmpty();
-            apiResponse.Results.Should().NotBeNull();
+            Assert.NotNull(apiResponse);
+            Assert.False(string.IsNullOrEmpty(apiResponse.Version));
+            Assert.False(string.IsNullOrEmpty(apiResponse.Changes));
+            Assert.NotNull(apiResponse.Results);
         }
 
         [Fact]
@@ -150,22 +149,22 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var root = jsonDoc.RootElement;
 
             // Assert - verify JSON structure matches VBA parsing expectations
-            root.TryGetProperty("Version", out var versionElement).Should().BeTrue();
-            versionElement.GetString().Should().NotBeNullOrEmpty();
+            Assert.True(root.TryGetProperty("Version", out var versionElement));
+            Assert.False(string.IsNullOrEmpty(versionElement.GetString()));
 
-            root.TryGetProperty("Changes", out var changesElement).Should().BeTrue();
-            changesElement.GetString().Should().NotBeNullOrEmpty();
+            Assert.True(root.TryGetProperty("Changes", out var changesElement));
+            Assert.False(string.IsNullOrEmpty(changesElement.GetString()));
 
-            root.TryGetProperty("Results", out var resultsElement).Should().BeTrue();
-            resultsElement.ValueKind.Should().Be(JsonValueKind.Array);
+            Assert.True(root.TryGetProperty("Results", out var resultsElement));
+            Assert.Equal(JsonValueKind.Array, resultsElement.ValueKind);
 
             // Check each result item has the required fields for VBA
             foreach (var result in resultsElement.EnumerateArray())
             {
-                result.TryGetProperty("Document_ID", out _).Should().BeTrue();
-                result.TryGetProperty("Content_ID", out _).Should().BeTrue();
-                result.TryGetProperty("Title", out _).Should().BeTrue();
-                result.TryGetProperty("Status", out _).Should().BeTrue();
+                Assert.True(result.TryGetProperty("Document_ID", out _));
+                Assert.True(result.TryGetProperty("Content_ID", out _));
+                Assert.True(result.TryGetProperty("Title", out _));
+                Assert.True(result.TryGetProperty("Status", out _));
             }
         }
 
@@ -203,18 +202,18 @@ namespace BulkEditor.Tests.Infrastructure.Services
             if (shouldBeExpired)
             {
                 // Should have at least one expired document for testing
-                apiResponse.Results.Should().Contain(r => r.Status == "Expired");
+                Assert.Contains(apiResponse.Results, r => r.Status == "Expired");
                 // Verify the expected status is present when looking for expired
-                apiResponse.Results.Should().Contain(r => r.Status == expectedStatus);
+                Assert.Contains(apiResponse.Results, r => r.Status == expectedStatus);
             }
             else
             {
                 // Should have non-expired documents
-                apiResponse.Results.Should().Contain(r => r.Status == "Released");
+                Assert.Contains(apiResponse.Results, r => r.Status == "Released");
                 // For non-expired cases, verify expectedStatus exists if it's "Released"
                 if (expectedStatus == "Released")
                 {
-                    apiResponse.Results.Should().Contain(r => r.Status == expectedStatus);
+                    Assert.Contains(apiResponse.Results, r => r.Status == expectedStatus);
                 }
             }
         }

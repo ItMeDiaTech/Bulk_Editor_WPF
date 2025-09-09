@@ -2,7 +2,6 @@ using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Core.Services;
 using BulkEditor.UI.ViewModels;
-using FluentAssertions;
 using Moq;
 using System.Threading.Tasks;
 using Xunit;
@@ -42,11 +41,11 @@ namespace BulkEditor.Tests.UI.ViewModels
         public void Constructor_ShouldInitializePropertiesFromAppSettings()
         {
             // Assert
-            _viewModel.ProcessingSettings.MaxConcurrentDocuments.Should().Be(_appSettings.Processing.MaxConcurrentDocuments);
-            _viewModel.ValidationSettings.ApiBaseUrl.Should().Be(_appSettings.Api.BaseUrl);
-            _viewModel.ValidationSettings.ApiTimeoutSeconds.Should().Be((int)_appSettings.Api.Timeout.TotalSeconds);
-            _viewModel.ValidationSettings.EnableApiCaching.Should().Be(_appSettings.Api.EnableCaching);
-            _viewModel.ValidationSettings.ApiCacheExpiryHours.Should().Be((int)_appSettings.Api.CacheExpiry.TotalHours);
+            Assert.Equal(_appSettings.Processing.MaxConcurrentDocuments, _viewModel.ProcessingSettings.MaxConcurrentDocuments);
+            Assert.Equal(_appSettings.Api.BaseUrl, _viewModel.ValidationSettings.ApiBaseUrl);
+            Assert.Equal((int)_appSettings.Api.Timeout.TotalSeconds, _viewModel.ValidationSettings.ApiTimeoutSeconds);
+            Assert.Equal(_appSettings.Api.EnableCaching, _viewModel.ValidationSettings.EnableApiCaching);
+            Assert.Equal((int)_appSettings.Api.CacheExpiry.TotalHours, _viewModel.ValidationSettings.ApiCacheExpiryHours);
         }
 
         [Fact]
@@ -66,11 +65,11 @@ namespace BulkEditor.Tests.UI.ViewModels
             _viewModel.ValidationSettings.ApiCacheExpiryHours = newCacheExpiry;
 
             // Assert
-            _viewModel.ValidationSettings.ApiBaseUrl.Should().Be(newApiUrl);
-            _viewModel.ValidationSettings.ApiKey.Should().Be(newApiKey);
-            _viewModel.ValidationSettings.ApiTimeoutSeconds.Should().Be(newTimeout);
-            _viewModel.ValidationSettings.EnableApiCaching.Should().BeFalse();
-            _viewModel.ValidationSettings.ApiCacheExpiryHours.Should().Be(newCacheExpiry);
+            Assert.Equal(newApiUrl, _viewModel.ValidationSettings.ApiBaseUrl);
+            Assert.Equal(newApiKey, _viewModel.ValidationSettings.ApiKey);
+            Assert.Equal(newTimeout, _viewModel.ValidationSettings.ApiTimeoutSeconds);
+            Assert.False(_viewModel.ValidationSettings.EnableApiCaching);
+            Assert.Equal(newCacheExpiry, _viewModel.ValidationSettings.ApiCacheExpiryHours);
         }
 
         [Fact]
@@ -85,7 +84,7 @@ namespace BulkEditor.Tests.UI.ViewModels
             var result = InvokeValidateSettings();
 
             // Assert
-            result.Should().BeTrue();
+            Assert.True(result);
         }
 
         [Fact]
@@ -100,7 +99,7 @@ namespace BulkEditor.Tests.UI.ViewModels
             var result = InvokeValidateSettings();
 
             // Assert
-            result.Should().BeTrue();
+            Assert.True(result);
         }
 
         [Theory]
@@ -118,7 +117,7 @@ namespace BulkEditor.Tests.UI.ViewModels
             var result = InvokeValidateSettings();
 
             // Assert
-            result.Should().BeFalse();
+            Assert.False(result);
         }
 
         [Theory]
@@ -136,7 +135,7 @@ namespace BulkEditor.Tests.UI.ViewModels
             var result = InvokeValidateSettings();
 
             // Assert
-            result.Should().BeFalse();
+            Assert.False(result);
         }
 
         [Theory]
@@ -154,7 +153,7 @@ namespace BulkEditor.Tests.UI.ViewModels
             var result = InvokeValidateSettings();
 
             // Assert
-            result.Should().BeFalse();
+            Assert.False(result);
         }
 
         [Fact]

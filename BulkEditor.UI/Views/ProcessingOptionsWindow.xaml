@@ -8,7 +8,8 @@
         Height="650" Width="900"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
-        MinHeight="600" MinWidth="800">
+        MinHeight="600" MinWidth="800"
+        Loaded="Window_Loaded">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -288,7 +289,7 @@
                         Background="#9E9E9E"
                         Foreground="White"/>
                 <Button Content="Save Settings"
-                        Command="{Binding SaveSettingsCommand}"
+                        Command="{Binding SaveSettingsAsyncCommand}"
                         Background="#4CAF50"
                         Foreground="White"
                         Padding="16,8"/>

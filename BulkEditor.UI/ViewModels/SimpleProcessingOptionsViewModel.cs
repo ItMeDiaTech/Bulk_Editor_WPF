@@ -21,6 +21,7 @@ namespace BulkEditor.UI.ViewModels
     {
         private readonly ILoggingService _logger;
         private readonly INotificationService _notificationService;
+        private readonly BulkEditor.Core.Services.IConfigurationService _configurationService;
 
         // Processing Options
         [ObservableProperty]
@@ -63,14 +64,22 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private ObservableCollection<TextReplacementRule> _textRules = new();
 
+        // Hyperlink matching mode for title comparison
+        [ObservableProperty]
+        private HyperlinkMatchMode _hyperlinkMatchMode = HyperlinkMatchMode.Contains;
+
         public SimpleProcessingOptionsViewModel(
             ILoggingService logger,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            BulkEditor.Core.Services.IConfigurationService configurationService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
 
             InitializeDefaultSettings();
+            // CRITICAL FIX: Don't load settings synchronously in constructor
+            // Settings will be loaded asynchronously when the window is shown
         }
 
         private void InitializeDefaultSettings()
@@ -104,28 +113,121 @@ namespace BulkEditor.UI.ViewModels
             }
         }
 
-        [RelayCommand]
-        private void SaveSettings()
+        /// <summary>
+        /// CRITICAL FIX: Async method to load current settings without blocking UI thread
+        /// </summary>
+        public async Task LoadCurrentSettingsAsync()
         {
             try
             {
-                // For now, just show a success message
-                // In a real implementation, this would save to configuration
-                
-                _logger.LogInformation("Processing options saved successfully");
-                _notificationService.ShowSuccess("Settings Saved", "Processing options have been saved successfully.");
+                _logger.LogDebug("Loading current settings asynchronously");
+                var currentSettings = await _configurationService.LoadSettingsAsync().ConfigureAwait(false);
 
-                // Close the window with OK result
-                if (System.Windows.Application.Current.Windows.OfType<ProcessingOptionsWindow>().FirstOrDefault() is ProcessingOptionsWindow window)
+                // CRITICAL FIX: Ensure UI updates happen on UI thread
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    window.DialogResult = true;
-                    window.Close();
-                }
+                    // Load processing settings into UI
+                    UpdateTheSourceHyperlinkUrls = currentSettings.Processing.UpdateHyperlinks;
+                    AppendContentIdsToTheSourceHyperlinks = currentSettings.Processing.AddContentIds;
+                    CreateBackupBeforeProcessing = currentSettings.Processing.CreateBackupBeforeProcessing;
+                    MaxConcurrentDocuments = currentSettings.Processing.MaxConcurrentDocuments;
+                    TimeoutPerDocumentMinutes = (int)currentSettings.Processing.TimeoutPerDocument.TotalMinutes;
+                    OptimizeTextFormatting = currentSettings.Processing.OptimizeText;
+
+                    // Load validation settings
+                    CheckForExpiredContent = currentSettings.Validation.CheckExpiredContent;
+                    AutoReplaceOutdatedTitles = currentSettings.Validation.AutoReplaceTitles;
+                    ReportTitleDifferencesInChangelog = currentSettings.Validation.ReportTitleDifferences;
+
+                    // Load replacement settings
+                    ReplaceCustomUserDefinedHyperlinks = currentSettings.Replacement.EnableHyperlinkReplacement;
+                    ReplaceCustomUserDefinedText = currentSettings.Replacement.EnableTextReplacement;
+
+                    // Load custom replacement rules
+                    HyperlinkRules.Clear();
+                    foreach (var rule in currentSettings.Replacement.HyperlinkRules)
+                    {
+                        HyperlinkRules.Add(rule);
+                    }
+
+                    TextRules.Clear();
+                    foreach (var rule in currentSettings.Replacement.TextRules)
+                    {
+                        TextRules.Add(rule);
+                    }
+
+                    // Set hyperlink match mode (default to Contains for backward compatibility)
+                    HyperlinkMatchMode = HyperlinkMatchMode.Contains;
+                });
+
+                _logger.LogDebug("Current settings loaded successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving processing options");
-                _notificationService.ShowError("Save Error", "Failed to save processing options.", ex);
+                _logger.LogError(ex, "Error loading current settings asynchronously");
+                _notificationService.ShowError("Settings Load Error", "Failed to load current settings. Using defaults.", ex);
+            }
+        }
+
+        /// <summary>
+        /// CRITICAL FIX: Async method to save settings without blocking UI thread
+        /// </summary>
+        [RelayCommand]
+        private async Task SaveSettingsAsync()
+        {
+            try
+            {
+                _logger.LogDebug("Saving processing options asynchronously");
+
+                // Get current app settings asynchronously
+                var currentSettings = await _configurationService.LoadSettingsAsync().ConfigureAwait(false);
+
+                // Update processing settings from UI values
+                currentSettings.Processing.UpdateHyperlinks = UpdateTheSourceHyperlinkUrls;
+                currentSettings.Processing.AddContentIds = AppendContentIdsToTheSourceHyperlinks;
+                currentSettings.Processing.CreateBackupBeforeProcessing = CreateBackupBeforeProcessing;
+                currentSettings.Processing.MaxConcurrentDocuments = MaxConcurrentDocuments;
+                currentSettings.Processing.TimeoutPerDocument = TimeSpan.FromMinutes(TimeoutPerDocumentMinutes);
+                currentSettings.Processing.OptimizeText = OptimizeTextFormatting;
+
+                // Update validation settings
+                currentSettings.Validation.CheckExpiredContent = CheckForExpiredContent;
+                currentSettings.Validation.AutoReplaceTitles = AutoReplaceOutdatedTitles;
+                currentSettings.Validation.ReportTitleDifferences = ReportTitleDifferencesInChangelog;
+
+                // Update replacement settings
+                currentSettings.Replacement.EnableHyperlinkReplacement = ReplaceCustomUserDefinedHyperlinks;
+                currentSettings.Replacement.EnableTextReplacement = ReplaceCustomUserDefinedText;
+
+                // Save custom replacement rules
+                currentSettings.Replacement.HyperlinkRules = HyperlinkRules.ToList();
+                currentSettings.Replacement.TextRules = TextRules.ToList();
+
+                // Save the updated settings asynchronously
+                await _configurationService.SaveSettingsAsync(currentSettings).ConfigureAwait(false);
+
+                _logger.LogInformation("Processing options saved successfully");
+
+                // CRITICAL FIX: UI updates must happen on UI thread
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    _notificationService.ShowSuccess("Settings Saved", "Processing options have been saved successfully.");
+
+                    // Close the window with OK result
+                    if (System.Windows.Application.Current.Windows.OfType<ProcessingOptionsWindow>().FirstOrDefault() is ProcessingOptionsWindow window)
+                    {
+                        window.DialogResult = true;
+                        window.Close();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving processing options asynchronously");
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    _notificationService.ShowError("Save Error", "Failed to save processing options.", ex);
+                });
             }
         }
 
@@ -214,9 +316,9 @@ namespace BulkEditor.UI.ViewModels
 
                 if (saveFileDialog.ShowDialog() == true)
                 {
-                    await System.IO.File.WriteAllTextAsync(saveFileDialog.FileName, 
+                    await System.IO.File.WriteAllTextAsync(saveFileDialog.FileName,
                         System.Text.Json.JsonSerializer.Serialize(HyperlinkRules.ToList(), new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-                    
+
                     _notificationService.ShowSuccess("Export Complete", $"Hyperlink rules exported to {System.IO.Path.GetFileName(saveFileDialog.FileName)}");
                     _logger.LogInformation("Hyperlink rules exported to {FilePath}", saveFileDialog.FileName);
                 }
@@ -326,9 +428,9 @@ namespace BulkEditor.UI.ViewModels
 
                 if (saveFileDialog.ShowDialog() == true)
                 {
-                    await System.IO.File.WriteAllTextAsync(saveFileDialog.FileName, 
+                    await System.IO.File.WriteAllTextAsync(saveFileDialog.FileName,
                         System.Text.Json.JsonSerializer.Serialize(TextRules.ToList(), new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-                    
+
                     _notificationService.ShowSuccess("Export Complete", $"Text rules exported to {System.IO.Path.GetFileName(saveFileDialog.FileName)}");
                     _logger.LogInformation("Text rules exported to {FilePath}", saveFileDialog.FileName);
                 }
@@ -400,5 +502,20 @@ namespace BulkEditor.UI.ViewModels
         {
             base.Cleanup();
         }
+    }
+
+    /// <summary>
+    /// Enum for hyperlink title matching modes
+    /// </summary>
+    public enum HyperlinkMatchMode
+    {
+        /// <summary>Exact title match (case-insensitive)</summary>
+        Exact,
+        /// <summary>Title contains the match text (case-insensitive)</summary>
+        Contains,
+        /// <summary>Title starts with the match text (case-insensitive)</summary>
+        StartsWith,
+        /// <summary>Title ends with the match text (case-insensitive)</summary>
+        EndsWith
     }
 }

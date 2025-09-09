@@ -1,7 +1,6 @@
 using BulkEditor.Application.Services;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
-using FluentAssertions;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -65,9 +64,9 @@ namespace BulkEditor.Tests.Application.Services
                 var result = await _applicationService.ProcessSingleDocumentAsync(filePath);
 
                 // Assert
-                result.Should().NotBeNull();
-                result.FilePath.Should().Be(filePath);
-                result.Status.Should().Be(DocumentStatus.Completed);
+                Assert.NotNull(result);
+                Assert.Equal(filePath, result.FilePath);
+                Assert.Equal(DocumentStatus.Completed, result.Status);
             }
             finally
             {
@@ -99,10 +98,10 @@ namespace BulkEditor.Tests.Application.Services
                 var result = await _applicationService.ValidateFilesAsync(filePaths);
 
                 // Assert
-                result.Should().NotBeNull();
-                result.ValidFiles.Should().HaveCount(2);
-                result.InvalidFiles.Should().BeEmpty();
-                result.ErrorMessages.Should().BeEmpty();
+                Assert.NotNull(result);
+                Assert.Equal(2, result.ValidFiles.Count);
+                Assert.Empty(result.InvalidFiles);
+                Assert.Empty(result.ErrorMessages);
             }
             finally
             {
@@ -126,11 +125,11 @@ namespace BulkEditor.Tests.Application.Services
             var result = await _applicationService.ValidateFilesAsync(filePaths);
 
             // Assert
-            result.Should().NotBeNull();
-            result.ValidFiles.Should().BeEmpty();
-            result.InvalidFiles.Should().HaveCount(2);
-            result.ErrorMessages.Should().HaveCount(2);
-            result.IsValid.Should().BeFalse();
+            Assert.NotNull(result);
+            Assert.Empty(result.ValidFiles);
+            Assert.Equal(2, result.InvalidFiles.Count);
+            Assert.Equal(2, result.ErrorMessages.Count);
+            Assert.False(result.IsValid);
         }
 
         [Fact]
@@ -162,13 +161,13 @@ namespace BulkEditor.Tests.Application.Services
             var stats = _applicationService.GetProcessingStatistics(documents);
 
             // Assert
-            stats.Should().NotBeNull();
-            stats.TotalDocuments.Should().Be(2);
-            stats.SuccessfulDocuments.Should().Be(1);
-            stats.FailedDocuments.Should().Be(1);
-            stats.TotalHyperlinks.Should().Be(3);
-            stats.UpdatedHyperlinks.Should().Be(1);
-            stats.SuccessRate.Should().Be(50.0);
+            Assert.NotNull(stats);
+            Assert.Equal(2, stats.TotalDocuments);
+            Assert.Equal(1, stats.SuccessfulDocuments);
+            Assert.Equal(1, stats.FailedDocuments);
+            Assert.Equal(3, stats.TotalHyperlinks);
+            Assert.Equal(1, stats.UpdatedHyperlinks);
+            Assert.Equal(50.0, stats.SuccessRate);
         }
 
         [Fact]
@@ -201,9 +200,9 @@ namespace BulkEditor.Tests.Application.Services
                 var results = await _applicationService.ProcessDocumentsBatchAsync(filePaths);
 
                 // Assert
-                results.Should().NotBeNull();
-                results.Should().HaveCount(2);
-                results.All(d => d.Status == DocumentStatus.Completed).Should().BeTrue();
+                Assert.NotNull(results);
+                Assert.Equal(2, results.Count());
+                Assert.True(results.All(d => d.Status == DocumentStatus.Completed));
             }
             finally
             {

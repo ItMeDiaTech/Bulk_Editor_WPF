@@ -128,7 +128,7 @@ namespace BulkEditor.Infrastructure.Services
             _logger.LogInformation("Auto-update {Status}", enabled ? "enabled" : "disabled");
         }
 
-        public async Task<UpdateInfo> CheckForUpdatesAsync(bool bypassRateLimit = false)
+        public async Task<UpdateInfo?> CheckForUpdatesAsync(bool bypassRateLimit = false)
         {
             try
             {
@@ -162,7 +162,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     _logger.LogWarning("Failed to check for updates. Status: {StatusCode} ({StatusMessage}). Rate limit headers: {RateLimitRemaining}/{RateLimitLimit}, Reset: {RateLimitReset}", 
                         response.StatusCode, 
-                        response.ReasonPhrase,
+                        response.ReasonPhrase ?? "Unknown",
                         response.Headers.Contains("x-ratelimit-remaining") ? string.Join(",", response.Headers.GetValues("x-ratelimit-remaining")) : "N/A",
                         response.Headers.Contains("x-ratelimit-limit") ? string.Join(",", response.Headers.GetValues("x-ratelimit-limit")) : "N/A",
                         response.Headers.Contains("x-ratelimit-reset") ? string.Join(",", response.Headers.GetValues("x-ratelimit-reset")) : "N/A");
@@ -182,10 +182,10 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 // Parse version from tag name (assuming format "v1.2.3" or "1.2.3")
-                var versionString = release.TagName.TrimStart('v');
+                var versionString = release.TagName?.TrimStart('v') ?? string.Empty;
                 if (!Version.TryParse(versionString, out var releaseVersion))
                 {
-                    _logger.LogWarning("Could not parse version from tag: {TagName}", release.TagName);
+                    _logger.LogWarning("Could not parse version from tag: {TagName}", release.TagName ?? "null");
                     return null;
                 }
 
@@ -198,7 +198,7 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 // Find installer asset
-                GitHubAsset installerAsset = null;
+                GitHubAsset? installerAsset = null;
                 foreach (var asset in release.Assets)
                 {
                     if (asset.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
@@ -314,7 +314,7 @@ namespace BulkEditor.Infrastructure.Services
                 await _configService.BackupSettingsAsync("pre-update");
 
                 // Create backup of current installation
-                await CreateInstallationBackupAsync();
+                CreateInstallationBackup();
 
                 _logger.LogInformation("Update preparation completed");
             }
@@ -361,7 +361,7 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        private async Task<string> DownloadUpdateAsync(UpdateInfo updateInfo, IProgress<UpdateProgress> progress)
+        private async Task<string> DownloadUpdateAsync(UpdateInfo updateInfo, IProgress<UpdateProgress>? progress)
         {
             try
             {
@@ -409,7 +409,7 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        private async Task<bool> InstallUpdateAsync(string installerPath, IProgress<UpdateProgress> progress)
+        private async Task<bool> InstallUpdateAsync(string installerPath, IProgress<UpdateProgress>? progress)
         {
             try
             {
@@ -546,7 +546,7 @@ $null = $Host.UI.RawUI.ReadKey(""NoEcho,IncludeKeyDown"")
             }
         }
 
-        private async Task CreateInstallationBackupAsync()
+        private void CreateInstallationBackup()
         {
             try
             {

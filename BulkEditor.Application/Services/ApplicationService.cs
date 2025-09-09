@@ -39,7 +39,7 @@ namespace BulkEditor.Application.Services
                 progress?.Report($"Validating file: {Path.GetFileName(filePath)}");
 
                 // Validate file first
-                var validation = await ValidateFilesAsync(new[] { filePath });
+                var validation = await ValidateFilesAsync(new[] { filePath }, cancellationToken).ConfigureAwait(false);
                 if (!validation.IsValid)
                 {
                     throw new InvalidOperationException($"File validation failed: {string.Join(", ", validation.ErrorMessages)}");
@@ -70,7 +70,7 @@ namespace BulkEditor.Application.Services
                 _logger.LogInformation("Starting batch processing of {Count} files", filePathsList.Count);
 
                 // Validate all files first
-                var validation = await ValidateFilesAsync(filePathsList);
+                var validation = await ValidateFilesAsync(filePathsList, cancellationToken).ConfigureAwait(false);
                 if (validation.InvalidFiles.Any())
                 {
                     _logger.LogWarning("Found {Count} invalid files in batch", validation.InvalidFiles.Count);
@@ -103,7 +103,7 @@ namespace BulkEditor.Application.Services
             }
         }
 
-        public async Task<ValidationResult> ValidateFilesAsync(IEnumerable<string> filePaths)
+        public async Task<ValidationResult> ValidateFilesAsync(IEnumerable<string> filePaths, CancellationToken cancellationToken = default)
         {
             var result = new ValidationResult();
 
@@ -111,6 +111,9 @@ namespace BulkEditor.Application.Services
             {
                 foreach (var filePath in filePaths)
                 {
+                    // Check cancellation to prevent hanging during validation
+                    cancellationToken.ThrowIfCancellationRequested();
+                    
                     if (string.IsNullOrWhiteSpace(filePath))
                     {
                         result.ErrorMessages.Add("Empty file path provided");
@@ -131,14 +134,30 @@ namespace BulkEditor.Application.Services
                         continue;
                     }
 
-                    // Check if file is accessible (not locked)
+                    // Check if file is accessible (not locked) with timeout protection
                     try
                     {
-                        var fileInfo = _fileService.GetFileInfo(filePath);
+                        // Use Task.Run with timeout to prevent hanging on network drives or locked files
+                        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        timeoutCts.CancelAfter(TimeSpan.FromSeconds(10)); // 10-second timeout per file
+                        
+                        var fileInfo = await Task.Run(() => _fileService.GetFileInfo(filePath), timeoutCts.Token).ConfigureAwait(false);
                         if (fileInfo.IsReadOnly)
                         {
                             result.ErrorMessages.Add($"File is read-only: {filePath}");
                         }
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        // Operation was cancelled by user
+                        throw;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Timeout occurred
+                        result.InvalidFiles.Add(filePath);
+                        result.ErrorMessages.Add($"File access timeout: {filePath} (possibly on network drive or locked)");
+                        continue;
                     }
                     catch (Exception ex)
                     {
@@ -155,7 +174,7 @@ namespace BulkEditor.Application.Services
                 _logger.LogInformation("File validation completed: {ValidCount} valid, {InvalidCount} invalid",
                     result.ValidFiles.Count, result.InvalidFiles.Count);
 
-                return await Task.FromResult(result);
+                return result;
             }
             catch (Exception ex)
             {

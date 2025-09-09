@@ -16,6 +16,7 @@ namespace BulkEditor.Core.Configuration
         public ApiSettings Api { get; set; } = new();
         public ReplacementSettings Replacement { get; set; } = new();
         public UpdateSettings Update { get; set; } = new();
+        public OfflineSettings Offline { get; set; } = new();
     }
 
     /// <summary>
@@ -165,5 +166,19 @@ namespace BulkEditor.Core.Configuration
         public string GitHubRepository { get; set; } = "Bulk_Editor";
         public DateTime LastUpdateCheck { get; set; } = DateTime.MinValue;
         public bool IncludePrerelease { get; set; } = false;
+    }
+
+    /// <summary>
+    /// Offline mode and network failure handling settings
+    /// </summary>
+    public class OfflineSettings
+    {
+        public bool OfflineModeEnabled { get; set; } = false;
+        public bool AllowStartupWithoutNetwork { get; set; } = true;
+        public bool SkipUpdateCheckWhenOffline { get; set; } = true;
+        public bool ContinueProcessingWithoutValidation { get; set; } = false;
+        public int NetworkTimeoutSeconds { get; set; } = 10;
+        public bool ShowOfflineIndicator { get; set; } = true;
+        public bool CacheLastKnownNetworkState { get; set; } = true;
     }
 }
