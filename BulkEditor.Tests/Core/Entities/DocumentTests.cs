@@ -1,5 +1,6 @@
 using BulkEditor.Core.Entities;
-using FluentAssertions;
+using System;
+using System.Linq;
 using Xunit;
 
 namespace BulkEditor.Tests.Core.Entities
@@ -16,14 +17,16 @@ namespace BulkEditor.Tests.Core.Entities
             var document = new Document();
 
             // Assert
-            document.Id.Should().NotBeEmpty();
-            document.Status.Should().Be(DocumentStatus.Pending);
-            document.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
-            document.ProcessedAt.Should().BeNull();
-            document.Hyperlinks.Should().NotBeNull().And.BeEmpty();
-            document.ProcessingErrors.Should().NotBeNull().And.BeEmpty();
-            document.ChangeLog.Should().NotBeNull();
-            document.ChangeLog.Changes.Should().BeEmpty();
+            Assert.False(string.IsNullOrEmpty(document.Id));
+            Assert.Equal(DocumentStatus.Pending, document.Status);
+            Assert.True((DateTime.UtcNow - document.CreatedAt).TotalSeconds < 5);
+            Assert.Null(document.ProcessedAt);
+            Assert.NotNull(document.Hyperlinks);
+            Assert.Empty(document.Hyperlinks);
+            Assert.NotNull(document.ProcessingErrors);
+            Assert.Empty(document.ProcessingErrors);
+            Assert.NotNull(document.ChangeLog);
+            Assert.Empty(document.ChangeLog.Changes);
         }
 
         [Fact]
@@ -39,7 +42,7 @@ namespace BulkEditor.Tests.Core.Entities
             };
 
             // Assert
-            document.FilePath.Should().Be(filePath);
+            Assert.Equal(filePath, document.FilePath);
         }
 
         [Theory]
@@ -56,7 +59,7 @@ namespace BulkEditor.Tests.Core.Entities
             var isProcessed = document.Status == DocumentStatus.Completed || document.Status == DocumentStatus.Failed;
 
             // Assert
-            isProcessed.Should().Be(expectedResult);
+            Assert.Equal(expectedResult, isProcessed);
         }
 
         [Fact]
@@ -74,8 +77,8 @@ namespace BulkEditor.Tests.Core.Entities
             document.Hyperlinks.Add(hyperlink);
 
             // Assert
-            document.Hyperlinks.Should().HaveCount(1);
-            document.Hyperlinks.First().Should().Be(hyperlink);
+            Assert.Single(document.Hyperlinks);
+            Assert.Equal(hyperlink, document.Hyperlinks.First());
         }
 
         [Fact]
@@ -90,8 +93,8 @@ namespace BulkEditor.Tests.Core.Entities
             document.ProcessingErrors.Add(processingError);
 
             // Assert
-            document.ProcessingErrors.Should().HaveCount(1);
-            document.ProcessingErrors.Should().Contain(processingError);
+            Assert.Single(document.ProcessingErrors);
+            Assert.Contains(processingError, document.ProcessingErrors);
         }
 
         [Fact]
@@ -111,9 +114,9 @@ namespace BulkEditor.Tests.Core.Entities
             document.ChangeLog.Changes.Add(changeEntry);
 
             // Assert
-            document.ChangeLog.Changes.Should().HaveCount(1);
-            document.ChangeLog.TotalChanges.Should().Be(1);
-            document.ChangeLog.Changes.First().Should().Be(changeEntry);
+            Assert.Single(document.ChangeLog.Changes);
+            Assert.Equal(1, document.ChangeLog.TotalChanges);
+            Assert.Equal(changeEntry, document.ChangeLog.Changes.First());
         }
     }
 }

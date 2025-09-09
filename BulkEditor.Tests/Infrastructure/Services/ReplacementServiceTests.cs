@@ -2,7 +2,7 @@ using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Infrastructure.Services;
-using FluentAssertions;
+using System.Linq;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -54,7 +54,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.ProcessReplacementsAsync(document, CancellationToken.None);
 
             // Assert
-            result.Should().BeSameAs(document);
+            Assert.Same(document, result);
             _mockHyperlinkService.Verify(x => x.ProcessHyperlinkReplacementsAsync(It.IsAny<Document>(), It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Never);
             _mockTextService.Verify(x => x.ProcessTextReplacementsAsync(It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Never);
         }
@@ -78,7 +78,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.ProcessReplacementsAsync(document, CancellationToken.None);
 
             // Assert
-            result.Should().BeSameAs(document);
+            Assert.Same(document, result);
             _mockHyperlinkService.Verify(x => x.ProcessHyperlinkReplacementsAsync(document, It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -101,7 +101,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.ProcessReplacementsAsync(document, CancellationToken.None);
 
             // Assert
-            result.Should().BeSameAs(document);
+            Assert.Same(document, result);
             _mockTextService.Verify(x => x.ProcessTextReplacementsAsync(document, It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -122,10 +122,10 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.ValidateReplacementRulesAsync(rules, CancellationToken.None);
 
             // Assert
-            result.IsValid.Should().BeTrue();
-            result.ValidRulesCount.Should().Be(1);
-            result.InvalidRulesCount.Should().Be(0);
-            result.ValidationErrors.Should().BeEmpty();
+            Assert.True(result.IsValid);
+            Assert.Equal(1, result.ValidRulesCount);
+            Assert.Equal(0, result.InvalidRulesCount);
+            Assert.Empty(result.ValidationErrors);
         }
 
         [Fact]
@@ -145,10 +145,10 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.ValidateReplacementRulesAsync(rules, CancellationToken.None);
 
             // Assert
-            result.IsValid.Should().BeFalse();
-            result.ValidRulesCount.Should().Be(0);
-            result.InvalidRulesCount.Should().Be(1);
-            result.ValidationErrors.Should().HaveCount(2);
+            Assert.False(result.IsValid);
+            Assert.Equal(0, result.ValidRulesCount);
+            Assert.Equal(1, result.InvalidRulesCount);
+            Assert.Equal(2, result.ValidationErrors.Count);
         }
 
         [Fact]
@@ -168,10 +168,10 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.ValidateReplacementRulesAsync(rules, CancellationToken.None);
 
             // Assert
-            result.IsValid.Should().BeTrue();
-            result.ValidRulesCount.Should().Be(1);
-            result.InvalidRulesCount.Should().Be(0);
-            result.ValidationErrors.Should().BeEmpty();
+            Assert.True(result.IsValid);
+            Assert.Equal(1, result.ValidRulesCount);
+            Assert.Equal(0, result.InvalidRulesCount);
+            Assert.Empty(result.ValidationErrors);
         }
 
         [Fact]
@@ -191,9 +191,9 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = await _service.ValidateReplacementRulesAsync(rules, CancellationToken.None);
 
             // Assert
-            result.IsValid.Should().BeFalse();
-            result.InvalidRulesCount.Should().Be(1);
-            result.ValidationErrors.Should().ContainSingle();
+            Assert.False(result.IsValid);
+            Assert.Equal(1, result.InvalidRulesCount);
+            Assert.Single(result.ValidationErrors);
         }
     }
 }

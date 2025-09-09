@@ -1,5 +1,5 @@
 using BulkEditor.Core.Entities;
-using FluentAssertions;
+using System;
 using Xunit;
 
 namespace BulkEditor.Tests.Core.Entities
@@ -16,17 +16,17 @@ namespace BulkEditor.Tests.Core.Entities
             var hyperlink = new Hyperlink();
 
             // Assert
-            hyperlink.Id.Should().NotBeEmpty();
-            hyperlink.Status.Should().Be(HyperlinkStatus.Pending);
-            hyperlink.ActionTaken.Should().Be(HyperlinkAction.None);
-            hyperlink.RequiresUpdate.Should().BeFalse();
-            hyperlink.DisplayText.Should().BeEmpty();
-            hyperlink.OriginalUrl.Should().BeEmpty();
-            hyperlink.UpdatedUrl.Should().BeEmpty();
-            hyperlink.LookupId.Should().BeEmpty();
-            hyperlink.ContentId.Should().BeEmpty();
-            hyperlink.DocumentId.Should().BeEmpty();
-            hyperlink.ErrorMessage.Should().BeEmpty();
+            Assert.False(string.IsNullOrEmpty(hyperlink.Id));
+            Assert.Equal(HyperlinkStatus.Pending, hyperlink.Status);
+            Assert.Equal(HyperlinkAction.None, hyperlink.ActionTaken);
+            Assert.False(hyperlink.RequiresUpdate);
+            Assert.Equal(string.Empty, hyperlink.DisplayText);
+            Assert.Equal(string.Empty, hyperlink.OriginalUrl);
+            Assert.Equal(string.Empty, hyperlink.UpdatedUrl);
+            Assert.Equal(string.Empty, hyperlink.LookupId);
+            Assert.Equal(string.Empty, hyperlink.ContentId);
+            Assert.Equal(string.Empty, hyperlink.DocumentId);
+            Assert.Equal(string.Empty, hyperlink.ErrorMessage);
         }
 
         [Theory]
@@ -43,8 +43,8 @@ namespace BulkEditor.Tests.Core.Entities
             };
 
             // Assert
-            hyperlink.OriginalUrl.Should().Be(url);
-            hyperlink.LookupId.Should().Be(expectedLookupId);
+            Assert.Equal(url, hyperlink.OriginalUrl);
+            Assert.Equal(expectedLookupId, hyperlink.LookupId);
         }
 
         [Fact]
@@ -58,8 +58,8 @@ namespace BulkEditor.Tests.Core.Entities
             hyperlink.LastChecked = DateTime.UtcNow;
 
             // Assert
-            hyperlink.Status.Should().Be(HyperlinkStatus.Valid);
-            hyperlink.LastChecked.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+            Assert.Equal(HyperlinkStatus.Valid, hyperlink.Status);
+            Assert.True((DateTime.UtcNow - hyperlink.LastChecked.Value).TotalSeconds < 5);
         }
 
         [Fact]
@@ -76,9 +76,9 @@ namespace BulkEditor.Tests.Core.Entities
             hyperlink.ActionTaken = HyperlinkAction.Updated;
 
             // Assert
-            hyperlink.ActionTaken.Should().Be(HyperlinkAction.Updated);
-            hyperlink.OriginalUrl.Should().Be("https://old-url.com");
-            hyperlink.UpdatedUrl.Should().Be("https://new-url.com");
+            Assert.Equal(HyperlinkAction.Updated, hyperlink.ActionTaken);
+            Assert.Equal("https://old-url.com", hyperlink.OriginalUrl);
+            Assert.Equal("https://new-url.com", hyperlink.UpdatedUrl);
         }
 
         [Theory]
@@ -97,7 +97,7 @@ namespace BulkEditor.Tests.Core.Entities
             };
 
             // Act & Assert
-            hyperlink.RequiresUpdate.Should().Be(expectedRequiresUpdate);
+            Assert.Equal(expectedRequiresUpdate, hyperlink.RequiresUpdate);
         }
     }
 }

@@ -1,7 +1,6 @@
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Infrastructure.Services;
-using FluentAssertions;
 using Moq;
 using Xunit;
 using System.Threading;
@@ -76,7 +75,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = InvokeShouldAutoValidateHyperlink(url, "Test Display Text");
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -102,7 +101,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = InvokeShouldAutoValidateHyperlink(url, "Test Display Text");
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -126,7 +125,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = InvokeExtractLookupIdUsingVbaLogic(input, "");
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -140,7 +139,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = InvokeExtractLookupIdUsingVbaLogic(input, "");
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -160,7 +159,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var result = InvokeExtractLookupIdUsingVbaLogic(input, "");
 
             // Assert
-            result.Should().Be(expected, reason);
+            Assert.Equal(expected, result);
         }
 
         [Theory]
@@ -175,11 +174,11 @@ namespace BulkEditor.Tests.Infrastructure.Services
             // Assert - We verify behavior by checking if it extracts correctly from combined URL
             if (expectedCombined.Contains("TSRC-") || expectedCombined.Contains("CMS-"))
             {
-                result.Should().NotBeEmpty(reason);
+                Assert.NotEmpty(result);
             }
             else
             {
-                result.Should().BeEmpty(reason);
+                Assert.Empty(result);
             }
         }
 
@@ -210,8 +209,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
 
                 var result = InvokeShouldAutoValidateHyperlink(testCase.Url, "Test Display");
 
-                result.Should().Be(testCase.ShouldProcess,
-                    $"URL '{testCase.Url}' should {(testCase.ShouldProcess ? "be" : "NOT be")} processed to match VBA behavior");
+                Assert.Equal(testCase.ShouldProcess, result);
             }
         }
 

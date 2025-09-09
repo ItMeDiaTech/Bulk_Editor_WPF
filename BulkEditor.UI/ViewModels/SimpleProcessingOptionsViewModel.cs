@@ -64,6 +64,10 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private ObservableCollection<TextReplacementRule> _textRules = new();
 
+        // Hyperlink matching mode for title comparison
+        [ObservableProperty]
+        private HyperlinkMatchMode _hyperlinkMatchMode = HyperlinkMatchMode.Contains;
+
         public SimpleProcessingOptionsViewModel(
             ILoggingService logger,
             INotificationService notificationService,
@@ -143,6 +147,9 @@ namespace BulkEditor.UI.ViewModels
                 {
                     TextRules.Add(rule);
                 }
+                
+                // Set hyperlink match mode (default to Contains for backward compatibility)
+                HyperlinkMatchMode = HyperlinkMatchMode.Contains;
                 
                 _logger.LogDebug("Current settings loaded successfully");
             }
@@ -472,5 +479,20 @@ namespace BulkEditor.UI.ViewModels
         {
             base.Cleanup();
         }
+    }
+
+    /// <summary>
+    /// Enum for hyperlink title matching modes
+    /// </summary>
+    public enum HyperlinkMatchMode
+    {
+        /// <summary>Exact title match (case-insensitive)</summary>
+        Exact,
+        /// <summary>Title contains the match text (case-insensitive)</summary>
+        Contains,
+        /// <summary>Title starts with the match text (case-insensitive)</summary>
+        StartsWith,
+        /// <summary>Title ends with the match text (case-insensitive)</summary>
+        EndsWith
     }
 }

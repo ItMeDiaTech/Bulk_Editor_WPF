@@ -24,6 +24,7 @@ namespace BulkEditor.Infrastructure.Services
         private readonly IHttpService _httpService;
         private readonly ILoggingService _logger;
         private readonly AppSettings _appSettings;
+        private readonly IRetryPolicyService _retryPolicyService;
         private readonly Regex _contentIdRegex;
         private readonly Regex _fiveDigitRegex;
         private readonly Regex _sixDigitRegex;
@@ -31,11 +32,12 @@ namespace BulkEditor.Infrastructure.Services
         // CRITICAL FIX: Add missing primary lookup ID regex pattern like VBA (Issue #1)
         private readonly Regex _lookupIdRegex;
 
-        public HyperlinkReplacementService(IHttpService httpService, ILoggingService logger, IOptions<AppSettings> appSettings)
+        public HyperlinkReplacementService(IHttpService httpService, ILoggingService logger, IOptions<AppSettings> appSettings, IRetryPolicyService retryPolicyService)
         {
             _httpService = httpService ?? throw new ArgumentNullException(nameof(httpService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _appSettings = appSettings?.Value ?? throw new ArgumentNullException(nameof(appSettings));
+            _retryPolicyService = retryPolicyService ?? throw new ArgumentNullException(nameof(retryPolicyService));
 
             // CRITICAL FIX: Primary regex pattern exactly like VBA with IgnoreCase and word boundaries (Issue #1)
             // VBA: .Pattern = "(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})"
@@ -94,8 +96,8 @@ namespace BulkEditor.Infrastructure.Services
                     {
                         var ruleTitleLower = rule.TitleToMatch.Trim().ToLowerInvariant();
 
-                        // Check if the title to match exists anywhere in the display text (case-insensitive)
-                        if (cleanDisplayText.Contains(ruleTitleLower, StringComparison.OrdinalIgnoreCase))
+                        // Check if the title matches based on configured match mode
+                        if (DoesTextMatch(cleanDisplayText, ruleTitleLower, GetHyperlinkMatchMode()))
                         {
                             var result = await ProcessHyperlinkReplacementAsync(mainPart, openXmlHyperlink, rule, document, cancellationToken).ConfigureAwait(false);
                             if (result.WasReplaced)
@@ -287,6 +289,7 @@ namespace BulkEditor.Infrastructure.Services
         public async Task<ApiProcessingResult> ProcessApiResponseAsync(IEnumerable<string> lookupIds, CancellationToken cancellationToken = default)
         {
             var result = new ApiProcessingResult();
+            var startTime = DateTime.UtcNow;
 
             try
             {
@@ -296,7 +299,10 @@ namespace BulkEditor.Infrastructure.Services
                     return result;
                 }
 
-                _logger.LogInformation("Processing single API call for {Count} lookup identifiers (both Content_IDs and Document_IDs combined)", lookupIds.Count());
+                var lookupIdsArray = lookupIds.ToArray();
+                result.TotalIdsProcessed = lookupIdsArray.Length;
+
+                _logger.LogInformation("Processing single API call for {Count} lookup identifiers (both Content_IDs and Document_IDs combined)", lookupIdsArray.Length);
 
                 // CRITICAL FIX: Try real API first, fallback to simulation for testing (Issue #2)
                 string jsonResponse;
@@ -312,10 +318,20 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 // Parse JSON response with flexible matching following Base_File.vba methodology
-                result = ParseJsonResponseWithFlexibleMatching(jsonResponse, lookupIds);
+                result = ParseJsonResponseWithFlexibleMatching(jsonResponse, lookupIdsArray);
 
-                _logger.LogInformation("API response processing completed: {FoundCount} found, {ExpiredCount} expired, {MissingCount} missing",
-                    result.FoundDocuments.Count, result.ExpiredDocuments.Count, result.MissingLookupIds.Count);
+                // Enhanced tracking completion
+                result.ProcessingDuration = DateTime.UtcNow - startTime;
+                result.TotalIdsFound = result.FoundDocuments.Count + result.ExpiredDocuments.Count;
+                
+                // Add details for missing IDs
+                foreach (var missingId in result.MissingLookupIds)
+                {
+                    result.MissingIdDetails[missingId] = "Not found in API response";
+                }
+
+                _logger.LogInformation("API response processing completed: {FoundCount} found, {ExpiredCount} expired, {MissingCount} missing ({FoundPercentage:F1}% success rate)",
+                    result.FoundDocuments.Count, result.ExpiredDocuments.Count, result.MissingLookupIds.Count, result.FoundPercentage);
 
                 return result;
             }
@@ -334,6 +350,7 @@ namespace BulkEditor.Infrastructure.Services
         /// </summary>
         private async Task<string> CallRealApiAsync(IEnumerable<string> lookupIds, CancellationToken cancellationToken)
         {
+            var apiCallStart = DateTime.UtcNow;
             try
             {
                 // CRITICAL FIX: Build exact VBA JSON structure (Issue #4)
@@ -343,7 +360,7 @@ namespace BulkEditor.Infrastructure.Services
                     Lookup_ID = lookupIds.ToArray() // Exact property name like VBA - case sensitive!
                 };
 
-                _logger.LogDebug("Calling real API with single request for {Count} combined lookup identifiers (Content_IDs and Document_IDs): {LookupIds}",
+                _logger.LogDebug("Calling real API with Lookup_ID array containing {Count} identifiers (Content_IDs and Document_IDs): {LookupIds}",
                     lookupIds.Count(), string.Join(", ", lookupIds));
 
                 // CRITICAL FIX: Use proper JSON serialization options (Issue #7)
@@ -356,6 +373,8 @@ namespace BulkEditor.Infrastructure.Services
 
                 var jsonString = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
                 _logger.LogInformation("Full HTTP API Request JSON: {JsonRequest}", jsonString);
+                _logger.LogDebug("API Request Details: Endpoint={ApiEndpoint}, Timeout={TimeoutSeconds}s, LookupIds={LookupIds}", 
+                    apiEndpoint, _appSettings.Api.Timeout.TotalSeconds, string.Join(", ", lookupIds));
 
                 // CRITICAL FIX: Use configured API endpoint from settings instead of hardcoded example
                 var apiEndpoint = GetConfiguredApiEndpoint();
@@ -369,7 +388,11 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                var apiCallDuration = DateTime.UtcNow - apiCallStart;
+                
                 _logger.LogInformation("Full HTTP API Response JSON: {Response}", jsonResponse);
+                _logger.LogInformation("API Call Performance: Duration={DurationMs}ms, Status={StatusCode}, ResponseLength={ResponseLength} chars", 
+                    apiCallDuration.TotalMilliseconds, response.StatusCode, jsonResponse.Length);
 
                 return jsonResponse;
             }
@@ -1520,6 +1543,18 @@ namespace BulkEditor.Infrastructure.Services
             public List<DocumentRecord> FoundDocuments { get; set; } = new();
             public List<DocumentRecord> ExpiredDocuments { get; set; } = new();
             public List<string> MissingLookupIds { get; set; } = new();
+            
+            // Enhanced tracking for better reporting
+            public Dictionary<string, string> MissingIdDetails { get; set; } = new();
+            public int TotalIdsProcessed { get; set; }
+            public int TotalIdsFound { get; set; }
+            public DateTime ProcessedAt { get; set; } = DateTime.UtcNow;
+            public TimeSpan ProcessingDuration { get; set; }
+            
+            // Computed properties for reporting
+            public int TotalMissing => MissingLookupIds.Count;
+            public double FoundPercentage => TotalIdsProcessed > 0 ? (double)TotalIdsFound / TotalIdsProcessed * 100 : 0;
+            public double MissingPercentage => TotalIdsProcessed > 0 ? (double)TotalMissing / TotalIdsProcessed * 100 : 0;
         }
 
         /// <summary>
@@ -1554,6 +1589,38 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
+        /// Gets the configured hyperlink match mode from settings
+        /// </summary>
+        private HyperlinkMatchMode GetHyperlinkMatchMode()
+        {
+            // For now, default to Contains for backward compatibility
+            // TODO: This should be read from configuration/settings
+            return HyperlinkMatchMode.Contains;
+        }
+
+        /// <summary>
+        /// Checks if text matches based on the specified match mode
+        /// </summary>
+        /// <param name="sourceText">The text to search in</param>
+        /// <param name="matchText">The text to search for</param>
+        /// <param name="matchMode">The matching mode to use</param>
+        /// <returns>True if text matches according to the mode</returns>
+        private bool DoesTextMatch(string sourceText, string matchText, HyperlinkMatchMode matchMode)
+        {
+            if (string.IsNullOrEmpty(sourceText) || string.IsNullOrEmpty(matchText))
+                return false;
+
+            return matchMode switch
+            {
+                HyperlinkMatchMode.Exact => sourceText.Equals(matchText, StringComparison.OrdinalIgnoreCase),
+                HyperlinkMatchMode.Contains => sourceText.Contains(matchText, StringComparison.OrdinalIgnoreCase),
+                HyperlinkMatchMode.StartsWith => sourceText.StartsWith(matchText, StringComparison.OrdinalIgnoreCase),
+                HyperlinkMatchMode.EndsWith => sourceText.EndsWith(matchText, StringComparison.OrdinalIgnoreCase),
+                _ => sourceText.Contains(matchText, StringComparison.OrdinalIgnoreCase) // Default to Contains
+            };
+        }
+
+        /// <summary>
         /// Result of hyperlink replacement operation
         /// </summary>
         public class HyperlinkReplacementResult
@@ -1566,6 +1633,21 @@ namespace BulkEditor.Infrastructure.Services
             public bool WasReplaced { get; set; }
             public string ErrorMessage { get; set; } = string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Enum for hyperlink title matching modes
+    /// </summary>
+    public enum HyperlinkMatchMode
+    {
+        /// <summary>Exact title match (case-insensitive)</summary>
+        Exact,
+        /// <summary>Title contains the match text (case-insensitive)</summary>
+        Contains,
+        /// <summary>Title starts with the match text (case-insensitive)</summary>
+        StartsWith,
+        /// <summary>Title ends with the match text (case-insensitive)</summary>
+        EndsWith
     }
 }
 
