@@ -38,7 +38,7 @@ if (-not (Test-Path $outputDir)) {
 
 try {
     Write-Host "`nStep 1: Updating Version Information..." -ForegroundColor Yellow
-    
+
     # Update UI project version
     $uiProjectFile = Join-Path $rootDir "BulkEditor.UI\BulkEditor.UI.csproj"
     if (Test-Path $uiProjectFile) {
@@ -72,7 +72,7 @@ try {
 
     Write-Host "`nStep 2: Running Tests..." -ForegroundColor Yellow
     if (-not $SkipTests) {
-        dotnet test --configuration Release --verbosity minimal --no-build
+        dotnet test --configuration Release --verbosity minimal
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Some tests failed, but continuing with deployment"
         } else {
@@ -83,7 +83,7 @@ try {
     }
 
     Write-Host "`nStep 3: Building Release..." -ForegroundColor Yellow
-    
+
     # Clean and build solution
     dotnet clean --configuration Release --verbosity quiet
     dotnet build --configuration Release --verbosity minimal
@@ -91,23 +91,23 @@ try {
     Write-Host "Solution built successfully" -ForegroundColor Green
 
     Write-Host "`nStep 4: Creating Portable Package..." -ForegroundColor Yellow
-    
+
     # Publish portable version
     $publishDir = Join-Path $outputDir "Publish"
     if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
-    
+
     dotnet publish "BulkEditor.UI\BulkEditor.UI.csproj" --configuration Release --output $publishDir --self-contained false --verbosity quiet
     if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
     # Create portable ZIP
     $portableZip = Join-Path $outputDir "BulkEditor-v$Version-Portable.zip"
     if (Test-Path $portableZip) { Remove-Item $portableZip -Force }
-    
+
     Compress-Archive -Path "$publishDir\*" -DestinationPath $portableZip -CompressionLevel Optimal
     Write-Host "Created portable package: BulkEditor-v$Version-Portable.zip" -ForegroundColor Green
 
     Write-Host "`nStep 5: Building MSI Installer..." -ForegroundColor Yellow
-    
+
     # Build MSI installer
     dotnet build "BulkEditor.Installer\BulkEditor.Installer.wixproj" --configuration Release --verbosity minimal
     if ($LASTEXITCODE -ne 0) { throw "MSI build failed" }
@@ -123,7 +123,7 @@ try {
     }
 
     Write-Host "`nStep 6: Committing Changes..." -ForegroundColor Yellow
-    
+
     # Commit version updates
     git add -A
     git commit -m "Release v$Version - Update version files and build artifacts"
@@ -131,7 +131,7 @@ try {
     Write-Host "Version changes committed and pushed" -ForegroundColor Green
 
     Write-Host "`nStep 7: Creating GitHub Release..." -ForegroundColor Yellow
-    
+
     # Create release notes if not provided
     if ([string]::IsNullOrEmpty($ReleaseNotes)) {
         $ReleaseNotes = @"
@@ -155,12 +155,12 @@ try {
     # Create GitHub release
     $prereleaseFlag = if ($Prerelease) { "--prerelease" } else { "" }
     $releaseCommand = "gh release create `"v$Version`" --title `"BulkEditor v$Version`" --notes `"$ReleaseNotes`" --target main $prereleaseFlag"
-    
+
     Invoke-Expression $releaseCommand
     Write-Host "GitHub release created: v$Version" -ForegroundColor Green
 
     Write-Host "`nStep 8: Uploading Release Assets..." -ForegroundColor Yellow
-    
+
     # Upload MSI installer
     gh release upload "v$Version" $targetMsi --clobber
     Write-Host "Uploaded MSI installer" -ForegroundColor Green
@@ -182,7 +182,7 @@ try {
     Write-Host "   * BulkEditor-v$Version-Portable.zip" -ForegroundColor Gray
     Write-Host "   * version.json" -ForegroundColor Gray
     Write-Host "================================================================" -ForegroundColor Cyan
-    
+
     # Show file sizes
     $msiSize = [math]::Round((Get-Item $targetMsi).Length / 1MB, 2)
     $zipSize = [math]::Round((Get-Item $portableZip).Length / 1MB, 2)
