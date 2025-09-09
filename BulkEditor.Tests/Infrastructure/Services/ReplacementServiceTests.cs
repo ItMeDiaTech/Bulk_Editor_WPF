@@ -50,10 +50,10 @@ namespace BulkEditor.Tests.Infrastructure.Services
         {
             // Arrange
             var document = new Document { FileName = "test.docx" };
-            var mockWordDoc = new Mock<WordprocessingDocument>();
+            // Note: Using null for WordprocessingDocument since we're testing coordination logic, not OpenXML operations
 
             // Act
-            var result = await _service.ProcessReplacementsInSessionAsync(mockWordDoc.Object, document, CancellationToken.None);
+            var result = await _service.ProcessReplacementsInSessionAsync(null, document, CancellationToken.None);
 
             // Assert
             Assert.Equal(0, result);
@@ -75,10 +75,10 @@ namespace BulkEditor.Tests.Infrastructure.Services
 
             _mockHyperlinkService.Setup(x => x.ProcessHyperlinkReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(1);
-            var mockWordDoc = new Mock<WordprocessingDocument>();
+            // Note: Using null for WordprocessingDocument since we're testing coordination logic, not OpenXML operations
 
             // Act
-            var result = await _service.ProcessReplacementsInSessionAsync(mockWordDoc.Object, document, CancellationToken.None);
+            var result = await _service.ProcessReplacementsInSessionAsync(null, document, CancellationToken.None);
 
             // Assert
             Assert.Equal(1, result);
@@ -99,10 +99,10 @@ namespace BulkEditor.Tests.Infrastructure.Services
 
             _mockTextService.Setup(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(1);
-            var mockWordDoc = new Mock<WordprocessingDocument>();
+            // Note: Using null for WordprocessingDocument since we're testing coordination logic, not OpenXML operations
 
             // Act
-            var result = await _service.ProcessReplacementsInSessionAsync(mockWordDoc.Object, document, CancellationToken.None);
+            var result = await _service.ProcessReplacementsInSessionAsync(null, document, CancellationToken.None);
 
             // Assert
             Assert.Equal(1, result);
