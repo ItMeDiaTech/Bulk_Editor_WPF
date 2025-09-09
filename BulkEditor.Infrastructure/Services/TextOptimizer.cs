@@ -157,10 +157,11 @@ namespace BulkEditor.Infrastructure.Services
                         changesMade += await OptimizeListFormattingAsync(mainPart, document, cancellationToken);
                     }
 
-                    // Save changes if any were made
+                    // CRITICAL FIX: Changes tracked but save handled by main session
                     if (changesMade > 0)
                     {
-                        mainPart.Document.Save();
+                        // REMOVED: mainPart.Document.Save(); - conflicts with session-based saves
+                        // The document will be saved by the main session processor
 
                         // Log summary change
                         document.ChangeLog.Changes.Add(new ChangeEntry
@@ -249,7 +250,8 @@ namespace BulkEditor.Infrastructure.Services
 
                     if (changesMade > 0)
                     {
-                        mainPart.Document.Save();
+                        // REMOVED: mainPart.Document.Save(); - conflicts with session-based saves
+                        // The document will be saved by the main session processor
 
                         document.ChangeLog.Changes.Add(new ChangeEntry
                         {
@@ -292,7 +294,8 @@ namespace BulkEditor.Infrastructure.Services
 
                     if (changesMade > 0)
                     {
-                        mainPart.Document.Save();
+                        // REMOVED: mainPart.Document.Save(); - conflicts with session-based saves
+                        // The document will be saved by the main session processor
 
                         document.ChangeLog.Changes.Add(new ChangeEntry
                         {
@@ -331,7 +334,8 @@ namespace BulkEditor.Infrastructure.Services
 
                     if (changesMade > 0)
                     {
-                        mainPart.Document.Save();
+                        // REMOVED: mainPart.Document.Save(); - conflicts with session-based saves
+                        // The document will be saved by the main session processor
 
                         document.ChangeLog.Changes.Add(new ChangeEntry
                         {

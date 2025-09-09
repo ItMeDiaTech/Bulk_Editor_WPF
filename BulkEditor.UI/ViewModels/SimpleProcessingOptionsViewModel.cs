@@ -21,6 +21,7 @@ namespace BulkEditor.UI.ViewModels
     {
         private readonly ILoggingService _logger;
         private readonly INotificationService _notificationService;
+        private readonly BulkEditor.Core.Services.IConfigurationService _configurationService;
 
         // Processing Options
         [ObservableProperty]
@@ -65,12 +66,15 @@ namespace BulkEditor.UI.ViewModels
 
         public SimpleProcessingOptionsViewModel(
             ILoggingService logger,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            BulkEditor.Core.Services.IConfigurationService configurationService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
 
             InitializeDefaultSettings();
+            LoadCurrentSettings();
         }
 
         private void InitializeDefaultSettings()
@@ -104,13 +108,81 @@ namespace BulkEditor.UI.ViewModels
             }
         }
 
+        private void LoadCurrentSettings()
+        {
+            try
+            {
+                var currentSettings = _configurationService.LoadSettingsAsync().Result;
+                
+                // Load processing settings into UI
+                UpdateTheSourceHyperlinkUrls = currentSettings.Processing.UpdateHyperlinks;
+                AppendContentIdsToTheSourceHyperlinks = currentSettings.Processing.AddContentIds;
+                CreateBackupBeforeProcessing = currentSettings.Processing.CreateBackupBeforeProcessing;
+                MaxConcurrentDocuments = currentSettings.Processing.MaxConcurrentDocuments;
+                TimeoutPerDocumentMinutes = (int)currentSettings.Processing.TimeoutPerDocument.TotalMinutes;
+                OptimizeTextFormatting = currentSettings.Processing.OptimizeText;
+                
+                // Load validation settings
+                CheckForExpiredContent = currentSettings.Validation.CheckExpiredContent;
+                AutoReplaceOutdatedTitles = currentSettings.Validation.AutoReplaceTitles;
+                ReportTitleDifferencesInChangelog = currentSettings.Validation.ReportTitleDifferences;
+                
+                // Load replacement settings
+                ReplaceCustomUserDefinedHyperlinks = currentSettings.Replacement.EnableHyperlinkReplacement;
+                ReplaceCustomUserDefinedText = currentSettings.Replacement.EnableTextReplacement;
+                
+                // Load custom replacement rules
+                HyperlinkRules.Clear();
+                foreach (var rule in currentSettings.Replacement.HyperlinkRules)
+                {
+                    HyperlinkRules.Add(rule);
+                }
+                
+                TextRules.Clear();
+                foreach (var rule in currentSettings.Replacement.TextRules)
+                {
+                    TextRules.Add(rule);
+                }
+                
+                _logger.LogDebug("Current settings loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading current settings");
+            }
+        }
+
         [RelayCommand]
         private void SaveSettings()
         {
             try
             {
-                // For now, just show a success message
-                // In a real implementation, this would save to configuration
+                // Get current app settings
+                var currentSettings = _configurationService.LoadSettingsAsync().Result;
+                
+                // Update processing settings from UI values
+                currentSettings.Processing.UpdateHyperlinks = UpdateTheSourceHyperlinkUrls;
+                currentSettings.Processing.AddContentIds = AppendContentIdsToTheSourceHyperlinks;
+                currentSettings.Processing.CreateBackupBeforeProcessing = CreateBackupBeforeProcessing;
+                currentSettings.Processing.MaxConcurrentDocuments = MaxConcurrentDocuments;
+                currentSettings.Processing.TimeoutPerDocument = TimeSpan.FromMinutes(TimeoutPerDocumentMinutes);
+                currentSettings.Processing.OptimizeText = OptimizeTextFormatting;
+                
+                // Update validation settings
+                currentSettings.Validation.CheckExpiredContent = CheckForExpiredContent;
+                currentSettings.Validation.AutoReplaceTitles = AutoReplaceOutdatedTitles;
+                currentSettings.Validation.ReportTitleDifferences = ReportTitleDifferencesInChangelog;
+                
+                // Update replacement settings
+                currentSettings.Replacement.EnableHyperlinkReplacement = ReplaceCustomUserDefinedHyperlinks;
+                currentSettings.Replacement.EnableTextReplacement = ReplaceCustomUserDefinedText;
+                
+                // Save custom replacement rules
+                currentSettings.Replacement.HyperlinkRules = HyperlinkRules.ToList();
+                currentSettings.Replacement.TextRules = TextRules.ToList();
+                
+                // Save the updated settings
+                _configurationService.SaveSettingsAsync(currentSettings).Wait();
                 
                 _logger.LogInformation("Processing options saved successfully");
                 _notificationService.ShowSuccess("Settings Saved", "Processing options have been saved successfully.");
