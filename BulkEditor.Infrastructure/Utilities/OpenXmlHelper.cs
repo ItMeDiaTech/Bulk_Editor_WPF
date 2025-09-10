@@ -109,42 +109,37 @@ namespace BulkEditor.Infrastructure.Utilities
                 var originalText = GetHyperlinkText(hyperlink);
                 var hyperlinkProperties = CloneHyperlinkProperties(hyperlink);
                 
-                // CRITICAL FIX: Hyperlinks should be siblings to runs, not children of runs
-                // Create a deleted hyperlink element (not wrapped in a run)
+                // CRITICAL FIX: Properly implement track changes for hyperlinks according to OpenXML spec
+                // Schema requires: hyperlinks must be wrapped in runs, then runs wrapped in track changes elements
+                
+                // Create deleted run containing the original complete hyperlink
                 var deletedRun = CreateDeletedRun();
                 var originalHyperlinkClone = (Hyperlink)hyperlink.CloneNode(true);
                 
-                // For track changes, we need to mark the hyperlink text as deleted
-                // but keep the hyperlink structure intact
-                foreach (var run in originalHyperlinkClone.Elements<Run>())
-                {
-                    var runContent = run.CloneNode(true);
-                    deletedRun.Append(runContent);
-                }
+                // Wrap the original hyperlink in a run for proper schema compliance
+                var deletedRunContent = new Run();
+                deletedRunContent.Append(originalHyperlinkClone);
+                deletedRun.Append(deletedRunContent);
                 
-                // Create an inserted run with the new hyperlink text
+                // Create inserted run containing the new complete hyperlink
                 var insertedRun = CreateInsertedRun();
                 var newHyperlink = CreateHyperlinkWithProperties(hyperlinkProperties, newText);
                 
-                // Add the new hyperlink content as runs within the inserted element
-                foreach (var run in newHyperlink.Elements<Run>())
-                {
-                    var runContent = run.CloneNode(true);
-                    insertedRun.Append(runContent);
-                }
+                // Wrap the new hyperlink in a run for proper schema compliance
+                var insertedRunContent = new Run();
+                insertedRunContent.Append(newHyperlink);
+                insertedRun.Append(insertedRunContent);
                 
                 // Replace the original hyperlink in the paragraph with proper error handling
                 try
                 {
-                    // CRITICAL FIX: Insert track changes and update hyperlink in place
-                    // rather than wrapping hyperlinks in runs (which violates schema)
-                    
-                    // Insert deleted and inserted track changes before the hyperlink
+                    // Insert track changes before the original hyperlink
                     paragraph.InsertBefore(deletedRun, hyperlink);
                     paragraph.InsertBefore(insertedRun, hyperlink);
                     
-                    // Update the original hyperlink in place with new text
-                    UpdateHyperlinkTextInternal(hyperlink, newText);
+                    // CRITICAL FIX: Remove the original hyperlink instead of updating it in place
+                    // This prevents the confusing display of old + text + new hyperlink
+                    hyperlink.Remove();
                 }
                 catch (Exception replaceEx)
                 {
