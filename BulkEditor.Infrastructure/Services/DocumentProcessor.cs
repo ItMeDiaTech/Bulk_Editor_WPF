@@ -1720,45 +1720,88 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     trackRevisions = new DocumentFormat.OpenXml.Wordprocessing.TrackRevisions();
                     
-                    // ENHANCED FIX: Insert TrackRevisions in correct schema order
-                    // Try to place it after common early settings elements but before complex ones
-                    var insertionPoint = settings.Elements().FirstOrDefault(e => 
-                        e.LocalName == "documentProtection" || 
-                        e.LocalName == "view" || 
-                        e.LocalName == "zoom" ||
-                        e.LocalName == "defaultTabStop");
+                    // CRITICAL FIX: Use early placement strategy to avoid schema conflicts
+                    // TrackRevisions should come early in the Settings to avoid interfering with 
+                    // elements like zoom, view, etc. that have specific schema positions
                     
-                    if (insertionPoint != null)
+                    // Strategy: Find elements that should come AFTER TrackRevisions and insert before them
+                    var laterElement = settings.Elements().FirstOrDefault(e => 
+                        e.LocalName == "zoom" || 
+                        e.LocalName == "view" || 
+                        e.LocalName == "removePersonalInformation" ||
+                        e.LocalName == "removeDateAndTime" ||
+                        e.LocalName == "doNotDisplayPageBoundaries" ||
+                        e.LocalName == "displayBackgroundShape" ||
+                        e.LocalName == "printPostScriptOverText" ||
+                        e.LocalName == "printFractionalCharacterWidth");
+                    
+                    if (laterElement != null)
                     {
-                        settings.InsertAfter(trackRevisions, insertionPoint);
-                        _logger.LogDebug("Inserted TrackRevisions after {ElementName}", insertionPoint.LocalName);
-                    }
-                    else if (settings.FirstChild != null)
-                    {
-                        settings.InsertBefore(trackRevisions, settings.FirstChild);
-                        _logger.LogDebug("Inserted TrackRevisions at beginning of Settings");
+                        // Insert TrackRevisions BEFORE elements that should come later
+                        settings.InsertBefore(trackRevisions, laterElement);
+                        _logger.LogDebug("Inserted TrackRevisions before {ElementName} to maintain schema order", laterElement.LocalName);
                     }
                     else
                     {
-                        settings.AppendChild(trackRevisions);
-                        _logger.LogDebug("Appended TrackRevisions as first child");
+                        // Safe fallback: prepend to beginning (earliest possible position)
+                        if (settings.FirstChild != null)
+                        {
+                            settings.InsertBefore(trackRevisions, settings.FirstChild);
+                            _logger.LogDebug("Inserted TrackRevisions at beginning of Settings (early placement)");
+                        }
+                        else
+                        {
+                            settings.AppendChild(trackRevisions);
+                            _logger.LogDebug("Appended TrackRevisions as first child (empty settings)");
+                        }
                     }
                 }
                 catch (Exception schemaEx)
                 {
                     _logger.LogError("Schema error when adding TrackRevisions: {Error}", schemaEx.Message);
-                    throw;
+                    
+                    // Last resort fallback: try simple append if placement strategies fail
+                    try
+                    {
+                        _logger.LogWarning("Attempting fallback TrackRevisions placement");
+                        trackRevisions = new DocumentFormat.OpenXml.Wordprocessing.TrackRevisions();
+                        settings.AppendChild(trackRevisions);
+                        _logger.LogWarning("Used fallback TrackRevisions placement - may have schema implications");
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        _logger.LogError("Fallback TrackRevisions placement also failed: {Error}", fallbackEx.Message);
+                        throw new InvalidOperationException($"All TrackRevisions placement strategies failed. Schema: {schemaEx.Message}, Fallback: {fallbackEx.Message}");
+                    }
                 }
 
                 // CRITICAL FIX: Save settings and validate
                 try
                 {
+                    // Log current settings structure for debugging
+                    var settingsChildren = settings.Elements().Select(e => e.LocalName).ToArray();
+                    _logger.LogDebug("Settings element order after TrackRevisions insertion: [{Elements}]", 
+                        string.Join(", ", settingsChildren));
+                    
                     settingsPart.Settings.Save();
                     _logger.LogInformation("Change tracking enabled successfully - all subsequent changes will be tracked");
                 }
                 catch (Exception saveEx)
                 {
                     _logger.LogError("Failed to save settings after enabling track changes: {Error}", saveEx.Message);
+                    
+                    // Log settings structure for debugging save failures
+                    try
+                    {
+                        var settingsChildren = settings.Elements().Select(e => e.LocalName).ToArray();
+                        _logger.LogError("Settings structure when save failed: [{Elements}]", 
+                            string.Join(", ", settingsChildren));
+                    }
+                    catch (Exception logEx)
+                    {
+                        _logger.LogError("Failed to log settings structure: {Error}", logEx.Message);
+                    }
+                    
                     throw;
                 }
             }
