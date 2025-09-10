@@ -1,5 +1,7 @@
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Core.Models;
+using BulkEditor.Core.Configuration;
+using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -18,10 +20,25 @@ public class BackupService : IBackupService
     /// Initializes a new instance of the <see cref="BackupService"/> class.
     /// </summary>
     /// <param name="logger">The logging service.</param>
-    public BackupService(ILoggingService logger)
+    /// <param name="appSettings">The application settings.</param>
+    public BackupService(ILoggingService logger, IOptions<AppSettings> appSettings)
     {
         _logger = logger;
-        _backupRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BulkEditor", "backups");
+        
+        // Get backup directory from settings, with fallback to default
+        var backupDir = appSettings.Value.Backup.BackupDirectory;
+        
+        // If relative path, make it relative to LocalApplicationData
+        if (!Path.IsPathRooted(backupDir))
+        {
+            _backupRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BulkEditor", backupDir);
+        }
+        else
+        {
+            _backupRoot = backupDir;
+        }
+        
+        _logger.LogInformation("BackupService initialized with backup directory: {BackupDirectory}", _backupRoot);
     }
 
     /// <inheritdoc />

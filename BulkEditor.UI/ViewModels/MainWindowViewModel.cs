@@ -591,11 +591,52 @@ namespace BulkEditor.UI.ViewModels
                     _logger.LogInformation("Processing session {SessionId} started.", session.SessionId);
                     IsRevertEnabled = false; // Disable revert until processing is complete
 
-                    SetStatusProcessing("Backing up files before processing...");
+                    SetStatusProcessing("Validating files before processing...");
                     var filePaths = Documents.Select(d => d.FilePath).ToList();
-
-                    // Create backups before processing
+                    
+                    // Validate that all files exist before processing
+                    var validFilePaths = new List<string>();
+                    var missingFiles = new List<string>();
+                    
                     foreach (var filePath in filePaths)
+                    {
+                        if (File.Exists(filePath))
+                        {
+                            validFilePaths.Add(filePath);
+                        }
+                        else
+                        {
+                            missingFiles.Add(filePath);
+                            _logger.LogWarning("File not found during validation: {FilePath}", filePath);
+                        }
+                    }
+                    
+                    // Remove missing files from the UI collection
+                    if (missingFiles.Count > 0)
+                    {
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            var documentsToRemove = Documents.Where(d => missingFiles.Contains(d.FilePath)).ToList();
+                            foreach (var doc in documentsToRemove)
+                            {
+                                Documents.Remove(doc);
+                                _logger.LogInformation("Removed missing file from UI: {FilePath}", doc.FilePath);
+                            }
+                        });
+                        
+                        _logger.LogWarning("Removed {Count} missing files from processing queue", missingFiles.Count);
+                    }
+                    
+                    // If no valid files remain, abort processing
+                    if (validFilePaths.Count == 0)
+                    {
+                        throw new InvalidOperationException("No valid files found for processing. All files appear to be missing.");
+                    }
+                    
+                    SetStatusProcessing("Backing up files before processing...");
+
+                    // Create backups before processing (only for valid files)
+                    foreach (var filePath in validFilePaths)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var backupPath = await _backupService.CreateBackupAsync(filePath, session);
@@ -607,7 +648,7 @@ namespace BulkEditor.UI.ViewModels
                     var progress = new Progress<BatchProcessingProgress>(OnBatchProgressChanged);
 
                     return await _applicationService.ProcessDocumentsBatchAsync(
-                        filePaths,
+                        validFilePaths,
                         progress,
                         cancellationToken);
                 });

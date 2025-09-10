@@ -25,10 +25,7 @@ namespace BulkEditor.Core.Interfaces
         /// </summary>
         Task<IEnumerable<Entities.Hyperlink>> ValidateHyperlinksAsync(Entities.Document document, CancellationToken cancellationToken = default);
 
-        /// <summary>
-        /// Creates a backup of the document before processing
-        /// </summary>
-        Task<string> CreateBackupAsync(string filePath, CancellationToken cancellationToken = default);
+        // NOTE: Backup creation is now handled by IBackupService for centralized backup management
 
         /// <summary>
         /// Restores a document from backup

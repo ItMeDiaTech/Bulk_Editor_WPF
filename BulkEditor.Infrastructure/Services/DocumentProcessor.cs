@@ -93,16 +93,8 @@ namespace BulkEditor.Infrastructure.Services
                     throw new InvalidOperationException($"File is not a valid Word document: {filePath}");
                 }
 
-                // Create backup if enabled in settings
-                if (_appSettings.Processing.CreateBackupBeforeProcessing)
-                {
-                    progress?.Report("Creating backup...");
-                    document.BackupPath = await CreateBackupAsync(filePath, cancellationToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    _logger.LogDebug("Backup creation skipped - disabled in settings for document: {FileName}", document.FileName);
-                }
+                // NOTE: Backup creation is handled by MainWindowViewModel before document processing begins
+                _logger.LogDebug("Document processing started - backup handled by caller for document: {FileName}", document.FileName);
 
                 // CRITICAL FIX: Process document in single session to prevent corruption
                 progress?.Report("Processing document...");
@@ -396,19 +388,8 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        public async Task<string> CreateBackupAsync(string filePath, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                var backupDirectory = Path.Combine(Path.GetDirectoryName(filePath) ?? "", "Backups");
-                return await _fileService.CreateBackupAsync(filePath, backupDirectory, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating backup for file: {FilePath}", filePath);
-                throw;
-            }
-        }
+        // NOTE: Backup creation is now handled by BackupService via MainWindowViewModel
+        // This ensures all backups use the configured backup directory from settings
 
         public async Task<bool> RestoreFromBackupAsync(string filePath, string backupPath, CancellationToken cancellationToken = default)
         {
