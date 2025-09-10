@@ -87,21 +87,29 @@ namespace BulkEditor.Infrastructure.Services
                     // Update paragraph if any replacements were made
                     if (replacementsMadeInParagraph > 0)
                     {
-                        UpdateParagraphText(paragraph, modifiedText, trackChanges);
-                        totalReplacements += replacementsMadeInParagraph;
-
-                        // Log the change in document
-                        document.ChangeLog.Changes.Add(new ChangeEntry
+                        // CRITICAL FIX: Validate paragraph structure before modification
+                        if (ValidateParagraphForTextReplacement(paragraph))
                         {
-                            Type = ChangeType.TextReplaced,
-                            Description = "Text replaced using replacement rules (paragraph-level)",
-                            OldValue = originalText,
-                            NewValue = modifiedText,
-                            ElementId = Guid.NewGuid().ToString(),
-                            Details = $"Applied {replacementsMadeInParagraph} replacement rule(s)"
-                        });
+                            UpdateParagraphText(paragraph, modifiedText, trackChanges);
+                            totalReplacements += replacementsMadeInParagraph;
 
-                        _logger.LogDebug("Text replacement in session paragraph: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
+                            // Log the change in document
+                            document.ChangeLog.Changes.Add(new ChangeEntry
+                            {
+                                Type = ChangeType.TextReplaced,
+                                Description = "Text replaced using replacement rules (paragraph-level)",
+                                OldValue = originalText,
+                                NewValue = modifiedText,
+                                ElementId = Guid.NewGuid().ToString(),
+                                Details = $"Applied {replacementsMadeInParagraph} replacement rule(s)"
+                            });
+
+                            _logger.LogDebug("Text replacement in session paragraph: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Skipped text replacement for paragraph due to complex structure that could cause document corruption");
+                        }
                     }
                 }
 
@@ -352,74 +360,194 @@ namespace BulkEditor.Infrastructure.Services
         /// </summary>
         private void UpdateParagraphText(Paragraph paragraph, string newText, bool trackChanges = false)
         {
+            // CRITICAL FIX: Text replacement track changes are disabled due to OpenXML schema complexity
+            // Similar to hyperlinks, text replacement with track changes can cause document corruption
+            // when dealing with complex paragraph structures (hyperlinks, fields, formatting, etc.)
+            
+            if (trackChanges)
+            {
+                // Log that track changes are not supported for text replacement
+                _logger.LogDebug("Track changes requested for text replacement, but text track changes can cause schema violations with complex content. Using non-tracked update.");
+            }
+            
             try
             {
-                if (!trackChanges)
-                {
-                    // Standard text replacement without tracking
-                    UpdateParagraphTextInternal(paragraph, newText);
-                    return;
-                }
-
-                // Track changes approach: mark existing content as deleted and new content as inserted
-                var existingRuns = paragraph.Elements<Run>().ToList();
-                var runProperties = existingRuns.FirstOrDefault()?.GetFirstChild<RunProperties>()?.CloneNode(true);
-
-                // Mark all existing runs as deleted
-                foreach (var run in existingRuns)
-                {
-                    var deletedRun = OpenXmlHelper.CreateTrackedDeletion(run);
-                    paragraph.InsertBefore(deletedRun, run);
-                    run.Remove();
-                }
-
-                // Add new content as inserted
-                var insertedRun = OpenXmlHelper.CreateTrackedInsertion(newText, runProperties as RunProperties);
-                paragraph.Append(insertedRun);
+                // Always use non-tracked updates for text replacement to ensure schema compliance
+                UpdateParagraphTextInternal(paragraph, newText);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating paragraph text. Falling back to simple text update.");
                 
-                // Fallback: update first text element found
-                var firstText = paragraph.Descendants<Text>().FirstOrDefault();
+                // Fallback: update first simple text element found
+                var firstText = paragraph.Descendants<Text>()
+                    .FirstOrDefault(t => IsSimpleTextElement(t));
+                
                 if (firstText != null)
                 {
                     firstText.Text = newText;
+                }
+                else
+                {
+                    _logger.LogWarning("No simple text elements found for fallback text replacement");
                 }
             }
         }
 
         /// <summary>
         /// Internal method for updating paragraph text without track changes
+        /// CRITICAL FIX: Uses text-only updates to preserve document structure and prevent corruption
         /// </summary>
         private void UpdateParagraphTextInternal(Paragraph paragraph, string newText)
         {
-            // Get the first run to preserve its properties
-            var firstRun = paragraph.Descendants<Run>().FirstOrDefault();
-            var runProperties = firstRun?.GetFirstChild<RunProperties>()?.CloneNode(true);
-
-            // Remove all existing runs
-            var runsToRemove = paragraph.Descendants<Run>().ToList();
-            foreach (var run in runsToRemove)
-            {
-                run.Remove();
-            }
-
-            // Create a new run with the updated text
-            var newRun = new Run();
+            // CRITICAL FIX: Only update text content, preserve all runs and structure
+            // This prevents "Word found unreadable content" errors by maintaining document integrity
             
-            // Apply preserved formatting if available
-            if (runProperties != null)
+            // Check if paragraph contains complex elements (hyperlinks, fields, etc.)
+            if (HasComplexElements(paragraph))
             {
-                newRun.Append(runProperties);
+                // For complex paragraphs, only update simple text elements to avoid corruption
+                UpdateSimpleTextElementsOnly(paragraph, newText);
+                return;
             }
 
-            // Add the new text
-            newRun.Append(new Text(newText));
+            // For simple paragraphs, consolidate all text content into the first run
+            var runs = paragraph.Elements<Run>().ToList();
+            if (!runs.Any())
+            {
+                // No runs exist, create a simple one
+                var newRun = new Run();
+                newRun.Append(new Text(newText));
+                paragraph.Append(newRun);
+                return;
+            }
 
-            // Add the new run to the paragraph
-            paragraph.Append(newRun);
+            // Use the first run and preserve its formatting
+            var firstRun = runs.First();
+            var runProperties = firstRun.GetFirstChild<RunProperties>();
+
+            // Clear text from first run and add new text
+            var textElements = firstRun.Elements<Text>().ToList();
+            foreach (var textElement in textElements)
+            {
+                textElement.Remove();
+            }
+            firstRun.Append(new Text(newText));
+
+            // Remove additional runs (but preserve the first one with its formatting)
+            for (int i = 1; i < runs.Count; i++)
+            {
+                // Only remove runs that contain only text (not complex elements)
+                if (IsSimpleTextRun(runs[i]))
+                {
+                    runs[i].Remove();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if a paragraph contains complex elements that shouldn't be modified
+        /// </summary>
+        private bool HasComplexElements(Paragraph paragraph)
+        {
+            // Check for hyperlinks, fields, drawings, etc.
+            return paragraph.Descendants<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>().Any() ||
+                   paragraph.Descendants<FieldCode>().Any() ||
+                   paragraph.Descendants<FieldChar>().Any() ||
+                   paragraph.Descendants<Drawing>().Any();
+        }
+
+        /// <summary>
+        /// Updates only simple text elements, preserving complex structure
+        /// </summary>
+        private void UpdateSimpleTextElementsOnly(Paragraph paragraph, string newText)
+        {
+            // For complex paragraphs, find the first simple text element and update it
+            var firstTextElement = paragraph.Descendants<Text>()
+                .FirstOrDefault(t => IsSimpleTextElement(t));
+
+            if (firstTextElement != null)
+            {
+                firstTextElement.Text = newText;
+                
+                // Remove other simple text elements to avoid duplication
+                var otherTextElements = paragraph.Descendants<Text>()
+                    .Where(t => t != firstTextElement && IsSimpleTextElement(t))
+                    .ToList();
+                
+                foreach (var textElement in otherTextElements)
+                {
+                    textElement.Remove();
+                }
+            }
+            else
+            {
+                // No simple text elements found, log warning and skip
+                _logger.LogWarning("Cannot safely update complex paragraph structure, skipping text replacement");
+            }
+        }
+
+        /// <summary>
+        /// Checks if a run contains only simple text (no complex elements)
+        /// </summary>
+        private bool IsSimpleTextRun(Run run)
+        {
+            return !run.Descendants<FieldCode>().Any() &&
+                   !run.Descendants<FieldChar>().Any() &&
+                   !run.Descendants<Drawing>().Any() &&
+                   run.Elements().All(e => e is RunProperties || e is Text);
+        }
+
+        /// <summary>
+        /// Checks if a text element is simple (not part of complex structures)
+        /// </summary>
+        private bool IsSimpleTextElement(Text textElement)
+        {
+            // Check if the text element is inside hyperlinks, fields, or other complex structures
+            return !textElement.Ancestors<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>().Any() &&
+                   !textElement.Ancestors<FieldCode>().Any() &&
+                   textElement.Ancestors<Run>().Any(); // Must be in a run
+        }
+
+        /// <summary>
+        /// Validates if a paragraph is safe for text replacement without causing document corruption
+        /// </summary>
+        private bool ValidateParagraphForTextReplacement(Paragraph paragraph)
+        {
+            try
+            {
+                // Check for severely complex structures that should not be modified
+                var hasComplexTable = paragraph.Ancestors<Table>().Any();
+                var hasNestedFields = paragraph.Descendants<FieldCode>().Count() > 1;
+                var hasDrawingElements = paragraph.Descendants<Drawing>().Any();
+                
+                // Check for problematic hyperlink structures
+                var hasComplexHyperlinks = paragraph.Descendants<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>().Any(h => 
+                    h.Descendants<FieldCode>().Any() || h.Elements<Run>().Count() > 3);
+
+                if (hasComplexTable || hasNestedFields || hasDrawingElements || hasComplexHyperlinks)
+                {
+                    _logger.LogDebug("Paragraph contains complex structure, skipping text replacement to prevent corruption");
+                    return false;
+                }
+
+                // Check if paragraph has any simple text that can be safely modified
+                var hasSimpleText = paragraph.Descendants<Text>()
+                    .Any(t => IsSimpleTextElement(t) && !string.IsNullOrWhiteSpace(t.Text));
+
+                if (!hasSimpleText)
+                {
+                    _logger.LogDebug("Paragraph contains no simple text elements for replacement");
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating paragraph for text replacement, skipping for safety");
+                return false;
+            }
         }
     }
 }
