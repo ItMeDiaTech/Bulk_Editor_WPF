@@ -4,7 +4,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <PackageId>BulkEditor</PackageId>
     <ProductName>Bulk Document Editor</ProductName>
-    <ProductVersion>2.5.3.7</ProductVersion>
+    <ProductVersion>2.5.4.0</ProductVersion>
     <ProductManufacturer>DiaTech</ProductManufacturer>
     <ProductLanguage>1033</ProductLanguage>
     <UpgradeCode>12345678-1234-1234-1234-123456789012</UpgradeCode>
