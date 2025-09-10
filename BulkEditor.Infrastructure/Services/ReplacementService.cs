@@ -59,7 +59,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     _logger.LogInformation("Processing {Count} text replacement rules in session for document: {FileName}", replacementSettings.TextRules.Count(), document.FileName);
                     var textReplacements = await _textReplacementService.ProcessTextReplacementsInSessionAsync(
-                        wordDocument, document, replacementSettings.TextRules, cancellationToken);
+                        wordDocument, document, replacementSettings.TextRules, _appSettings.Processing.TrackChanges, cancellationToken);
                     totalReplacements += textReplacements;
                     _logger.LogInformation("Completed text replacements: {Count} changes made for document: {FileName}", textReplacements, document.FileName);
                 }

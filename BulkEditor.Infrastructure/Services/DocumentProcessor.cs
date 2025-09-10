@@ -2311,7 +2311,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     try
                     {
-                        OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
+                        OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText, _appSettings.Processing.TrackChanges);
 
                         // CRITICAL FIX: Save the document after display text changes
                         mainPart.Document.Save();

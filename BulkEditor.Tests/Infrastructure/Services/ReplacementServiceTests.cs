@@ -58,7 +58,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             // Assert
             Assert.Equal(0, result);
             _mockHyperlinkService.Verify(x => x.ProcessHyperlinkReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<HyperlinkReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Never);
-            _mockTextService.Verify(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Never);
+            _mockTextService.Verify(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
@@ -97,7 +97,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
                 ReplacementText = "new text"
             });
 
-            _mockTextService.Setup(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()))
+            _mockTextService.Setup(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), It.IsAny<Document>(), It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(1);
             // Note: Using null for WordprocessingDocument since we're testing coordination logic, not OpenXML operations
 
@@ -106,7 +106,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
 
             // Assert
             Assert.Equal(1, result);
-            _mockTextService.Verify(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), document, It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockTextService.Verify(x => x.ProcessTextReplacementsInSessionAsync(It.IsAny<WordprocessingDocument>(), document, It.IsAny<IEnumerable<TextReplacementRule>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]

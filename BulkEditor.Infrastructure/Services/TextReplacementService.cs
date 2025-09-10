@@ -1,6 +1,7 @@
 using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
+using BulkEditor.Infrastructure.Utilities;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System;
@@ -29,7 +30,7 @@ namespace BulkEditor.Infrastructure.Services
         /// <summary>
         /// NEW METHOD: Processes text replacements using an already opened WordprocessingDocument to prevent corruption
         /// </summary>
-        public Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, CoreDocument document, IEnumerable<TextReplacementRule> rules, CancellationToken cancellationToken = default)
+        public Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, CoreDocument document, IEnumerable<TextReplacementRule> rules, bool trackChanges = false, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -86,7 +87,7 @@ namespace BulkEditor.Infrastructure.Services
                     // Update paragraph if any replacements were made
                     if (replacementsMadeInParagraph > 0)
                     {
-                        UpdateParagraphText(paragraph, modifiedText);
+                        UpdateParagraphText(paragraph, modifiedText, trackChanges);
                         totalReplacements += replacementsMadeInParagraph;
 
                         // Log the change in document
@@ -173,7 +174,7 @@ namespace BulkEditor.Infrastructure.Services
                         // Update paragraph if any replacements were made
                         if (replacementsMadeInParagraph > 0)
                         {
-                            UpdateParagraphText(paragraph, modifiedText);
+                            UpdateParagraphText(paragraph, modifiedText, false);
                             totalReplacements += replacementsMadeInParagraph;
 
                             // Log the change in document
@@ -349,35 +350,32 @@ namespace BulkEditor.Infrastructure.Services
         /// Updates paragraph text while preserving formatting structure
         /// Uses consolidation approach - creates a single run with the new text
         /// </summary>
-        private void UpdateParagraphText(Paragraph paragraph, string newText)
+        private void UpdateParagraphText(Paragraph paragraph, string newText, bool trackChanges = false)
         {
             try
             {
-                // Get the first run to preserve its properties
-                var firstRun = paragraph.Descendants<Run>().FirstOrDefault();
-                var runProperties = firstRun?.GetFirstChild<RunProperties>()?.CloneNode(true);
-
-                // Remove all existing runs
-                var runsToRemove = paragraph.Descendants<Run>().ToList();
-                foreach (var run in runsToRemove)
+                if (!trackChanges)
                 {
+                    // Standard text replacement without tracking
+                    UpdateParagraphTextInternal(paragraph, newText);
+                    return;
+                }
+
+                // Track changes approach: mark existing content as deleted and new content as inserted
+                var existingRuns = paragraph.Elements<Run>().ToList();
+                var runProperties = existingRuns.FirstOrDefault()?.GetFirstChild<RunProperties>()?.CloneNode(true);
+
+                // Mark all existing runs as deleted
+                foreach (var run in existingRuns)
+                {
+                    var deletedRun = OpenXmlHelper.CreateTrackedDeletion(run);
+                    paragraph.InsertBefore(deletedRun, run);
                     run.Remove();
                 }
 
-                // Create a new run with the updated text
-                var newRun = new Run();
-                
-                // Apply preserved formatting if available
-                if (runProperties != null)
-                {
-                    newRun.Append(runProperties);
-                }
-
-                // Add the new text
-                newRun.Append(new Text(newText));
-
-                // Add the new run to the paragraph
-                paragraph.Append(newRun);
+                // Add new content as inserted
+                var insertedRun = OpenXmlHelper.CreateTrackedInsertion(newText, runProperties as RunProperties);
+                paragraph.Append(insertedRun);
             }
             catch (Exception ex)
             {
@@ -390,6 +388,38 @@ namespace BulkEditor.Infrastructure.Services
                     firstText.Text = newText;
                 }
             }
+        }
+
+        /// <summary>
+        /// Internal method for updating paragraph text without track changes
+        /// </summary>
+        private void UpdateParagraphTextInternal(Paragraph paragraph, string newText)
+        {
+            // Get the first run to preserve its properties
+            var firstRun = paragraph.Descendants<Run>().FirstOrDefault();
+            var runProperties = firstRun?.GetFirstChild<RunProperties>()?.CloneNode(true);
+
+            // Remove all existing runs
+            var runsToRemove = paragraph.Descendants<Run>().ToList();
+            foreach (var run in runsToRemove)
+            {
+                run.Remove();
+            }
+
+            // Create a new run with the updated text
+            var newRun = new Run();
+            
+            // Apply preserved formatting if available
+            if (runProperties != null)
+            {
+                newRun.Append(runProperties);
+            }
+
+            // Add the new text
+            newRun.Append(new Text(newText));
+
+            // Add the new run to the paragraph
+            paragraph.Append(newRun);
         }
     }
 }

@@ -75,9 +75,10 @@ namespace BulkEditor.Core.Interfaces
         /// <param name="wordDocument">Already opened WordprocessingDocument</param>
         /// <param name="document">Document entity to track changes</param>
         /// <param name="rules">Text replacement rules</param>
+        /// <param name="trackChanges">Whether to mark changes as tracked revisions</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Number of replacements made</returns>
-        Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, Entities.Document document, IEnumerable<Configuration.TextReplacementRule> rules, CancellationToken cancellationToken = default);
+        Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, Entities.Document document, IEnumerable<Configuration.TextReplacementRule> rules, bool trackChanges = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Processes text replacements in a document (legacy method - opens document independently)
