@@ -110,6 +110,10 @@ namespace BulkEditor.UI.ViewModels
                 _logger.LogDebug("Loading current settings asynchronously");
                 var currentSettings = await _configurationService.LoadSettingsAsync().ConfigureAwait(false);
 
+                // Enhanced logging: Log configuration values being loaded
+                _logger.LogInformation("Configuration values loaded - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}, HyperlinkRuleCount: {RuleCount}",
+                    currentSettings.Validation.AutoReplaceTitles, currentSettings.Replacement.EnableHyperlinkReplacement, currentSettings.Replacement.HyperlinkRules?.Count ?? 0);
+
                 // CRITICAL FIX: Ensure UI updates happen on UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -154,6 +158,10 @@ namespace BulkEditor.UI.ViewModels
 
                     // Set hyperlink match mode (default to Contains for backward compatibility)
                     HyperlinkMatchMode = HyperlinkMatchMode.Contains;
+
+                    // Enhanced logging: Log UI values after they are set
+                    _logger.LogInformation("UI Settings loaded - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}, HyperlinkRuleCount: {RuleCount}",
+                        AutoReplaceOutdatedTitles, ReplaceCustomUserDefinedHyperlinks, HyperlinkRules.Count);
                 });
 
                 _logger.LogDebug("Current settings loaded successfully");
@@ -178,6 +186,10 @@ namespace BulkEditor.UI.ViewModels
                 // Get current app settings asynchronously
                 var currentSettings = await _configurationService.LoadSettingsAsync().ConfigureAwait(false);
 
+                // Enhanced logging: Log current UI values before saving
+                _logger.LogInformation("UI Settings being saved - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}, HyperlinkRuleCount: {RuleCount}",
+                    AutoReplaceOutdatedTitles, ReplaceCustomUserDefinedHyperlinks, HyperlinkRules.Count);
+
                 // Update processing settings from UI values
                 currentSettings.Processing.UpdateHyperlinks = UpdateTheSourceHyperlinkUrls;
                 currentSettings.Processing.AddContentIds = AppendContentIdsToTheSourceHyperlinks;
@@ -199,10 +211,14 @@ namespace BulkEditor.UI.ViewModels
                 currentSettings.Replacement.HyperlinkRules = HyperlinkRules.ToList();
                 currentSettings.Replacement.TextRules = TextRules.ToList();
 
+                // Enhanced logging: Log final configuration values before saving
+                _logger.LogInformation("Final config values being saved - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}, HyperlinkRuleCount: {RuleCount}",
+                    currentSettings.Validation.AutoReplaceTitles, currentSettings.Replacement.EnableHyperlinkReplacement, currentSettings.Replacement.HyperlinkRules.Count);
+
                 // Save the updated settings asynchronously
                 await _configurationService.SaveSettingsAsync(currentSettings).ConfigureAwait(false);
 
-                _logger.LogInformation("Processing options saved successfully");
+                _logger.LogInformation("Processing options saved successfully to configuration file");
 
                 // CRITICAL FIX: UI updates must happen on UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>

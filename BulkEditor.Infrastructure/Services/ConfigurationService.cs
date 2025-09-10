@@ -100,6 +100,10 @@ namespace BulkEditor.Infrastructure.Services
                     return await CreateDefaultSettingsAsync();
                 }
 
+                // Enhanced logging: Log critical settings after loading
+                _logger.LogInformation("Settings loaded from file - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}, HyperlinkRuleCount: {RuleCount}",
+                    settings.Validation.AutoReplaceTitles, settings.Replacement.EnableHyperlinkReplacement, settings.Replacement.HyperlinkRules?.Count ?? 0);
+
                 // Update paths to use AppData locations
                 UpdatePathsToAppData(settings);
 
@@ -117,6 +121,10 @@ namespace BulkEditor.Infrastructure.Services
         {
             try
             {
+                // Enhanced logging: Log critical settings before saving
+                _logger.LogInformation("Saving settings to file - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}, HyperlinkRuleCount: {RuleCount}",
+                    settings.Validation.AutoReplaceTitles, settings.Replacement.EnableHyperlinkReplacement, settings.Replacement.HyperlinkRules?.Count ?? 0);
+
                 // Create backup before saving
                 await BackupSettingsAsync("pre-save");
 
