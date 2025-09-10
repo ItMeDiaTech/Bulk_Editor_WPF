@@ -44,7 +44,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task ProcessApiResponseAsync_WithMissingLookupIds_ShouldIdentifyMissingIds()
         {
             // Arrange - Use multiple lookup IDs to ensure some are missing based on simulation
@@ -62,7 +62,8 @@ namespace BulkEditor.Tests.Infrastructure.Services
             };
 
             // Act
-            var result = await _service.ProcessApiResponseAsync(lookupIds, CancellationToken.None);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var result = await _service.ProcessApiResponseAsync(lookupIds, cts.Token);
 
             // Assert
             Assert.NotNull(result);
@@ -81,14 +82,15 @@ namespace BulkEditor.Tests.Infrastructure.Services
             }
         }
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task LookupDocumentByIdentifierAsync_WithValidContentId_ShouldReturnDocumentRecord()
         {
             // Arrange
             var contentId = "123456";
 
             // Act
-            var result = await _service.LookupDocumentByIdentifierAsync(contentId, CancellationToken.None);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var result = await _service.LookupDocumentByIdentifierAsync(contentId, cts.Token);
 
             // Assert
             Assert.NotNull(result);
@@ -98,14 +100,15 @@ namespace BulkEditor.Tests.Infrastructure.Services
             Assert.Contains(result.Status, new[] { "Released", "Expired", "Unknown" });
         }
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task LookupDocumentByIdentifierAsync_WithMissingLookupId_ShouldReturnNull()
         {
             // Arrange - Use content ID that will trigger missing lookup ID simulation
             var contentId = "000001"; // This should trigger the 15% missing chance based on hash
 
             // Act
-            var result = await _service.LookupDocumentByIdentifierAsync(contentId, CancellationToken.None);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var result = await _service.LookupDocumentByIdentifierAsync(contentId, cts.Token);
 
             // Assert - Some content IDs will return null to simulate missing lookup IDs
             // We can't guarantee which ones due to hash-based simulation, so we test the behavior
@@ -238,7 +241,8 @@ namespace BulkEditor.Tests.Infrastructure.Services
             var lookupIds = new[] { "TSRC-PROD-123456", "CMS-TEST-654321" };
 
             // Act
-            var result = (Task<string>)method.Invoke(_service, new object[] { lookupIds, CancellationToken.None });
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var result = (Task<string>)method.Invoke(_service, new object[] { lookupIds, cts.Token });
             var jsonResponse = await result;
 
             // Assert
@@ -254,28 +258,30 @@ namespace BulkEditor.Tests.Infrastructure.Services
         }
 
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task LookupTitleByIdentifierAsync_WithValidContentId_ShouldReturnTitle()
         {
             // Arrange
             var contentId = "123456";
 
             // Act
-            var result = await _service.LookupTitleByIdentifierAsync(contentId, CancellationToken.None);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var result = await _service.LookupTitleByIdentifierAsync(contentId, cts.Token);
 
             // Assert
             Assert.False(string.IsNullOrEmpty(result));
             Assert.Contains(contentId, result);
         }
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task LookupTitleByIdentifierAsync_WithMissingContentId_ShouldReturnFallbackTitle()
         {
             // Arrange - Use content ID that will likely be missing based on simulation
             var contentId = "000001";
 
             // Act
-            var result = await _service.LookupTitleByIdentifierAsync(contentId, CancellationToken.None);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var result = await _service.LookupTitleByIdentifierAsync(contentId, cts.Token);
 
             // Assert
             Assert.False(string.IsNullOrEmpty(result));

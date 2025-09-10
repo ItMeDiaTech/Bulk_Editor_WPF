@@ -35,7 +35,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             
             _httpClient = new HttpClient(handler)
             {
-                Timeout = TimeSpan.FromMinutes(5)
+                Timeout = TimeSpan.FromSeconds(10) // Reduced from 5 minutes to prevent test hangs
             };
             
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "BulkEditor-Test/1.0");
@@ -52,7 +52,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             _httpService = new HttpService(_httpClient, _mockLogger.Object, mockRetryPolicyService.Object, mockStructuredLogger.Object);
         }
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task PostJsonAsync_WithTestUrl_ReturnsTestResponse()
         {
             // Arrange
@@ -91,7 +91,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             Assert.Contains(apiResponse.Results, r => r.Status == "Expired");
         }
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task PostJsonAsync_WithTestUrl_CaseInsensitive()
         {
             // Arrange
@@ -108,7 +108,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             Assert.Equal(HttpStatusCode.OK, response3.StatusCode);
         }
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task PostJsonAsync_WithValidData_SerializesJsonProperly()
         {
             // Arrange
@@ -134,7 +134,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             Assert.NotNull(apiResponse.Results);
         }
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task PostJsonAsync_TestResponseFormat_MatchesVbaExpectations()
         {
             // Arrange
@@ -168,7 +168,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
             }
         }
 
-        [Fact]
+        [Fact(Timeout = 15000)] // 15 second timeout
         public async Task PostJsonAsync_TestMode_LogsCorrectly()
         {
             // Arrange
@@ -183,7 +183,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
                 Times.Once);
         }
 
-        [Theory]
+        [Theory(Timeout = 15000)] // 15 second timeout
         [InlineData("Expired", true)]
         [InlineData("Released", false)]
         [InlineData("Active", false)]
