@@ -35,6 +35,40 @@ echo -e "${CYAN}🚀 BulkEditor Complete Deployment Script${NC}"
 echo -e "${GREEN}Version: $VERSION${NC}"
 echo -e "${BLUE}Root Directory: $ROOT_DIR${NC}"
 
+# Pre-deployment validation
+echo -e "\n${YELLOW}🔍 Step 0: Pre-deployment Validation...${NC}"
+
+# Check required tools
+MISSING_TOOLS=""
+if ! command -v dotnet >/dev/null 2>&1; then
+    MISSING_TOOLS="$MISSING_TOOLS dotnet"
+fi
+if ! command -v git >/dev/null 2>&1; then
+    MISSING_TOOLS="$MISSING_TOOLS git"
+fi
+if ! command -v gh >/dev/null 2>&1; then
+    MISSING_TOOLS="$MISSING_TOOLS gh"
+fi
+
+if [[ -n "$MISSING_TOOLS" ]]; then
+    echo -e "${RED}❌ Missing required tools:$MISSING_TOOLS${NC}"
+    echo -e "${YELLOW}Please install missing tools and try again${NC}"
+    exit 1
+fi
+
+# Validate project files exist
+if [[ ! -f "BulkEditor.UI/BulkEditor.UI.csproj" ]]; then
+    echo -e "${RED}❌ UI project file not found${NC}"
+    exit 1
+fi
+
+if [[ ! -f "BulkEditor.Installer/BulkEditor.Installer.wixproj" ]]; then
+    echo -e "${RED}❌ Installer project file not found${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Pre-deployment validation passed${NC}"
+
 # Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
@@ -96,7 +130,21 @@ fi
 PORTABLE_ZIP="$OUTPUT_DIR/BulkEditor-v$VERSION-Portable.zip"
 rm -f "$PORTABLE_ZIP"
 
-cd "$PUBLISH_DIR" && tar -czf "$PORTABLE_ZIP" . && cd "$ROOT_DIR"
+# Use appropriate ZIP method based on platform
+if command -v powershell >/dev/null 2>&1; then
+    # Windows with PowerShell
+    powershell -Command "Compress-Archive -Path '$PUBLISH_DIR\\*' -DestinationPath '$PORTABLE_ZIP' -CompressionLevel Optimal -Force"
+elif command -v zip >/dev/null 2>&1; then
+    # Linux/macOS with zip command
+    cd "$PUBLISH_DIR" && zip -r "$PORTABLE_ZIP" . >/dev/null && cd "$ROOT_DIR"
+elif command -v 7z >/dev/null 2>&1; then
+    # Fallback to 7-zip
+    7z a "$PORTABLE_ZIP" "$PUBLISH_DIR/*" >/dev/null
+else
+    echo -e "${RED}❌ No ZIP utility found. Please install zip, 7z, or run on Windows with PowerShell${NC}"
+    exit 1
+fi
+
 echo -e "${GREEN}✅ Created portable package: BulkEditor-v$VERSION-Portable.zip${NC}"
 
 echo -e "\n${YELLOW}🏗️ Step 4: Building MSI Installer...${NC}"

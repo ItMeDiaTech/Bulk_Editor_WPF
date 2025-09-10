@@ -31,9 +31,54 @@ if (-not ($Version -match '^\d+\.\d+\.\d+(\.\d+)?$')) {
     throw "Version must be in format x.y.z or x.y.z.w (e.g., 1.5.1)"
 }
 
+Write-Host "`nStep 0: Pre-deployment Validation..." -ForegroundColor Yellow
+
+# Check required tools
+$missingTools = @()
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { $missingTools += "dotnet" }
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) { $missingTools += "git" }
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { $missingTools += "gh" }
+
+if ($missingTools.Count -gt 0) {
+    throw "Missing required tools: $($missingTools -join ', '). Please install missing tools and try again."
+}
+
+# Validate project files
+$uiProjectPath = Join-Path $rootDir "BulkEditor.UI\BulkEditor.UI.csproj"
+$installerProjectPath = Join-Path $rootDir "BulkEditor.Installer\BulkEditor.Installer.wixproj"
+
+if (-not (Test-Path $uiProjectPath)) {
+    throw "UI project file not found: $uiProjectPath"
+}
+
+if (-not (Test-Path $installerProjectPath)) {
+    throw "Installer project file not found: $installerProjectPath"
+}
+
+Write-Host "Pre-deployment validation passed" -ForegroundColor Green
+
 # Create output directory if it doesn't exist
 if (-not (Test-Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+}
+
+# Clean up old releases (keep latest 5)
+Write-Host "`nCleaning up old deployment files..." -ForegroundColor Yellow
+try {
+    $oldMsiFiles = Get-ChildItem $outputDir -Filter "*.msi" | Sort-Object Name | Select-Object -SkipLast 5
+    $oldZipFiles = Get-ChildItem $outputDir -Filter "*-Portable.zip" | Sort-Object Name | Select-Object -SkipLast 5
+    
+    $cleanedCount = 0
+    $oldMsiFiles | ForEach-Object { Remove-Item $_.FullName -Force; $cleanedCount++ }
+    $oldZipFiles | ForEach-Object { Remove-Item $_.FullName -Force; $cleanedCount++ }
+    
+    if ($cleanedCount -gt 0) {
+        Write-Host "Cleaned up $cleanedCount old deployment files" -ForegroundColor Green
+    } else {
+        Write-Host "No old files to clean up" -ForegroundColor Green
+    }
+} catch {
+    Write-Warning "Failed to clean up old files: $($_.Exception.Message)"
 }
 
 try {

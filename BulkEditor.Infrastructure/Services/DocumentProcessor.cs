@@ -1472,7 +1472,11 @@ namespace BulkEditor.Infrastructure.Services
 
                     // STEP 9: Process hyperlinks using VBA UpdateHyperlinksFromAPI workflow (only if enabled)
                     var hyperlinkStepStart = DateTime.UtcNow;
-                    if (_appSettings.Processing.UpdateHyperlinks && _appSettings.Processing.ValidateHyperlinks && document.Hyperlinks.Any())
+                    // CRITICAL FIX: Skip API calls if BaseUrl is empty or "Test"
+                    bool skipApiCalls = string.IsNullOrWhiteSpace(_appSettings.Api.BaseUrl) ||
+                                       _appSettings.Api.BaseUrl.Equals("Test", StringComparison.OrdinalIgnoreCase);
+
+                    if (_appSettings.Processing.UpdateHyperlinks && _appSettings.Processing.ValidateHyperlinks && document.Hyperlinks.Any() && !skipApiCalls)
                     {
                         progress?.Report("Processing hyperlinks using VBA methodology...");
                         _logger.LogInformation("Starting hyperlink processing for {FileName}: {HyperlinkCount} hyperlinks found, UpdateHyperlinks={UpdateEnabled}, ValidateHyperlinks={ValidateEnabled}",
@@ -1489,6 +1493,10 @@ namespace BulkEditor.Infrastructure.Services
                         var hyperlinkDuration = DateTime.UtcNow - hyperlinkStepStart;
                         _logger.LogInformation("Hyperlink processing completed for {FileName}: Duration={DurationMs}ms",
                             document.FileName, hyperlinkDuration.TotalMilliseconds);
+                    }
+                    else if (skipApiCalls)
+                    {
+                        _logger.LogInformation("Hyperlink processing skipped for {FileName}: API BaseUrl is empty or set to 'Test' mode", document.FileName);
                     }
                     else if (!_appSettings.Processing.UpdateHyperlinks)
                     {
@@ -1697,11 +1705,16 @@ namespace BulkEditor.Infrastructure.Services
                     settings.AppendChild(trackRevisions);
                 }
 
-                _logger.LogInformation("Change tracking enabled for document");
+                // CRITICAL FIX: Save settings immediately after enabling track changes
+                settingsPart.Settings.Save();
+
+                _logger.LogInformation("Change tracking enabled for document - all subsequent changes will be tracked");
             }
             catch (Exception ex)
             {
+                // CRITICAL FIX: Don't let track changes failure break document processing
                 _logger.LogWarning("Failed to enable change tracking - processing will continue without tracking: {Error}", ex.Message);
+                // Continue processing without throwing
             }
         }
 
@@ -1752,10 +1765,17 @@ namespace BulkEditor.Infrastructure.Services
                 // Validate API settings if hyperlink processing is enabled
                 if (_appSettings.Processing.UpdateHyperlinks && _appSettings.Processing.ValidateHyperlinks)
                 {
-                    if (string.IsNullOrWhiteSpace(_appSettings.Api.BaseUrl) && !_appSettings.Api.BaseUrl.Equals("Test", StringComparison.OrdinalIgnoreCase))
+                    // CRITICAL FIX: Only validate API if not using Test mode
+                    if (!string.IsNullOrWhiteSpace(_appSettings.Api.BaseUrl) &&
+                        !_appSettings.Api.BaseUrl.Equals("Test", StringComparison.OrdinalIgnoreCase))
                     {
-                        issues.Add("API BaseUrl is required when hyperlink validation is enabled");
+                        // Real API URL provided - validate it
+                        if (!Uri.IsWellFormedUriString(_appSettings.Api.BaseUrl, UriKind.Absolute))
+                        {
+                            issues.Add($"API BaseUrl must be a valid URL. Current: {_appSettings.Api.BaseUrl}");
+                        }
                     }
+                    // If BaseUrl is empty or "Test", that's OK - we'll skip API calls
 
                     if (_appSettings.Api.Timeout.TotalSeconds < 5 || _appSettings.Api.Timeout.TotalSeconds > 300)
                     {

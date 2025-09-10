@@ -635,13 +635,40 @@ namespace BulkEditor.UI.ViewModels
                     
                     SetStatusProcessing("Backing up files before processing...");
 
-                    // Create backups before processing (only for valid files)
+                    // Create backups before processing (with individual file error handling)
+                    var validFilesWithBackups = new List<string>();
                     foreach (var filePath in validFilePaths)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var backupPath = await _backupService.CreateBackupAsync(filePath, session);
-                        _sessionManager.AddFileToSession(filePath, backupPath);
+                        
+                        try
+                        {
+                            // Double-check file exists immediately before backup
+                            if (!File.Exists(filePath))
+                            {
+                                _logger.LogWarning("File disappeared before backup: {FilePath}", filePath);
+                                continue;
+                            }
+                            
+                            var backupPath = await _backupService.CreateBackupAsync(filePath, session);
+                            _sessionManager.AddFileToSession(filePath, backupPath);
+                            validFilesWithBackups.Add(filePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to create backup for {FilePath}, skipping file", filePath);
+                            // Continue with other files instead of failing entire batch
+                        }
                     }
+                    
+                    // If no files have backups, abort processing
+                    if (validFilesWithBackups.Count == 0)
+                    {
+                        throw new InvalidOperationException("No files could be backed up. Processing aborted.");
+                    }
+                    
+                    // Update valid file paths to only include files that were successfully backed up
+                    validFilePaths = validFilesWithBackups;
 
                     SetStatusProcessing("Starting document processing...");
 
