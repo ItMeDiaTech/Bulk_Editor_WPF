@@ -1941,17 +1941,53 @@ namespace BulkEditor.Infrastructure.Services
             {
                 // STEP 1: Validate current state and capture original data
                 var originalRelationship = mainPart.GetReferenceRelationship(relationshipId);
-                originalUri = originalRelationship.Uri.ToString();
+                originalUri = originalRelationship.Uri.ToString(); // Keep for logging/fallback
+                
+                // CRITICAL FIX: Get complete original URL including fragments for proper comparison
+                var completeOriginalUrl = BuildCompleteHyperlinkUrl(mainPart, openXmlHyperlink);
+                
                 var currentDisplayText = openXmlHyperlink.InnerText ?? string.Empty;
                 var alreadyExpired = currentDisplayText.Contains(" - Expired", StringComparison.OrdinalIgnoreCase);
                 var alreadyNotFound = currentDisplayText.Contains(" - Not Found", StringComparison.OrdinalIgnoreCase);
 
-                _logger.LogDebug("Starting atomic hyperlink update: {RelId}, Original URL: {OriginalUrl}", relationshipId, originalUri);
+                _logger.LogDebug("Starting atomic hyperlink update: {RelId}, Complete Original URL: {CompleteOriginalUrl}, Base URI: {BaseUri}", 
+                    relationshipId, completeOriginalUrl, originalUri);
 
                 // STEP 2: Calculate new URL using proper VBA Address/SubAddress separation (Issue #8)
-                var docIdForUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId)
-                    ? hyperlinkToUpdate.DocumentId
-                    : hyperlinkToUpdate.ContentId;
+                // CRITICAL FIX: Handle case where Content_ID is in URL field and we need Document_ID
+                string docIdForUrl;
+                if (!string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId))
+                {
+                    // Use Document_ID if available
+                    docIdForUrl = hyperlinkToUpdate.DocumentId;
+                }
+                else if (!string.IsNullOrEmpty(hyperlinkToUpdate.ContentId))
+                {
+                    // Check if the original URL contains a Content_ID pattern and we need to use Document_ID instead
+                    var originalUrlLower = completeOriginalUrl.ToLowerInvariant();
+                    var contentIdLower = hyperlinkToUpdate.ContentId.ToLowerInvariant();
+                    
+                    if (originalUrlLower.Contains(contentIdLower) && originalUrlLower.Contains("docid="))
+                    {
+                        // The original URL contains the Content_ID in the docid field
+                        // We should rebuild with Document_ID if available, otherwise keep Content_ID
+                        docIdForUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId) 
+                            ? hyperlinkToUpdate.DocumentId 
+                            : hyperlinkToUpdate.ContentId;
+                        _logger.LogDebug("Found Content_ID '{ContentId}' in original URL, using Document_ID '{DocumentId}' for rebuild", 
+                            hyperlinkToUpdate.ContentId, docIdForUrl);
+                    }
+                    else
+                    {
+                        // Use Content_ID as fallback
+                        docIdForUrl = hyperlinkToUpdate.ContentId;
+                    }
+                }
+                else
+                {
+                    // No ID available, keep original URL
+                    docIdForUrl = string.Empty;
+                }
 
                 // CRITICAL FIX: Separate Address and SubAddress exactly like VBA (Issue #8)
                 // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
@@ -1967,7 +2003,8 @@ namespace BulkEditor.Infrastructure.Services
                     : hyperlinkToUpdate.OriginalUrl;
 
                 // STEP 3: Only update if URL actually changed to prevent unnecessary operations
-                var urlChanged = !string.Equals(originalUri, newUrl, StringComparison.OrdinalIgnoreCase);
+                // CRITICAL FIX: Compare complete URLs (including fragments) not just base addresses
+                var urlChanged = !string.Equals(completeOriginalUrl, newUrl, StringComparison.OrdinalIgnoreCase);
 
                 if (urlChanged)
                 {
@@ -2029,7 +2066,8 @@ namespace BulkEditor.Infrastructure.Services
                 var newDisplayText = currentDisplayText;
                 var displayTextChanged = false;
 
-                if (!alreadyExpired && !alreadyNotFound && !string.IsNullOrEmpty(hyperlinkToUpdate.ContentId))
+                // CRITICAL FIX: Append Content_ID even for expired links (as per user requirement)
+                if (!string.IsNullOrEmpty(hyperlinkToUpdate.ContentId))
                 {
                     // Get last 6 and last 5 digits like VBA
                     // CRITICAL FIX: Add proper bounds checking to prevent IndexOutOfRangeException (Issue #12)
