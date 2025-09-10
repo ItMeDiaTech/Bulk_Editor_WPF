@@ -960,7 +960,7 @@ namespace BulkEditor.Infrastructure.Services
                     }
 
                     // Update hyperlink with proper VBA ordering
-                    OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, expiredDisplayText, _appSettings.Processing.TrackChanges);
+                    OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, expiredDisplayText);
 
                     result.WasReplaced = true;
                     result.NewTitle = expiredDisplayText;
@@ -1135,7 +1135,7 @@ namespace BulkEditor.Infrastructure.Services
                 var newUrl = targetAddress + "#" + targetSubAddress;
 
                 // Update the hyperlink display text
-                OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText, _appSettings.Processing.TrackChanges);
+                OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
 
                 // CRITICAL FIX: Update URL with proper Address/SubAddress separation (Issue #8)
                 var relId = openXmlHyperlink.Id?.Value;

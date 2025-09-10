@@ -14,7 +14,7 @@ namespace BulkEditor.Core.Interfaces
         /// Optimizes text formatting in a document using an already opened WordprocessingDocument
         /// </summary>
         /// <param name="wordDocument">Already opened WordprocessingDocument</param>
-        /// <param name="document">Document entity to track changes</param>
+        /// <param name="document">Document entity to log changes</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Number of optimizations made</returns>
         Task<int> OptimizeDocumentTextInSessionAsync(WordprocessingDocument wordDocument, Document document, CancellationToken cancellationToken = default);

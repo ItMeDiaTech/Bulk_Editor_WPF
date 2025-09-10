@@ -32,7 +32,6 @@ namespace BulkEditor.Core.Configuration
         public bool UpdateHyperlinks { get; set; } = true;
         public bool AddContentIds { get; set; } = true;
         public bool OptimizeText { get; set; } = false;
-        public bool TrackChanges { get; set; } = false;
         public List<string> SupportedExtensions { get; set; } = new() { ".docx", ".docm" };
         public string LookupIdPattern { get; set; } = @"(TSRC-[^-]+-[0-9]{6}|CMS-[^-]+-[0-9]{6})";
     }

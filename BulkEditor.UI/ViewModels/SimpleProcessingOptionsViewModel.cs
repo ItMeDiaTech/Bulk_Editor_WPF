@@ -51,8 +51,6 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private bool _createBackupBeforeProcessing = true;
 
-        [ObservableProperty]
-        private bool _trackChanges = false;
 
         [ObservableProperty]
         private int _maxConcurrentDocuments = 5;
@@ -119,7 +117,6 @@ namespace BulkEditor.UI.ViewModels
                     UpdateTheSourceHyperlinkUrls = currentSettings.Processing.UpdateHyperlinks;
                     AppendContentIdsToTheSourceHyperlinks = currentSettings.Processing.AddContentIds;
                     CreateBackupBeforeProcessing = currentSettings.Processing.CreateBackupBeforeProcessing;
-                    TrackChanges = currentSettings.Processing.TrackChanges;
                     MaxConcurrentDocuments = currentSettings.Processing.MaxConcurrentDocuments;
                     TimeoutPerDocumentMinutes = (int)currentSettings.Processing.TimeoutPerDocument.TotalMinutes;
                     OptimizeTextFormatting = currentSettings.Processing.OptimizeText;
@@ -185,7 +182,6 @@ namespace BulkEditor.UI.ViewModels
                 currentSettings.Processing.UpdateHyperlinks = UpdateTheSourceHyperlinkUrls;
                 currentSettings.Processing.AddContentIds = AppendContentIdsToTheSourceHyperlinks;
                 currentSettings.Processing.CreateBackupBeforeProcessing = CreateBackupBeforeProcessing;
-                currentSettings.Processing.TrackChanges = TrackChanges;
                 currentSettings.Processing.MaxConcurrentDocuments = MaxConcurrentDocuments;
                 currentSettings.Processing.TimeoutPerDocument = TimeSpan.FromMinutes(TimeoutPerDocumentMinutes);
                 currentSettings.Processing.OptimizeText = OptimizeTextFormatting;
@@ -262,7 +258,6 @@ namespace BulkEditor.UI.ViewModels
                 ReplaceCustomUserDefinedText = false;
                 OptimizeTextFormatting = true;
                 CreateBackupBeforeProcessing = true;
-                TrackChanges = false;
                 MaxConcurrentDocuments = 5;
                 TimeoutPerDocumentMinutes = 10;
 

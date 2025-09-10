@@ -15,7 +15,7 @@ namespace BulkEditor.Core.Interfaces
         /// Processes all replacements for a document using an already opened WordprocessingDocument
         /// </summary>
         /// <param name="wordDocument">Already opened WordprocessingDocument</param>
-        /// <param name="document">Document entity to track changes</param>
+        /// <param name="document">Document entity to log changes</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Number of replacements made</returns>
         Task<int> ProcessReplacementsInSessionAsync(WordprocessingDocument wordDocument, Entities.Document document, CancellationToken cancellationToken = default);
@@ -41,7 +41,7 @@ namespace BulkEditor.Core.Interfaces
         /// Processes hyperlink replacements in an already opened document
         /// </summary>
         /// <param name="wordDocument">Already opened WordprocessingDocument</param>
-        /// <param name="document">Document entity to track changes</param>
+        /// <param name="document">Document entity to log changes</param>
         /// <param name="rules">Hyperlink replacement rules</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Number of replacements made</returns>
@@ -73,12 +73,11 @@ namespace BulkEditor.Core.Interfaces
         /// Processes text replacements in an already opened document
         /// </summary>
         /// <param name="wordDocument">Already opened WordprocessingDocument</param>
-        /// <param name="document">Document entity to track changes</param>
+        /// <param name="document">Document entity to log changes</param>
         /// <param name="rules">Text replacement rules</param>
-        /// <param name="trackChanges">Whether to mark changes as tracked revisions</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Number of replacements made</returns>
-        Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, Entities.Document document, IEnumerable<Configuration.TextReplacementRule> rules, bool trackChanges = false, CancellationToken cancellationToken = default);
+        Task<int> ProcessTextReplacementsInSessionAsync(WordprocessingDocument wordDocument, Entities.Document document, IEnumerable<Configuration.TextReplacementRule> rules, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Processes text replacements in a document (legacy method - opens document independently)

@@ -1440,14 +1440,7 @@ namespace BulkEditor.Infrastructure.Services
                     progress?.Report("Validating document structure...");
                     await ValidateOpenDocumentAsync(wordDocument, "initial", cancellationToken).ConfigureAwait(false);
 
-                    // STEP 3: Enable change tracking if requested
-                    if (_appSettings.Processing.TrackChanges)
-                    {
-                        progress?.Report("Enabling change tracking...");
-                        EnableChangeTracking(wordDocument);
-                    }
-
-                    // STEP 4: Create document snapshot for rollback
+                    // STEP 3: Create document snapshot for rollback
                     progress?.Report("Creating document snapshot...");
                     snapshot = CreateDocumentSnapshot(mainPart);
 
@@ -1691,165 +1684,6 @@ namespace BulkEditor.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Enables change tracking in the Word document
-        /// </summary>
-        private void EnableChangeTracking(WordprocessingDocument wordDocument)
-        {
-            try
-            {
-                if (wordDocument.MainDocumentPart?.Document?.Body == null)
-                {
-                    _logger.LogWarning("Cannot enable change tracking - document has no main content");
-                    return;
-                }
-
-                // Get or create document settings part
-                var settingsPart = wordDocument.MainDocumentPart.DocumentSettingsPart;
-                if (settingsPart == null)
-                {
-                    try
-                    {
-                        settingsPart = wordDocument.MainDocumentPart.AddNewPart<DocumentSettingsPart>();
-                        settingsPart.Settings = new DocumentFormat.OpenXml.Wordprocessing.Settings();
-                        _logger.LogDebug("Created new DocumentSettingsPart for track changes");
-                    }
-                    catch (Exception partEx)
-                    {
-                        _logger.LogError("Failed to create DocumentSettingsPart: {Error}", partEx.Message);
-                        throw;
-                    }
-                }
-
-                // Get or create settings element
-                var settings = settingsPart.Settings;
-                if (settings == null)
-                {
-                    settings = new DocumentFormat.OpenXml.Wordprocessing.Settings();
-                    settingsPart.Settings = settings;
-                    _logger.LogDebug("Created new Settings element");
-                }
-
-                // Check if track revisions is already enabled
-                var trackRevisions = settings.Elements<DocumentFormat.OpenXml.Wordprocessing.TrackRevisions>().FirstOrDefault();
-                if (trackRevisions != null)
-                {
-                    _logger.LogDebug("Track revisions already enabled in document");
-                    return;
-                }
-
-                // Enable track revisions with proper schema placement
-                try
-                {
-                    trackRevisions = new DocumentFormat.OpenXml.Wordprocessing.TrackRevisions();
-                    
-                    // CRITICAL FIX: Use proper schema ordering strategy to avoid validation errors
-                    // TrackRevisions should come early in the Settings to avoid interfering with 
-                    // elements like zoom, view, etc. that have specific schema positions
-                    
-                    // OpenXML schema order reference: TrackRevisions should come before view, zoom, and display settings
-                    // but after document protection settings
-                    
-                    // Strategy: Find elements that should come AFTER TrackRevisions and insert before them
-                    // Priority: view element must come after TrackRevisions to avoid "unexpected child element view" error
-                    var laterElement = settings.Elements().FirstOrDefault(e => 
-                        e.LocalName == "view" ||           // CRITICAL: view must come after TrackRevisions
-                        e.LocalName == "zoom" || 
-                        e.LocalName == "removePersonalInformation" ||
-                        e.LocalName == "removeDateAndTime" ||
-                        e.LocalName == "doNotDisplayPageBoundaries" ||
-                        e.LocalName == "displayBackgroundShape" ||
-                        e.LocalName == "printPostScriptOverText" ||
-                        e.LocalName == "printFractionalCharacterWidth" ||
-                        e.LocalName == "doNotValidateAgainstSchema" ||
-                        e.LocalName == "saveInvalidXml");
-                    
-                    if (laterElement != null)
-                    {
-                        // Insert TrackRevisions BEFORE elements that should come later
-                        settings.InsertBefore(trackRevisions, laterElement);
-                        _logger.LogDebug("Inserted TrackRevisions before {ElementName} to maintain schema order (prevents view validation errors)", laterElement.LocalName);
-                        
-                        // Log the specific case for view element
-                        if (laterElement.LocalName == "view")
-                        {
-                            _logger.LogInformation("Successfully positioned TrackRevisions before 'view' element to prevent OpenXML schema validation error");
-                        }
-                    }
-                    else
-                    {
-                        // Safe fallback: prepend to beginning (earliest possible position)
-                        if (settings.FirstChild != null)
-                        {
-                            settings.InsertBefore(trackRevisions, settings.FirstChild);
-                            _logger.LogDebug("Inserted TrackRevisions at beginning of Settings (early placement)");
-                        }
-                        else
-                        {
-                            settings.AppendChild(trackRevisions);
-                            _logger.LogDebug("Appended TrackRevisions as first child (empty settings)");
-                        }
-                    }
-                }
-                catch (Exception schemaEx)
-                {
-                    _logger.LogError("Schema error when adding TrackRevisions: {Error}", schemaEx.Message);
-                    
-                    // Last resort fallback: try simple append if placement strategies fail
-                    try
-                    {
-                        _logger.LogWarning("Attempting fallback TrackRevisions placement");
-                        trackRevisions = new DocumentFormat.OpenXml.Wordprocessing.TrackRevisions();
-                        settings.AppendChild(trackRevisions);
-                        _logger.LogWarning("Used fallback TrackRevisions placement - may have schema implications");
-                    }
-                    catch (Exception fallbackEx)
-                    {
-                        _logger.LogError("Fallback TrackRevisions placement also failed: {Error}", fallbackEx.Message);
-                        throw new InvalidOperationException($"All TrackRevisions placement strategies failed. Schema: {schemaEx.Message}, Fallback: {fallbackEx.Message}");
-                    }
-                }
-
-                // CRITICAL FIX: Save settings and validate
-                try
-                {
-                    // Log current settings structure for debugging
-                    var settingsChildren = settings.Elements().Select(e => e.LocalName).ToArray();
-                    _logger.LogDebug("Settings element order after TrackRevisions insertion: [{Elements}]", 
-                        string.Join(", ", settingsChildren));
-                    
-                    settingsPart.Settings.Save();
-                    _logger.LogInformation("Change tracking enabled successfully - all subsequent changes will be tracked");
-                }
-                catch (Exception saveEx)
-                {
-                    _logger.LogError("Failed to save settings after enabling track changes: {Error}", saveEx.Message);
-                    
-                    // Log settings structure for debugging save failures
-                    try
-                    {
-                        var settingsChildren = settings.Elements().Select(e => e.LocalName).ToArray();
-                        _logger.LogError("Settings structure when save failed: [{Elements}]", 
-                            string.Join(", ", settingsChildren));
-                    }
-                    catch (Exception logEx)
-                    {
-                        _logger.LogError("Failed to log settings structure: {Error}", logEx.Message);
-                    }
-                    
-                    throw;
-                }
-            }
-            catch (Exception ex)
-            {
-                // ENHANCED FIX: More detailed error handling
-                _logger.LogWarning("Failed to enable change tracking - processing will continue without tracking. Error: {Error}, Stack: {Stack}", 
-                    ex.Message, ex.StackTrace);
-                
-                // Don't throw - continue processing without track changes
-                // Track changes failure should not break document processing
-            }
-        }
 
         /// <summary>
         /// Validates processing options to ensure they are properly configured
@@ -2444,7 +2278,7 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     try
                     {
-                        OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText, _appSettings.Processing.TrackChanges);
+                        OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
 
                         // CRITICAL FIX: Save the document after display text changes
                         mainPart.Document.Save();
