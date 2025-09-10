@@ -587,16 +587,13 @@ namespace BulkEditor.Infrastructure.Services
                             // Safely try to get the relationship - some hyperlinks may have invalid IDs
                             try
                             {
-                                var relationship = mainPart.GetReferenceRelationship(relId);
-
-                                // CRITICAL FIX: Get the complete URL and decode any URL encoding
-                                var rawUrl = relationship.Uri.ToString();
-                                var completeUrl = Uri.UnescapeDataString(rawUrl);
+                                // CRITICAL FIX: Build complete URL including fragment exactly like VBA
+                                var completeUrl = BuildCompleteHyperlinkUrl(mainPart, openXmlHyperlink);
                                 var displayText = openXmlHyperlink.InnerText;
 
                                 var hyperlink = new Hyperlink
                                 {
-                                    OriginalUrl = completeUrl, // Use decoded complete URL
+                                    OriginalUrl = completeUrl, // Use complete URL including fragment
                                     DisplayText = displayText,
                                     LookupId = _hyperlinkValidator.ExtractLookupId(completeUrl),
                                     RequiresUpdate = ShouldAutoValidateHyperlink(completeUrl, displayText)
@@ -645,6 +642,58 @@ namespace BulkEditor.Infrastructure.Services
                 url, lookupId, shouldValidate);
 
             return shouldValidate;
+        }
+
+        /// <summary>
+        /// CRITICAL FIX: Builds complete URL by combining address and fragment exactly like VBA logic
+        /// VBA: full = addr & IIf(Len(subAddr) > 0, "#" & subAddr, "")
+        /// </summary>
+        /// <param name="mainPart">Document main part containing relationships</param>
+        /// <param name="openXmlHyperlink">OpenXML hyperlink element</param>
+        /// <returns>Complete URL with fragment if present</returns>
+        private string BuildCompleteHyperlinkUrl(MainDocumentPart mainPart, OpenXmlHyperlink openXmlHyperlink)
+        {
+            try
+            {
+                var relId = openXmlHyperlink.Id?.Value;
+                if (string.IsNullOrEmpty(relId))
+                    return string.Empty;
+
+                // Get the base address from the relationship
+                var relationship = mainPart.GetReferenceRelationship(relId);
+                var baseAddress = Uri.UnescapeDataString(relationship.Uri.ToString());
+
+                // Check for fragment/subaddress in multiple places
+                string fragment = null;
+
+                // 1. Check DocLocation property (most common for external links with fragments)
+                if (!string.IsNullOrEmpty(openXmlHyperlink.DocLocation?.Value))
+                {
+                    fragment = openXmlHyperlink.DocLocation.Value;
+                    _logger.LogDebug("Found fragment in DocLocation: {Fragment}", fragment);
+                }
+                // 2. Check Anchor property (typically for internal bookmarks)
+                else if (!string.IsNullOrEmpty(openXmlHyperlink.Anchor?.Value))
+                {
+                    fragment = openXmlHyperlink.Anchor.Value;
+                    _logger.LogDebug("Found fragment in Anchor: {Fragment}", fragment);
+                }
+
+                // Combine address and fragment exactly like VBA
+                var completeUrl = !string.IsNullOrEmpty(fragment) 
+                    ? baseAddress + "#" + fragment 
+                    : baseAddress;
+
+                _logger.LogDebug("Built complete URL: BaseAddress='{BaseAddress}', Fragment='{Fragment}', Complete='{CompleteUrl}'", 
+                    baseAddress, fragment ?? "", completeUrl);
+
+                return completeUrl;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error building complete hyperlink URL for relationship: {RelId}", openXmlHyperlink.Id?.Value);
+                return string.Empty;
+            }
         }
 
         /// <summary>
@@ -1630,14 +1679,11 @@ namespace BulkEditor.Infrastructure.Services
                         // Safely try to get the relationship
                         try
                         {
-                            var relationship = mainPart.GetReferenceRelationship(relId);
-
-                            // CRITICAL FIX: Get the complete URL and decode any URL encoding
-                            var rawUrl = relationship.Uri.ToString();
-                            var completeUrl = Uri.UnescapeDataString(rawUrl);
+                            // CRITICAL FIX: Build complete URL including fragment exactly like VBA
+                            var completeUrl = BuildCompleteHyperlinkUrl(mainPart, openXmlHyperlink);
                             var displayText = openXmlHyperlink.InnerText;
 
-                            _logger.LogDebug("Extracted hyperlink: Raw='{RawUrl}', Decoded='{CompleteUrl}'", rawUrl, completeUrl);
+                            _logger.LogDebug("Extracted hyperlink: Complete='{CompleteUrl}'", completeUrl);
 
                             var hyperlink = new Hyperlink
                             {
@@ -1697,11 +1743,8 @@ namespace BulkEditor.Infrastructure.Services
 
                         try
                         {
-                            var relationship = mainPart.GetReferenceRelationship(relId);
-
-                            // CRITICAL FIX: Get the complete URL and decode any URL encoding
-                            var rawUrl = relationship.Uri.ToString();
-                            var completeUrl = Uri.UnescapeDataString(rawUrl);
+                            // CRITICAL FIX: Build complete URL including fragment exactly like VBA
+                            var completeUrl = BuildCompleteHyperlinkUrl(mainPart, openXmlHyperlink);
                             var displayText = openXmlHyperlink.InnerText?.Trim() ?? string.Empty;
 
                             // CRITICAL FIX: Check if hyperlink has valid lookup ID - use complete URL
@@ -1829,11 +1872,8 @@ namespace BulkEditor.Infrastructure.Services
 
                     try
                     {
-                        var relationship = mainPart.GetReferenceRelationship(hyperlinkRelId);
-
-                        // CRITICAL FIX: Get the complete URL and decode any URL encoding
-                        var rawUrl = relationship.Uri.ToString();
-                        var currentUrl = Uri.UnescapeDataString(rawUrl);
+                        // CRITICAL FIX: Build complete URL including fragment exactly like VBA
+                        var currentUrl = BuildCompleteHyperlinkUrl(mainPart, openXmlHyperlink);
                         var currentDisplayText = openXmlHyperlink.InnerText ?? string.Empty;
 
                         var hyperlinkToUpdate = hyperlinksToUpdate.FirstOrDefault(h => h.OriginalUrl == currentUrl);

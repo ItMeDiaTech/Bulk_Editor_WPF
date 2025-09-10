@@ -133,6 +133,7 @@ namespace BulkEditor.Tests.Infrastructure.Services
         [InlineData("https://example.com/page?docid=some-document-id&other=value", "some-document-id")]
         [InlineData("https://example.com/page?docid=123456", "123456")]
         [InlineData("https://example.com/page?other=value&docid=test-doc", "test-doc")]
+        [InlineData("https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c", "8f2f198d-df40-4667-b72c-6f2d2141a91c")]
         public void ExtractLookupIdUsingVbaLogic_DocIdParameter_ReturnsCorrectId(string input, string expected)
         {
             // Act

@@ -32,7 +32,9 @@
       "Bash(dotnet clean:*)",
       "Bash(rg:*)",
       "Bash(dotnet list:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(csc:*)",
+      "Bash(./test_url_extraction.exe)"
     ],
     "deny": [],
     "ask": []
