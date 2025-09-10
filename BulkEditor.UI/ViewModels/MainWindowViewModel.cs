@@ -43,6 +43,10 @@ namespace BulkEditor.UI.ViewModels
         private readonly System.Timers.Timer _freezeDetectionTimer;
         private DateTime _lastUIUpdateTime = DateTime.UtcNow;
         private bool _freezeDetectionEnabled = true;
+        
+        // CRITICAL FIX: Add real-time timer updates for processing
+        private readonly System.Timers.Timer _processingTimer;
+        private BatchProcessingProgress? _currentBatchProgress;
 
         [ObservableProperty]
         private ObservableCollection<DocumentViewModel> _documents = new();
@@ -122,7 +126,7 @@ namespace BulkEditor.UI.ViewModels
         private string _progressMessage = string.Empty;
 
         [ObservableProperty]
-        private bool _isProcessing;
+        private bool _isProcessing = false;
 
         [ObservableProperty]
         private string _statusIcon = "ℹ";
@@ -231,6 +235,12 @@ namespace BulkEditor.UI.ViewModels
             _freezeDetectionTimer.Start();
 
             _logger.LogInformation("Freeze detection timer started - monitoring UI responsiveness");
+            
+            // CRITICAL FIX: Initialize real-time processing timer for elapsed time updates
+            _processingTimer = new System.Timers.Timer(1000); // Update every 1 second
+            _processingTimer.Elapsed += OnProcessingTimerElapsed;
+            _processingTimer.AutoReset = true;
+            // Timer will be started when processing begins
 
             // Subscribe to background task status changes
             _backgroundTaskService.TaskStatusChanged += OnBackgroundTaskStatusChanged;
@@ -620,6 +630,11 @@ namespace BulkEditor.UI.ViewModels
                 }
 
                 ProcessingStatistics = _applicationService.GetProcessingStatistics(results);
+                
+                // CRITICAL FIX: Stop real-time timer when processing completes
+                IsProcessing = false;
+                _processingTimer.Stop();
+                _currentBatchProgress = null;
 
                 ProgressValue = 100;
 
@@ -693,6 +708,12 @@ namespace BulkEditor.UI.ViewModels
             FailedDocuments = 0;
             ProgressValue = 0;
             ProcessingStatistics = null;
+            
+            // CRITICAL FIX: Stop real-time timer when resetting
+            IsProcessing = false;
+            _processingTimer.Stop();
+            _currentBatchProgress = null;
+            
             SetStatusReady();
             IsRevertEnabled = _undoService.CanUndo();
         }
@@ -789,6 +810,16 @@ namespace BulkEditor.UI.ViewModels
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
+                // CRITICAL FIX: Store progress for real-time timer updates
+                _currentBatchProgress = progress;
+                
+                // Start timer on first progress update
+                if (!IsProcessing)
+                {
+                    IsProcessing = true;
+                    _processingTimer.Start();
+                }
+
                 // Update basic progress
                 TotalDocuments = progress.TotalDocuments;
                 ProcessedDocuments = progress.ProcessedDocuments;
@@ -1211,6 +1242,38 @@ namespace BulkEditor.UI.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in freeze detection check");
+            }
+        }
+
+        /// <summary>
+        /// CRITICAL FIX: Timer handler for real-time elapsed time updates during processing
+        /// </summary>
+        private void OnProcessingTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (!IsProcessing || _currentBatchProgress == null)
+                return;
+
+            try
+            {
+                // Update the elapsed time display in real-time
+                System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
+                {
+                    if (_currentBatchProgress != null)
+                    {
+                        ElapsedTime = _currentBatchProgress.FormattedElapsedTime;
+                        EstimatedTimeRemaining = _currentBatchProgress.FormattedEstimatedTimeRemaining;
+                        
+                        // Update status with current elapsed time
+                        if (_currentBatchProgress.ProcessedDocuments > 0)
+                        {
+                            SetStatusProcessing($"Processing {_currentBatchProgress.ProcessedDocuments}/{_currentBatchProgress.TotalDocuments} documents - {_currentBatchProgress.FormattedElapsedTime} elapsed");
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating processing timer display");
             }
         }
 

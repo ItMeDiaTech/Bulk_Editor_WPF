@@ -226,7 +226,36 @@ namespace BulkEditor.Infrastructure.Services
                             batchProgress.SuccessfulDocuments = successful;
                             batchProgress.TotalHyperlinksFound += document.Hyperlinks.Count;
                             batchProgress.TotalHyperlinksProcessed += document.Hyperlinks.Count(h => !string.IsNullOrEmpty(h.UpdatedUrl));
-                            batchProgress.TotalHyperlinksUpdated += document.Hyperlinks.Count(h => !string.IsNullOrEmpty(h.UpdatedUrl) && h.UpdatedUrl != h.OriginalUrl);
+                            
+                            // CRITICAL FIX: Track unique hyperlinks that have been changed (any type of change)
+                            // Check for URL changes, title changes, or any modification
+                            foreach (var hyperlink in document.Hyperlinks)
+                            {
+                                bool hasChanged = false;
+                                
+                                // Check if URL was updated
+                                if (!string.IsNullOrEmpty(hyperlink.UpdatedUrl) && hyperlink.UpdatedUrl != hyperlink.OriginalUrl)
+                                {
+                                    hasChanged = true;
+                                }
+                                
+                                // Check if display text was updated (from change log)
+                                if (document.ChangeLog.Changes.Any(c => 
+                                    (c.Type == ChangeType.HyperlinkUpdated || c.Type == ChangeType.TitleChanged || c.Type == ChangeType.TitleReplaced || c.Type == ChangeType.HyperlinkStatusAdded || c.Type == ChangeType.ContentIdAdded) 
+                                    && c.ElementId == hyperlink.Id))
+                                {
+                                    hasChanged = true;
+                                }
+                                
+                                // Add to unique set if any change occurred
+                                if (hasChanged)
+                                {
+                                    batchProgress.UniqueHyperlinksChanged.Add($"{document.FileName}:{hyperlink.Id}");
+                                }
+                            }
+                            
+                            // Update count based on unique changes
+                            batchProgress.TotalHyperlinksUpdated = batchProgress.UniqueHyperlinksChanged.Count;
 
                             // Calculate average processing time
                             var totalProcessingTime = (DateTime.Now - startTime).TotalSeconds;

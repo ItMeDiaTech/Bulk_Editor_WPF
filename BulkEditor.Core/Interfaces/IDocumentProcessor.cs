@@ -59,6 +59,11 @@ namespace BulkEditor.Core.Interfaces
         public double AverageProcessingTimePerDocument { get; set; }
         public double CurrentDocumentProgress { get; set; }
         public List<string> RecentErrors { get; set; } = new();
+        
+        // CRITICAL FIX: Track unique hyperlinks that have been changed
+        // This ensures each hyperlink is counted only once, regardless of how many changes were made
+        public HashSet<string> UniqueHyperlinksChanged { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        
         public double PercentageComplete => TotalDocuments > 0 ? (double)ProcessedDocuments / TotalDocuments * 100 : 0;
         public double OverallProgress => TotalDocuments > 0 ? ((double)ProcessedDocuments + (CurrentDocumentProgress / 100.0)) / TotalDocuments * 100 : 0;
         public string FormattedElapsedTime => ElapsedTime.ToString(@"hh\:mm\:ss");

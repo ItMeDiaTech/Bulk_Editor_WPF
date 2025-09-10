@@ -3,6 +3,7 @@ using BulkEditor.Core.Entities;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Core.Services;
 using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml;
 using BulkEditor.Infrastructure.Utilities;
 using Microsoft.Extensions.Options;
 using System;
@@ -1182,6 +1183,14 @@ namespace BulkEditor.Infrastructure.Services
 
                             _logger.LogDebug("Updated hyperlink with VBA-compatible Address/SubAddress: {Address}#{SubAddress}",
                                 targetAddress, targetSubAddress);
+                            
+                            // CRITICAL FIX: Set DocLocation for the fragment (required for Word to show complete URL)
+                            // This matches what DocumentProcessor.cs does for regular hyperlinks
+                            if (!string.IsNullOrEmpty(targetSubAddress))
+                            {
+                                openXmlHyperlink.DocLocation = new StringValue(targetSubAddress);
+                                _logger.LogDebug("Set DocLocation for custom hyperlink: {Fragment}", targetSubAddress);
+                            }
                         }
                         else
                         {

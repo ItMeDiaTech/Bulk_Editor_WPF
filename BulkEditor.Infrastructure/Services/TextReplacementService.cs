@@ -52,19 +52,23 @@ namespace BulkEditor.Infrastructure.Services
 
                 var totalReplacements = 0;
 
-                // Process all text elements in the document
-                var textElements = mainPart.Document.Body.Descendants<Text>().ToList();
+                // CRITICAL FIX: Process paragraphs instead of individual text elements
+                // This handles text that is fragmented across multiple Text elements due to formatting
+                var paragraphs = mainPart.Document.Body.Descendants<Paragraph>().ToList();
 
-                foreach (var textElement in textElements)
+                foreach (var paragraph in paragraphs)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (string.IsNullOrEmpty(textElement.Text))
+                    // Get all text content from the paragraph (consolidated)
+                    var paragraphText = GetParagraphText(paragraph);
+                    
+                    if (string.IsNullOrEmpty(paragraphText))
                         continue;
 
-                    var originalText = textElement.Text;
+                    var originalText = paragraphText;
                     var modifiedText = originalText;
-                    var replacementsMadeInElement = 0;
+                    var replacementsMadeInParagraph = 0;
 
                     foreach (var rule in activeRules)
                     {
@@ -75,28 +79,28 @@ namespace BulkEditor.Infrastructure.Services
                         if (replacementResult != modifiedText)
                         {
                             modifiedText = replacementResult;
-                            replacementsMadeInElement++;
+                            replacementsMadeInParagraph++;
                         }
                     }
 
-                    // Update text element if any replacements were made
-                    if (replacementsMadeInElement > 0)
+                    // Update paragraph if any replacements were made
+                    if (replacementsMadeInParagraph > 0)
                     {
-                        textElement.Text = modifiedText;
-                        totalReplacements += replacementsMadeInElement;
+                        UpdateParagraphText(paragraph, modifiedText);
+                        totalReplacements += replacementsMadeInParagraph;
 
                         // Log the change in document
                         document.ChangeLog.Changes.Add(new ChangeEntry
                         {
                             Type = ChangeType.TextReplaced,
-                            Description = "Text replaced using replacement rules",
+                            Description = "Text replaced using replacement rules (paragraph-level)",
                             OldValue = originalText,
                             NewValue = modifiedText,
                             ElementId = Guid.NewGuid().ToString(),
-                            Details = $"Applied {replacementsMadeInElement} replacement rule(s)"
+                            Details = $"Applied {replacementsMadeInParagraph} replacement rule(s)"
                         });
 
-                        _logger.LogDebug("Text replacement in session element: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
+                        _logger.LogDebug("Text replacement in session paragraph: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
                     }
                 }
 
@@ -135,19 +139,23 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     var totalReplacements = 0;
 
-                    // Process all text elements in the document
-                    var textElements = mainPart.Document.Body.Descendants<Text>().ToList();
+                    // CRITICAL FIX: Process paragraphs instead of individual text elements (legacy method)
+                    // This handles text that is fragmented across multiple Text elements due to formatting
+                    var paragraphs = mainPart.Document.Body.Descendants<Paragraph>().ToList();
 
-                    foreach (var textElement in textElements)
+                    foreach (var paragraph in paragraphs)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        if (string.IsNullOrEmpty(textElement.Text))
+                        // Get all text content from the paragraph (consolidated)
+                        var paragraphText = GetParagraphText(paragraph);
+                        
+                        if (string.IsNullOrEmpty(paragraphText))
                             continue;
 
-                        var originalText = textElement.Text;
+                        var originalText = paragraphText;
                         var modifiedText = originalText;
-                        var replacementsMadeInElement = 0;
+                        var replacementsMadeInParagraph = 0;
 
                         foreach (var rule in activeRules)
                         {
@@ -158,28 +166,28 @@ namespace BulkEditor.Infrastructure.Services
                             if (replacementResult != modifiedText)
                             {
                                 modifiedText = replacementResult;
-                                replacementsMadeInElement++;
+                                replacementsMadeInParagraph++;
                             }
                         }
 
-                        // Update text element if any replacements were made
-                        if (replacementsMadeInElement > 0)
+                        // Update paragraph if any replacements were made
+                        if (replacementsMadeInParagraph > 0)
                         {
-                            textElement.Text = modifiedText;
-                            totalReplacements += replacementsMadeInElement;
+                            UpdateParagraphText(paragraph, modifiedText);
+                            totalReplacements += replacementsMadeInParagraph;
 
                             // Log the change in document
                             document.ChangeLog.Changes.Add(new ChangeEntry
                             {
                                 Type = ChangeType.TextReplaced,
-                                Description = "Text replaced using replacement rules",
+                                Description = "Text replaced using replacement rules (paragraph-level, legacy)",
                                 OldValue = originalText,
                                 NewValue = modifiedText,
                                 ElementId = Guid.NewGuid().ToString(),
-                                Details = $"Applied {replacementsMadeInElement} replacement rule(s)"
+                                Details = $"Applied {replacementsMadeInParagraph} replacement rule(s)"
                             });
 
-                            _logger.LogDebug("Text replacement in element: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
+                            _logger.LogDebug("Text replacement in legacy paragraph: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
                         }
                     }
 
@@ -310,6 +318,71 @@ namespace BulkEditor.Infrastructure.Services
             {
                 _logger.LogError(ex, "Error in exact text replacement. SearchText: {SearchText}, ReplacementText: {ReplacementText}", searchText, replacementText);
                 return sourceText; // Return original text on error
+            }
+        }
+
+        /// <summary>
+        /// Gets all text content from a paragraph, consolidating across all runs and text elements
+        /// </summary>
+        private string GetParagraphText(Paragraph paragraph)
+        {
+            var textBuilder = new StringBuilder();
+            
+            foreach (var run in paragraph.Descendants<Run>())
+            {
+                foreach (var text in run.Descendants<Text>())
+                {
+                    textBuilder.Append(text.Text ?? string.Empty);
+                }
+            }
+            
+            return textBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Updates paragraph text while preserving formatting structure
+        /// Uses consolidation approach - creates a single run with the new text
+        /// </summary>
+        private void UpdateParagraphText(Paragraph paragraph, string newText)
+        {
+            try
+            {
+                // Get the first run to preserve its properties
+                var firstRun = paragraph.Descendants<Run>().FirstOrDefault();
+                var runProperties = firstRun?.GetFirstChild<RunProperties>()?.CloneNode(true);
+
+                // Remove all existing runs
+                var runsToRemove = paragraph.Descendants<Run>().ToList();
+                foreach (var run in runsToRemove)
+                {
+                    run.Remove();
+                }
+
+                // Create a new run with the updated text
+                var newRun = new Run();
+                
+                // Apply preserved formatting if available
+                if (runProperties != null)
+                {
+                    newRun.Append(runProperties);
+                }
+
+                // Add the new text
+                newRun.Append(new Text(newText));
+
+                // Add the new run to the paragraph
+                paragraph.Append(newRun);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating paragraph text. Falling back to simple text update.");
+                
+                // Fallback: update first text element found
+                var firstText = paragraph.Descendants<Text>().FirstOrDefault();
+                if (firstText != null)
+                {
+                    firstText.Text = newText;
+                }
             }
         }
     }
