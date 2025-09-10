@@ -447,14 +447,15 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Checks if a paragraph contains complex elements that shouldn't be modified
+        /// CRITICAL FIX: Simplified - only truly dangerous elements
         /// </summary>
         private bool HasComplexElements(Paragraph paragraph)
         {
-            // Check for hyperlinks, fields, drawings, etc.
-            return paragraph.Descendants<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>().Any() ||
-                   paragraph.Descendants<FieldCode>().Any() ||
-                   paragraph.Descendants<FieldChar>().Any() ||
-                   paragraph.Descendants<Drawing>().Any();
+            // Only check for genuinely dangerous elements that can corrupt documents
+            // Allow normal hyperlinks, simple fields, and formatted text
+            return paragraph.Descendants<FieldCode>().Any() ||
+                   paragraph.Descendants<Drawing>().Any() ||
+                   paragraph.Descendants<FieldChar>().Count() > 2; // Complex field structures only
         }
 
         /// <summary>
@@ -499,45 +500,47 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
-        /// Checks if a text element is simple (not part of complex structures)
+        /// Checks if a text element is simple (not part of dangerous structures)
+        /// CRITICAL FIX: Allow hyperlink text and normal formatted text
         /// </summary>
         private bool IsSimpleTextElement(Text textElement)
         {
-            // Check if the text element is inside hyperlinks, fields, or other complex structures
-            return !textElement.Ancestors<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>().Any() &&
-                   !textElement.Ancestors<FieldCode>().Any() &&
+            // Only exclude text elements that are inside dangerous field codes
+            // Allow hyperlink display text, table text, and normal formatted text
+            return !textElement.Ancestors<FieldCode>().Any() &&
                    textElement.Ancestors<Run>().Any(); // Must be in a run
         }
 
         /// <summary>
         /// Validates if a paragraph is safe for text replacement without causing document corruption
+        /// CRITICAL FIX: Simplified validation - only blocks genuinely dangerous structures
         /// </summary>
         private bool ValidateParagraphForTextReplacement(Paragraph paragraph)
         {
             try
             {
-                // Check for severely complex structures that should not be modified
-                var hasComplexTable = paragraph.Ancestors<Table>().Any();
-                var hasNestedFields = paragraph.Descendants<FieldCode>().Count() > 1;
-                var hasDrawingElements = paragraph.Descendants<Drawing>().Any();
+                // Only block truly dangerous structures that can corrupt documents
+                // Allow normal table text, hyperlink text, and formatted text
                 
-                // Check for problematic hyperlink structures
-                var hasComplexHyperlinks = paragraph.Descendants<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>().Any(h => 
-                    h.Descendants<FieldCode>().Any() || h.Elements<Run>().Count() > 3);
-
-                if (hasComplexTable || hasNestedFields || hasDrawingElements || hasComplexHyperlinks)
+                // Check for genuinely problematic structures
+                var hasFieldCodes = paragraph.Descendants<FieldCode>().Any();
+                var hasDrawingElements = paragraph.Descendants<Drawing>().Any();
+                var hasComplexFields = paragraph.Descendants<FieldChar>().Count() > 2; // Complex field structure
+                
+                // Only block paragraphs with dangerous field codes or complex graphics
+                if (hasFieldCodes || hasDrawingElements || hasComplexFields)
                 {
-                    _logger.LogDebug("Paragraph contains complex structure, skipping text replacement to prevent corruption");
+                    _logger.LogDebug("Paragraph contains field codes, drawings, or complex fields - skipping text replacement for safety");
                     return false;
                 }
 
-                // Check if paragraph has any simple text that can be safely modified
-                var hasSimpleText = paragraph.Descendants<Text>()
-                    .Any(t => IsSimpleTextElement(t) && !string.IsNullOrWhiteSpace(t.Text));
+                // Check if paragraph has any text content at all
+                var hasText = paragraph.Descendants<Text>()
+                    .Any(t => !string.IsNullOrWhiteSpace(t.Text));
 
-                if (!hasSimpleText)
+                if (!hasText)
                 {
-                    _logger.LogDebug("Paragraph contains no simple text elements for replacement");
+                    _logger.LogDebug("Paragraph contains no text content for replacement");
                     return false;
                 }
 
