@@ -3,4 +3,4 @@
 [2025-09-09 23:05:11.935 -04:00 INF] DEBUG: About to set DocLocation - targetSubAddress: '!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5', isEmpty: false
 [2025-09-09 23:05:11.936 -04:00 INF] DEBUG: Set DocLocation fragment: '!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5' (from UpdatedUrl: true)
 [2025-09-09 23:05:11.938 -04:00 INF] Applied display text changes to document: 'Aetna Senior Compass - Copay Overrides (066440)' -> 'Aetna Senior Compass - Copay Overrides (066440)'
-[2025-09-09 23:05:11.938 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> d#!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5, Display: 'Aetna Senior Compass - Copay Overrides (066440)'
+[2025-09-09 23:05:11.938 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> #!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5, Display: 'Aetna Senior Compass - Copay Overrides (066440)'

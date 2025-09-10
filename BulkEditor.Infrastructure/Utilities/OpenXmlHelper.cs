@@ -7,7 +7,9 @@ namespace BulkEditor.Infrastructure.Utilities
     public static class OpenXmlHelper
     {
         /// <summary>
-        /// Safely updates hyperlink text, preserving formatting and hyperlink properties (DocLocation, Anchor, etc.).
+        /// Safely updates hyperlink text, preserving formatting. 
+        /// CRITICAL FIX: Attributes (DocLocation, Anchor, etc.) persist automatically through RemoveAllChildren()
+        /// so we don't need to preserve/restore them, which was causing issues.
         /// </summary>
         public static void UpdateHyperlinkText(Hyperlink hyperlink, string newText)
         {
@@ -17,26 +19,12 @@ namespace BulkEditor.Infrastructure.Utilities
                 ?.GetFirstChild<RunProperties>()
                 ?.CloneNode(true);
 
-            // CRITICAL FIX: Preserve important hyperlink properties before removing children
-            var docLocation = hyperlink.DocLocation?.Value;
-            var anchor = hyperlink.Anchor?.Value;
-            var tooltip = hyperlink.Tooltip?.Value;
-            var history = hyperlink.History?.Value;
-
-            // Clear existing content and add the new, properly structured text
+            // CRITICAL FIX: Only remove children, not attributes
+            // Attributes like DocLocation, Anchor, Tooltip, History are preserved automatically
+            // The previous approach of manually preserving/restoring was interfering with them
             hyperlink.RemoveAllChildren();
             
-            // Re-add preserved properties first
-            if (docLocation != null)
-                hyperlink.DocLocation = new StringValue(docLocation);
-            if (anchor != null)
-                hyperlink.Anchor = new StringValue(anchor);
-            if (tooltip != null)
-                hyperlink.Tooltip = new StringValue(tooltip);
-            if (history != null)
-                hyperlink.History = new OnOffValue(history);
-            
-            // Add the new text run
+            // Add the new text run with preserved formatting
             var newRun = new Run();
             if (runProperties != null)
             {
