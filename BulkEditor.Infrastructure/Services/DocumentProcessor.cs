@@ -1022,6 +1022,9 @@ namespace BulkEditor.Infrastructure.Services
                         notFoundHyperlinks++;
                         missingIdTracker[lookupId] = $"Hyperlink: '{dispText}' - Missing from API response";
 
+                        // CRITICAL FIX: Preserve the lookup ID even when marked as Not Found
+                        // This ensures the hyperlink can still be processed in UpdateHyperlinkWithAtomicVbaLogicAsync
+                        hyperlink.LookupId = lookupId;
                         hyperlink.DisplayText += " - Not Found";
                         hyperlink.Status = HyperlinkStatus.NotFound;
                         hyperlink.RequiresUpdate = true; // CRITICAL FIX: Mark for update
@@ -1081,6 +1084,18 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 var dispText = hyperlink.DisplayText ?? string.Empty;
+
+                // CRITICAL FIX: Set hyperlink properties from API response for later use in UpdateHyperlinkWithAtomicVbaLogicAsync
+                if (!string.IsNullOrEmpty(rec.Document_ID))
+                {
+                    hyperlink.DocumentId = rec.Document_ID;
+                    _logger.LogDebug("Set hyperlink.DocumentId from API: '{DocumentId}'", rec.Document_ID);
+                }
+                if (!string.IsNullOrEmpty(rec.Content_ID))
+                {
+                    hyperlink.ContentId = rec.Content_ID;
+                    _logger.LogDebug("Set hyperlink.ContentId from API: '{ContentId}'", rec.Content_ID);
+                }
 
                 // CRITICAL FIX: Determine correct ID for URL building
                 string idForUrl;
