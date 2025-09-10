@@ -1,56 +1,6 @@
-[2025-09-09 22:50:51.962 -04:00 INF] Dictionary built with 10 entries, found 4 active, 1 expired, 1 missing
-[2025-09-09 22:50:51.963 -04:00 INF] API response processing completed: 4 found, 1 expired, 1 missing (0.0% success rate)
-[2025-09-09 22:50:51.967 -04:00 INF] ✓ EXTRACTED docid fallback: '8f2f198d-df40-4667-b72c-6f2d2141a91c' (raw: '8f2f198d-df40-4667-b72c-6f2d2141a91c') from URL: https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c
-[2025-09-09 22:50:51.969 -04:00 INF] ✓ EXTRACTED docid fallback: '784d1956-1e04-4ccf-a73f-f5d3f487b5b0' (raw: '784d1956-1e04-4ccf-a73f-f5d3f487b5b0') from URL: https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=784d1956-1e04-4ccf-a73f-f5d3f487b5b0
-[2025-09-09 22:50:51.970 -04:00 INF] Appended Content_ID to hyperlink: 068698
-[2025-09-09 22:50:51.970 -04:00 INF] Detected title difference: Current='Aetna - GPS - Locating Plan in GPS', API='Aetna - GPS - Locating Plan Benefits in GPS'
-[2025-09-09 22:50:51.970 -04:00 INF] Updated hyperlink: Appended Content ID for 
-[2025-09-09 22:50:51.970 -04:00 INF] ✓ EXTRACTED Lookup_ID via regex pattern: 'TSRC-PROD-066440' from URL: file:///C:/Users/c551465/Downloads/TSRC-PROD-066440
-[2025-09-09 22:50:51.970 -04:00 INF] Appended Content_ID to hyperlink: 066440
-[2025-09-09 22:50:51.970 -04:00 INF] Detected title difference: Current='Aetna Senior Compass - Copay Overrides', API='Aetna Senior Team Compass - Copay Overrides'
-[2025-09-09 22:50:51.971 -04:00 INF] Updated hyperlink: URL Updated, Appended Content ID for 
-[2025-09-09 22:50:51.971 -04:00 INF] ✓ EXTRACTED docid fallback: 'a7f6f529-3a96-413b-8623-689c0c867530' (raw: 'a7f6f529-3a96-413b-8623-689c0c867530') from URL: https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=a7f6f529-3a96-413b-8623-689c0c867530
-[2025-09-09 22:50:51.971 -04:00 INF] Marked hyperlink as Not Found: a7f6f529-3a96-413b-8623-689c0c867530 (Hyperlink: 'Aetna Med D - Handling Prior Authorization Inquiries (867530)')
-[2025-09-09 22:50:51.971 -04:00 INF] ✓ EXTRACTED docid fallback: '080c3531-54e5-471e-a8cd-a4df4511ee59' (raw: '080c3531-54e5-471e-a8cd-a4df4511ee59') from URL: https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=080c3531-54e5-471e-a8cd-a4df4511ee59
-[2025-09-09 22:50:51.971 -04:00 INF] Appended Content_ID to hyperlink: 012335
-[2025-09-09 22:50:51.971 -04:00 INF] Marked hyperlink as Expired: 
-[2025-09-09 22:50:51.971 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0011 - this hyperlink will be excluded from API call
-[2025-09-09 22:50:51.971 -04:00 INF] ✗ NO VALID LOOKUP ID found in URL: https://policy.corp.cvscaremark.com/pnp/faces/DocRenderer?documentId=CALL-0049 - this hyperlink will be excluded from API call
-[2025-09-09 22:50:51.971 -04:00 INF] ✓ EXTRACTED docid fallback: 'c1f1028b-e42c-4b4f-a4cf-cc0b42c91606' (raw: 'c1f1028b-e42c-4b4f-a4cf-cc0b42c91606') from URL: https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=c1f1028b-e42c-4b4f-a4cf-cc0b42c91606
-[2025-09-09 22:50:51.971 -04:00 INF] Appended Content_ID to hyperlink: 017428
-[2025-09-09 22:50:51.971 -04:00 INF] Detected title difference: Current='Customer Care Abbreviations, Definitions, and Terms', API='Customer Care Abbreviations, Definitions, and Terms Index'
-[2025-09-09 22:50:51.971 -04:00 INF] Updated hyperlink: Appended Content ID for 
-[2025-09-09 22:50:51.971 -04:00 INF] Hyperlink processing summary for TestDoc3_Backup - Copy (31) - Copy - Copy.docx: Total: 6, Found: 4, Expired: 1, Not Found: 1, Success Rate: 66.7%, API Response Rate: 4 found + 1 expired from 0 API IDs
-[2025-09-09 22:50:51.975 -04:00 WRN] Missing IDs details for TestDoc3_Backup - Copy (31) - Copy - Copy.docx: a7f6f529-3a96-413b-8623-689c0c867530: Hyperlink: 'Aetna Med D - Handling Prior Authorization Inquiries (867530)' - Missing from API response
-[2025-09-09 22:50:51.975 -04:00 INF] Completed VBA-compatible hyperlink processing workflow for: TestDoc3_Backup - Copy (31) - Copy - Copy.docx
-[2025-09-09 22:50:51.980 -04:00 INF] Updating 6 hyperlinks in document session using atomic VBA logic: TestDoc3_Backup - Copy (31) - Copy - Copy.docx
-[2025-09-09 22:50:51.984 -04:00 INF] Updated hyperlink atomically with VBA logic: rId5 -> https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=8f2f198d-df40-4667-b72c-6f2d2141a91c, Display: 'Aetna Compass - Requests for Formularies and Member Materials (064131)'
-[2025-09-09 22:50:52.001 -04:00 INF] Applied display text changes to document: 'Aetna - GPS - Locating Plan in GPS (068698)' -> 'Aetna - GPS - Locating Plan in GPS (068698)'
-[2025-09-09 22:50:52.001 -04:00 INF] Updated hyperlink atomically with VBA logic: rId7 -> https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=784d1956-1e04-4ccf-a73f-f5d3f487b5b0, Display: 'Aetna - GPS - Locating Plan in GPS (068698)'
-[2025-09-09 22:50:52.009 -04:00 INF] Applied display text changes to document: 'Aetna Senior Compass - Copay Overrides (066440)' -> 'Aetna Senior Compass - Copay Overrides (066440)'
-[2025-09-09 22:50:52.009 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5, Display: 'Aetna Senior Compass - Copay Overrides (066440)'
-[2025-09-09 22:50:52.013 -04:00 INF] Applied display text changes to document: 'Aetna Med D - Handling Prior Authorization Inquiries (867530) - Not Found' -> 'Aetna Med D - Handling Prior Authorization Inquiries (867530) - Not Found'
-[2025-09-09 22:50:52.013 -04:00 INF] Updated hyperlink atomically with VBA logic: rId9 -> https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=a7f6f529-3a96-413b-8623-689c0c867530, Display: 'Aetna Med D - Handling Prior Authorization Inquiries (867530) - Not Found'
-[2025-09-09 22:50:52.016 -04:00 INF] Applied display text changes to document: 'Specialty CRU Appeal vs Peer to Peer (P2P) (012335) - Expired' -> 'Specialty CRU Appeal vs Peer to Peer (P2P) (012335) - Expired'
-[2025-09-09 22:50:52.016 -04:00 INF] Updated hyperlink atomically with VBA logic: rId10 -> https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=080c3531-54e5-471e-a8cd-a4df4511ee59, Display: 'Specialty CRU Appeal vs Peer to Peer (P2P) (012335) - Expired'
-[2025-09-09 22:50:52.019 -04:00 INF] Applied display text changes to document: 'Customer Care Abbreviations, Definitions, and Terms (017428)' -> 'Customer Care Abbreviations, Definitions, and Terms (017428)'
-[2025-09-09 22:50:52.020 -04:00 INF] Updated hyperlink atomically with VBA logic: rId13 -> https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=c1f1028b-e42c-4b4f-a4cf-cc0b42c91606, Display: 'Customer Care Abbreviations, Definitions, and Terms (017428)'
-[2025-09-09 22:50:52.023 -04:00 INF] Hyperlink updates completed atomically in session for document: TestDoc3_Backup - Copy (31) - Copy - Copy.docx
-[2025-09-09 22:50:52.023 -04:00 INF] Hyperlink processing completed for TestDoc3_Backup - Copy (31) - Copy - Copy.docx: Duration=18549.2624ms
-[2025-09-09 22:50:52.078 -04:00 INF] Starting replacement processing for TestDoc3_Backup - Copy (31) - Copy - Copy.docx: HyperlinkReplacement=true (0 rules), TextReplacement=true (0 rules)
-[2025-09-09 22:50:52.080 -04:00 INF] Starting replacement processing in session for document: TestDoc3_Backup - Copy (31) - Copy - Copy.docx
-[2025-09-09 22:50:52.081 -04:00 INF] SESSION-BASED REPLACEMENT PROCESSING COMPLETED for document: TestDoc3_Backup - Copy (31) - Copy - Copy.docx, TOTAL REPLACEMENTS: 0
-[2025-09-09 22:50:52.081 -04:00 INF] Replacement processing completed for TestDoc3_Backup - Copy (31) - Copy - Copy.docx: Duration=3.1192ms
-[2025-09-09 22:50:52.143 -04:00 INF] Text optimization skipped for TestDoc3_Backup - Copy (31) - Copy - Copy.docx: OptimizeText disabled in settings
-[2025-09-09 22:50:52.189 -04:00 INF] Starting enhanced document save operation for: TestDoc3_Backup - Copy (31) - Copy - Copy.docx
-[2025-09-09 22:50:52.239 -04:00 INF] ✓ DOCUMENT SAVE COMPLETED SUCCESSFULLY: TestDoc3_Backup - Copy (31) - Copy - Copy.docx
-[2025-09-09 22:50:52.340 -04:00 INF] ✓ DOCUMENT SAVE COMPLETED - verification will occur after document disposal
-[2025-09-09 22:50:52.402 -04:00 INF] Document processed successfully with comprehensive validation: TestDoc3_Backup - Copy (31) - Copy - Copy.docx, Total Duration: 19748.0132ms, Hyperlinks: 8, Changes: 11
-[2025-09-09 22:50:52.404 -04:00 INF] Document processing completed successfully: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (31) - Copy - Copy.docx
-[2025-09-09 22:50:52.408 -04:00 INF] Batch processing completed: 1 successful, 0 failed
-[2025-09-09 22:50:52.408 -04:00 INF] Batch processing completed in "00:00:19.7857591": 1 files, 1 successful
-[2025-09-09 22:50:52.410 -04:00 INF] Background task completed successfully: Document Processing (ID: 73314c11-d10e-4d2b-84dc-62d70cb00156)
-[2025-09-09 22:50:52.418 -04:00 INF] Processing statistics calculated: 1/1 successful
-[2025-09-09 22:50:52.419 -04:00 INF] Success notification: Processing Complete - Successfully processed all 1 documents.
-[2025-09-09 22:50:52.419 -04:00 INF] Batch processing completed successfully
-[2025-09-09 22:50:57.215 -04:00 INF] Opened location for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (31) - Copy - Copy.docx
+
+[2025-09-09 23:05:11.935 -04:00 INF] DEBUG: Using UpdatedUrl: 'https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5' -> Base: 'https://thesource.cvshealth.com/nuxeo/thesource/', Fragment: '!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5', Parts.Length: 2
+[2025-09-09 23:05:11.935 -04:00 INF] DEBUG: About to set DocLocation - targetSubAddress: '!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5', isEmpty: false
+[2025-09-09 23:05:11.936 -04:00 INF] DEBUG: Set DocLocation fragment: '!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5' (from UpdatedUrl: true)
+[2025-09-09 23:05:11.938 -04:00 INF] Applied display text changes to document: 'Aetna Senior Compass - Copay Overrides (066440)' -> 'Aetna Senior Compass - Copay Overrides (066440)'
+[2025-09-09 23:05:11.938 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5, Display: 'Aetna Senior Compass - Copay Overrides (066440)'
