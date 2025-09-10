@@ -2012,17 +2012,27 @@ namespace BulkEditor.Infrastructure.Services
                 }
                 else
                 {
-                    // Fall back to recalculating from Document ID
-                    // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
-                    // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
-                    targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
-                    targetSubAddress = $"!/view?docid={docIdForUrl}";
-                    
-                    newUrl = !string.IsNullOrEmpty(docIdForUrl)
-                        ? targetAddress + "#" + targetSubAddress
-                        : hyperlinkToUpdate.OriginalUrl;
+                    // Fall back to recalculating from Document ID or using original URL
+                    if (!string.IsNullOrEmpty(docIdForUrl))
+                    {
+                        // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
+                        // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
+                        targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
+                        targetSubAddress = $"!/view?docid={docIdForUrl}";
+                        newUrl = targetAddress + "#" + targetSubAddress;
                         
-                    _logger.LogDebug("Calculated URL: Base={BaseAddress}, Fragment={Fragment}", targetAddress, targetSubAddress);
+                        _logger.LogDebug("Calculated URL: Base={BaseAddress}, Fragment={Fragment}", targetAddress, targetSubAddress);
+                    }
+                    else
+                    {
+                        // No ID available, keep original URL and parse it
+                        newUrl = hyperlinkToUpdate.OriginalUrl;
+                        var parts = newUrl.Split('#', 2);
+                        targetAddress = parts[0];
+                        targetSubAddress = parts.Length > 1 ? parts[1] : string.Empty;
+                        
+                        _logger.LogDebug("Using Original URL: Base={BaseAddress}, Fragment={Fragment}", targetAddress, targetSubAddress);
+                    }
                 }
 
                 // STEP 3: Only update if URL actually changed to prevent unnecessary operations
