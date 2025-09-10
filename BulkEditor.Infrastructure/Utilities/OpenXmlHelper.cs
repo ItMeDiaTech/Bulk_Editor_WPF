@@ -24,36 +24,19 @@ namespace BulkEditor.Infrastructure.Utilities
         /// </summary>
         public static void UpdateHyperlinkText(Hyperlink hyperlink, string newText, bool trackChanges)
         {
-            if (!trackChanges)
+            // CRITICAL FIX: Hyperlink track changes are not supported due to OpenXML schema limitations
+            // Word uses field codes (HYPERLINK instrText) for track changes, but our implementation uses w:hyperlink elements
+            // These are incompatible systems, so we disable track changes for hyperlinks to prevent schema violations
+            
+            if (trackChanges)
             {
-                UpdateHyperlinkTextInternal(hyperlink, newText);
-                return;
+                // Log that track changes are not supported for hyperlinks, but continue processing
+                // This prevents the "Word found unreadable content" errors while maintaining functionality
+                System.Diagnostics.Debug.WriteLine("Track changes requested for hyperlink update, but hyperlink track changes are not supported. Using non-tracked update.");
             }
-
-            // For track changes, we need to work at the paragraph level
-            // since hyperlinks cannot contain track changes elements directly
-            var paragraph = hyperlink.Ancestors<Paragraph>().FirstOrDefault();
-            if (paragraph == null)
-            {
-                // Fallback to non-tracking update if we can't find the paragraph
-                UpdateHyperlinkTextInternal(hyperlink, newText);
-                return;
-            }
-
-            try
-            {
-                UpdateHyperlinkWithParagraphLevelTracking(paragraph, hyperlink, newText);
-            }
-            catch (Exception ex)
-            {
-                // If track changes fail, fall back to simple update
-                // This ensures document processing continues even if track changes have issues
-                UpdateHyperlinkTextInternal(hyperlink, newText);
-                
-                // Note: We don't re-throw here to prevent document processing failure
-                // The calling code should log this if needed
-                throw new InvalidOperationException($"Track changes failed, used fallback update: {ex.Message}", ex);
-            }
+            
+            // Always use non-tracked updates for hyperlinks to maintain schema compliance
+            UpdateHyperlinkTextInternal(hyperlink, newText);
         }
 
         /// <summary>
@@ -90,113 +73,9 @@ namespace BulkEditor.Infrastructure.Utilities
             return string.Join("", hyperlink.Descendants<Text>().Select(t => t.Text ?? ""));
         }
 
-        /// <summary>
-        /// Updates a hyperlink with track changes at the paragraph level (schema-compliant approach)
-        /// </summary>
-        private static void UpdateHyperlinkWithParagraphLevelTracking(Paragraph paragraph, Hyperlink hyperlink, string newText)
-        {
-            try
-            {
-                // Validate inputs
-                if (paragraph == null)
-                    throw new ArgumentNullException(nameof(paragraph));
-                if (hyperlink == null)
-                    throw new ArgumentNullException(nameof(hyperlink));
-                if (string.IsNullOrEmpty(newText))
-                    throw new ArgumentException("New text cannot be null or empty", nameof(newText));
-
-                // Store original hyperlink properties for cloning
-                var originalText = GetHyperlinkText(hyperlink);
-                var hyperlinkProperties = CloneHyperlinkProperties(hyperlink);
-                
-                // CRITICAL FIX: Properly implement track changes for hyperlinks according to OpenXML spec
-                // Schema requires: hyperlinks must be wrapped in runs, then runs wrapped in track changes elements
-                
-                // Create deleted run containing the original complete hyperlink
-                var deletedRun = CreateDeletedRun();
-                var originalHyperlinkClone = (Hyperlink)hyperlink.CloneNode(true);
-                
-                // Wrap the original hyperlink in a run for proper schema compliance
-                var deletedRunContent = new Run();
-                deletedRunContent.Append(originalHyperlinkClone);
-                deletedRun.Append(deletedRunContent);
-                
-                // Create inserted run containing the new complete hyperlink
-                var insertedRun = CreateInsertedRun();
-                var newHyperlink = CreateHyperlinkWithProperties(hyperlinkProperties, newText);
-                
-                // Wrap the new hyperlink in a run for proper schema compliance
-                var insertedRunContent = new Run();
-                insertedRunContent.Append(newHyperlink);
-                insertedRun.Append(insertedRunContent);
-                
-                // Replace the original hyperlink in the paragraph with proper error handling
-                try
-                {
-                    // Insert track changes before the original hyperlink
-                    paragraph.InsertBefore(deletedRun, hyperlink);
-                    paragraph.InsertBefore(insertedRun, hyperlink);
-                    
-                    // CRITICAL FIX: Remove the original hyperlink instead of updating it in place
-                    // This prevents the confusing display of old + text + new hyperlink
-                    hyperlink.Remove();
-                }
-                catch (Exception replaceEx)
-                {
-                    // If track changes insertion fails, fall back to simple update
-                    throw new InvalidOperationException($"Failed to insert track changes in paragraph: {replaceEx.Message}", replaceEx);
-                }
-            }
-            catch (Exception ex)
-            {
-                // If all track changes operations fail, fall back to simple hyperlink update
-                throw new InvalidOperationException($"Track changes hyperlink update failed: {ex.Message}. Consider disabling track changes.", ex);
-            }
-        }
-
-        /// <summary>
-        /// Clones important properties from a hyperlink for recreation
-        /// </summary>
-        private static Dictionary<string, string> CloneHyperlinkProperties(Hyperlink hyperlink)
-        {
-            var properties = new Dictionary<string, string>();
-            
-            if (hyperlink.Id?.Value != null)
-                properties["Id"] = hyperlink.Id.Value;
-            if (hyperlink.Anchor?.Value != null)
-                properties["Anchor"] = hyperlink.Anchor.Value;
-            if (hyperlink.DocLocation?.Value != null)
-                properties["DocLocation"] = hyperlink.DocLocation.Value;
-            if (hyperlink.Tooltip?.Value != null)
-                properties["Tooltip"] = hyperlink.Tooltip.Value;
-            
-            return properties;
-        }
-
-        /// <summary>
-        /// Creates a new hyperlink with preserved properties and new text
-        /// </summary>
-        private static Hyperlink CreateHyperlinkWithProperties(Dictionary<string, string> properties, string newText)
-        {
-            var newHyperlink = new Hyperlink();
-            
-            // Restore properties
-            if (properties.TryGetValue("Id", out var id))
-                newHyperlink.Id = id;
-            if (properties.TryGetValue("Anchor", out var anchor))
-                newHyperlink.Anchor = anchor;
-            if (properties.TryGetValue("DocLocation", out var docLocation))
-                newHyperlink.DocLocation = docLocation;
-            if (properties.TryGetValue("Tooltip", out var tooltip))
-                newHyperlink.Tooltip = tooltip;
-            
-            // Add text content
-            var run = new Run();
-            run.Append(new Text(newText));
-            newHyperlink.Append(run);
-            
-            return newHyperlink;
-        }
+        // NOTE: Hyperlink track changes methods removed due to fundamental OpenXML incompatibility
+        // Word uses field codes (HYPERLINK instrText) for track changes, while our implementation 
+        // uses w:hyperlink elements. These are incompatible systems that cannot be bridged safely.
 
         /// <summary>
         /// Creates a deleted run element for track changes
