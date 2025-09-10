@@ -34,7 +34,8 @@
       "Bash(dotnet list:*)",
       "Bash(ls:*)",
       "Bash(csc:*)",
-      "Bash(./test_url_extraction.exe)"
+      "Bash(./test_url_extraction.exe)",
+      "WebFetch(domain:docs.microsoft.com)"
     ],
     "deny": [],
     "ask": []

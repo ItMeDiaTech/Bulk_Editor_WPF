@@ -1917,6 +1917,9 @@ namespace BulkEditor.Infrastructure.Services
                     }
                 }
 
+                // CRITICAL FIX: Final save to ensure all hyperlink updates are persisted
+                mainPart.Document.Save();
+                
                 _logger.LogInformation("Hyperlink updates completed atomically in session for document: {FileName}", document.FileName);
                 await Task.CompletedTask;
             }
@@ -2040,6 +2043,10 @@ namespace BulkEditor.Infrastructure.Services
                         {
                             _logger.LogDebug("Old relationship {RelId} was already deleted or didn't exist", relationshipId);
                         }
+
+                        // CRITICAL FIX: Save the document after relationship changes
+                        mainPart.Document.Save();
+                        _logger.LogDebug("Document saved after relationship update: {RelId} -> {NewRelId}", relationshipId, newRelationshipId);
                     }
                     catch (Exception relEx)
                     {
@@ -2112,32 +2119,22 @@ namespace BulkEditor.Infrastructure.Services
                         _logger.LogInformation("Appended Content_ID to hyperlink: {ContentId}", last6);
                     }
 
-                    // Update display text in the document if changed
+                    // DON'T UPDATE DISPLAY TEXT YET - Wait until after status suffix is added
                     if (displayTextChanged)
                     {
-                        try
+                        document.ChangeLog.Changes.Add(new ChangeEntry
                         {
-                            OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
-
-                            document.ChangeLog.Changes.Add(new ChangeEntry
-                            {
-                                Type = ChangeType.ContentIdAdded,
-                                Description = "Content ID appended using atomic VBA logic",
-                                OldValue = currentDisplayText,
-                                NewValue = newDisplayText,
-                                ElementId = hyperlinkToUpdate.Id,
-                                Details = $"Content ID: {last6}"
-                            });
-                        }
-                        catch (Exception textEx)
-                        {
-                            _logger.LogError(textEx, "Failed to update display text atomically: {RelId}", relationshipId);
-                            throw;
-                        }
+                            Type = ChangeType.ContentIdAdded,
+                            Description = "Content ID appended using atomic VBA logic",
+                            OldValue = currentDisplayText,
+                            NewValue = newDisplayText,
+                            ElementId = hyperlinkToUpdate.Id,
+                            Details = $"Content ID: {last6}"
+                        });
                     }
                 }
 
-                // STEP 5: Handle status suffixes like VBA (Expired/Not Found)
+                // STEP 5: Handle status suffixes like VBA (Expired/Not Found) BEFORE updating display text
                 if (hyperlinkToUpdate.Status == HyperlinkStatus.Expired && !alreadyExpired)
                 {
                     newDisplayText += " - Expired";
@@ -2149,26 +2146,35 @@ namespace BulkEditor.Infrastructure.Services
                     displayTextChanged = true;
                 }
 
-                // Apply status suffix changes if needed
-                if (displayTextChanged && (hyperlinkToUpdate.Status == HyperlinkStatus.Expired || hyperlinkToUpdate.Status == HyperlinkStatus.NotFound))
+                // STEP 5.1: Apply ALL display text changes at once (Content ID + Status)
+                if (displayTextChanged)
                 {
                     try
                     {
                         OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
+                        
+                        // CRITICAL FIX: Save the document after display text changes
+                        mainPart.Document.Save();
 
-                        var statusType = hyperlinkToUpdate.Status == HyperlinkStatus.Expired ? "Expired" : "Not Found";
-                        document.ChangeLog.Changes.Add(new ChangeEntry
+                        // Add status change to changelog if status was added
+                        if (hyperlinkToUpdate.Status == HyperlinkStatus.Expired || hyperlinkToUpdate.Status == HyperlinkStatus.NotFound)
                         {
-                            Type = ChangeType.HyperlinkStatusAdded,
-                            Description = $"Added {statusType} status atomically",
-                            OldValue = currentDisplayText,
-                            NewValue = newDisplayText,
-                            ElementId = hyperlinkToUpdate.Id
-                        });
+                            var statusType = hyperlinkToUpdate.Status == HyperlinkStatus.Expired ? "Expired" : "Not Found";
+                            document.ChangeLog.Changes.Add(new ChangeEntry
+                            {
+                                Type = ChangeType.HyperlinkStatusAdded,
+                                Description = $"Added {statusType} status atomically",
+                                OldValue = currentDisplayText,
+                                NewValue = newDisplayText,
+                                ElementId = hyperlinkToUpdate.Id
+                            });
+                        }
+
+                        _logger.LogInformation("Updated hyperlink display text atomically: '{OldText}' -> '{NewText}'", currentDisplayText, newDisplayText);
                     }
-                    catch (Exception statusEx)
+                    catch (Exception textEx)
                     {
-                        _logger.LogError(statusEx, "Failed to update status suffix atomically: {RelId}", relationshipId);
+                        _logger.LogError(textEx, "Failed to update display text atomically: {RelId}", relationshipId);
                         throw;
                     }
                 }
