@@ -701,6 +701,7 @@ namespace BulkEditor.UI.ViewModels
 
             Documents.Clear();
             DocumentItems.Clear();
+            _allDocumentItems.Clear(); // CRITICAL FIX: Also clear the master collection to prevent removed files from reappearing
             ProcessingResults.Clear();
             SelectedDocument = null;
             TotalDocuments = 0;
@@ -999,6 +1000,7 @@ namespace BulkEditor.UI.ViewModels
                 }
 
                 DocumentItems.Remove(documentItem);
+                _allDocumentItems.Remove(documentItem); // CRITICAL FIX: Also remove from master collection to prevent it from reappearing
 
                 // Update counts
                 TotalDocuments = Documents.Count;

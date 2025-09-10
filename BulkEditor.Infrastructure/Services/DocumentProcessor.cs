@@ -1436,20 +1436,27 @@ namespace BulkEditor.Infrastructure.Services
                     progress?.Report("Validating document structure...");
                     await ValidateOpenDocumentAsync(wordDocument, "initial", cancellationToken).ConfigureAwait(false);
 
-                    // STEP 3: Create document snapshot for rollback
+                    // STEP 3: Enable change tracking if requested
+                    if (_appSettings.Processing.TrackChanges)
+                    {
+                        progress?.Report("Enabling change tracking...");
+                        EnableChangeTracking(wordDocument);
+                    }
+
+                    // STEP 4: Create document snapshot for rollback
                     progress?.Report("Creating document snapshot...");
                     snapshot = CreateDocumentSnapshot(mainPart);
 
-                    // STEP 4: Extract metadata (read-only operations first)
+                    // STEP 5: Extract metadata (read-only operations first)
                     progress?.Report("Extracting metadata...");
                     document.Metadata = ExtractDocumentMetadataFromOpenDocument(wordDocument);
 
-                    // STEP 5: Extract hyperlinks from the open document
+                    // STEP 6: Extract hyperlinks from the open document
                     progress?.Report("Extracting hyperlinks...");
                     document.Hyperlinks = ExtractHyperlinksFromOpenDocument(mainPart);
                     _logger.LogInformation("Initial hyperlink extraction found {Count} hyperlinks in document: {FileName}", document.Hyperlinks.Count, document.FileName);
 
-                    // STEP 6: CRITICAL FIX - Extract lookup IDs BEFORE removing invisible hyperlinks
+                    // STEP 7: CRITICAL FIX - Extract lookup IDs BEFORE removing invisible hyperlinks
                     // This ensures we don't lose valid lookup IDs from hyperlinks with empty display text
                     progress?.Report("Pre-analyzing hyperlinks for lookup IDs...");
                     var allHyperlinksBeforeCleanup = ExtractHyperlinksFromOpenDocument(mainPart);
@@ -1669,6 +1676,51 @@ namespace BulkEditor.Infrastructure.Services
                         throw new InvalidOperationException($"Document appears to be corrupted after processing: {ex.Message}", ex);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Enables change tracking in the Word document
+        /// </summary>
+        private void EnableChangeTracking(WordprocessingDocument wordDocument)
+        {
+            try
+            {
+                if (wordDocument.MainDocumentPart?.Document?.Body == null)
+                {
+                    _logger.LogWarning("Cannot enable change tracking - document has no main content");
+                    return;
+                }
+
+                // Get or create document settings part
+                var settingsPart = wordDocument.MainDocumentPart.DocumentSettingsPart;
+                if (settingsPart == null)
+                {
+                    settingsPart = wordDocument.MainDocumentPart.AddNewPart<DocumentSettingsPart>();
+                    settingsPart.Settings = new DocumentFormat.OpenXml.Wordprocessing.Settings();
+                }
+
+                // Get or create settings element
+                var settings = settingsPart.Settings;
+                if (settings == null)
+                {
+                    settings = new DocumentFormat.OpenXml.Wordprocessing.Settings();
+                    settingsPart.Settings = settings;
+                }
+
+                // Enable track revisions
+                var trackRevisions = settings.Elements<DocumentFormat.OpenXml.Wordprocessing.TrackRevisions>().FirstOrDefault();
+                if (trackRevisions == null)
+                {
+                    trackRevisions = new DocumentFormat.OpenXml.Wordprocessing.TrackRevisions();
+                    settings.AppendChild(trackRevisions);
+                }
+
+                _logger.LogInformation("Change tracking enabled for document");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to enable change tracking - processing will continue without tracking: {Error}", ex.Message);
             }
         }
 
@@ -2182,37 +2234,36 @@ namespace BulkEditor.Infrastructure.Services
                     // Create new relationship with validation
                     try
                     {
-                        // CRITICAL FIX: Create relationship with base address only (Issue #8)
-                        // The fragment will be set via DocLocation property on the hyperlink element
-                        var addressUri = new Uri(targetAddress);
+                        // CRITICAL FIX: For external URLs with fragments, put the complete URL in the relationship
+                        // This ensures Word displays the full URL when hovering over the hyperlink
+                        string relationshipUrl;
+                        if (!string.IsNullOrEmpty(targetSubAddress))
+                        {
+                            // Create complete URL for the relationship - Word will display this properly
+                            relationshipUrl = newUrl;
+                            _logger.LogInformation("DEBUG: Using complete URL for relationship: '{CompleteUrl}'", relationshipUrl);
+                        }
+                        else
+                        {
+                            // No fragment, just use the base address
+                            relationshipUrl = targetAddress;
+                        }
+
+                        var addressUri = new Uri(relationshipUrl);
                         var newRelationship = mainPart.AddHyperlinkRelationship(addressUri, true);
                         newRelationshipId = newRelationship.Id;
 
                         _logger.LogDebug("Created new relationship atomically: {NewRelId} -> {Address}",
-                            newRelationshipId, targetAddress);
+                            newRelationshipId, relationshipUrl);
 
                         // Update the hyperlink element to use the new relationship ID
                         openXmlHyperlink.Id = newRelationshipId;
 
-                        // CRITICAL FIX: Set the DocLocation property for the fragment (Issue #8)
-                        // This is equivalent to VBA's .SubAddress property
-                        _logger.LogInformation("DEBUG: About to set DocLocation - targetSubAddress: '{TargetSubAddress}', isEmpty: {IsEmpty}",
-                            targetSubAddress, string.IsNullOrEmpty(targetSubAddress));
-
+                        // CRITICAL FIX: For external URLs, clear any existing DocLocation since complete URL is in relationship
                         if (!string.IsNullOrEmpty(targetSubAddress))
                         {
-                            // If fragment came from UpdatedUrl, use it as-is; if calculated, unescape it
-                            var fragmentForDocLocation = hyperlinkToUpdate.UpdatedUrl != null
-                                ? targetSubAddress  // Already unescaped from URL parsing
-                                : Uri.UnescapeDataString(targetSubAddress); // Needs unescaping from calculation
-
-                            openXmlHyperlink.DocLocation = new StringValue(fragmentForDocLocation);
-                            _logger.LogInformation("DEBUG: Set DocLocation fragment: '{Fragment}' (from UpdatedUrl: {FromUpdatedUrl})",
-                                fragmentForDocLocation, hyperlinkToUpdate.UpdatedUrl != null);
-                        }
-                        else
-                        {
-                            _logger.LogInformation("DEBUG: DocLocation NOT set because targetSubAddress is empty");
+                            openXmlHyperlink.DocLocation = null;
+                            _logger.LogInformation("DEBUG: Cleared DocLocation since complete URL is in relationship");
                         }
 
                         // Only delete old relationship after successful update

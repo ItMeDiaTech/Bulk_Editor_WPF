@@ -1225,12 +1225,13 @@ namespace BulkEditor.Infrastructure.Services
                             _logger.LogDebug("Updated hyperlink with VBA-compatible Address/SubAddress: {Address}#{SubAddress}",
                                 targetAddress, targetSubAddress);
 
-                            // CRITICAL FIX: Set DocLocation for the fragment (required for Word to show complete URL)
-                            // This matches what DocumentProcessor.cs does for regular hyperlinks
+                            // CRITICAL FIX: For external URLs with fragments, clear DocLocation since complete URL is in relationship
+                            // This ensures Word displays the complete URL when hovering over the hyperlink
                             if (!string.IsNullOrEmpty(targetSubAddress))
                             {
-                                openXmlHyperlink.DocLocation = new StringValue(targetSubAddress);
-                                _logger.LogDebug("Set DocLocation for custom hyperlink: {Fragment}", targetSubAddress);
+                                openXmlHyperlink.DocLocation = null;
+                                _logger.LogDebug("Cleared DocLocation for custom hyperlink since complete URL is in relationship: {CompleteUrl}", 
+                                    completeUri.ToString());
                             }
                         }
                         else

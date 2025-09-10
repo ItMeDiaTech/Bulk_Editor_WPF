@@ -108,6 +108,9 @@
                             <StackPanel>
                                 <CheckBox Content="Create backup before processing"
                                           IsChecked="{Binding CreateBackupBeforeProcessing}"/>
+                                <CheckBox Content="Track changes in document"
+                                          IsChecked="{Binding TrackChanges}"
+                                          ToolTip="Enable change tracking in Word documents to show all modifications"/>
 
                                 <Grid Margin="0,8,0,8">
                                     <Grid.ColumnDefinitions>

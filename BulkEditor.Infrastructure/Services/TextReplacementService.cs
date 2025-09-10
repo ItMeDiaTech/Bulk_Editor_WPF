@@ -305,9 +305,15 @@ namespace BulkEditor.Infrastructure.Services
                 if (string.IsNullOrEmpty(sourceText) || string.IsNullOrWhiteSpace(searchText))
                     return sourceText;
 
-                // Use regex with case-insensitive matching and word boundaries
+                // CRITICAL FIX: Handle multi-word phrases correctly by using lookbehind/lookahead instead of word boundaries
+                // Word boundaries (\b) don't work properly with multi-word phrases containing spaces
                 var escapedSearchText = Regex.Escape(searchText);
-                var pattern = $@"(?i)\b{escapedSearchText}\b";
+                
+                // Use negative lookbehind/lookahead to ensure we match whole words/phrases, not partial matches
+                // (?<!\w) = not preceded by a word character
+                // (?!\w) = not followed by a word character  
+                // This handles both single words and multi-word phrases correctly
+                var pattern = $@"(?i)(?<!\w){escapedSearchText}(?!\w)";
 
                 // Replace with exact text provided by user (no capitalization changes)
                 var result = Regex.Replace(sourceText, pattern, replacementText);
