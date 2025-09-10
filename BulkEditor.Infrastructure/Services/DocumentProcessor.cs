@@ -1971,15 +1971,15 @@ namespace BulkEditor.Infrastructure.Services
                     var originalUrlLower = completeOriginalUrl.ToLowerInvariant();
                     var contentIdLower = hyperlinkToUpdate.ContentId.ToLowerInvariant();
                     
-                    if (originalUrlLower.Contains(contentIdLower) && originalUrlLower.Contains("docid="))
+                    if (originalUrlLower.Contains(contentIdLower))
                     {
-                        // The original URL contains the Content_ID in the docid field
+                        // The original URL contains the Content_ID anywhere (file://, https://, etc.)
                         // We should rebuild with Document_ID if available, otherwise keep Content_ID
                         docIdForUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId) 
                             ? hyperlinkToUpdate.DocumentId 
                             : hyperlinkToUpdate.ContentId;
-                        _logger.LogDebug("Found Content_ID '{ContentId}' in original URL, using Document_ID '{DocumentId}' for rebuild", 
-                            hyperlinkToUpdate.ContentId, docIdForUrl);
+                        _logger.LogDebug("Found Content_ID '{ContentId}' anywhere in original URL '{OriginalUrl}', using Document_ID '{DocumentId}' for rebuild", 
+                            hyperlinkToUpdate.ContentId, completeOriginalUrl, docIdForUrl);
                     }
                     else
                     {
