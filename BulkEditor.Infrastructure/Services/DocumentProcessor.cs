@@ -58,6 +58,28 @@ namespace BulkEditor.Infrastructure.Services
             "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:view'."
         };
 
+        // Additional patterns for runtime validation error matching
+        private static readonly HashSet<string> IgnorableValidationErrorPatterns = new HashSet<string>
+        {
+            "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' attribute is invalid - The value",
+            "The element has invalid child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:hyperlink'. List of possible elements expected:"
+        };
+
+        /// <summary>
+        /// Checks if a validation error should be ignored based on exact matches and patterns
+        /// </summary>
+        private static bool IsIgnorableValidationError(string description)
+        {
+            // Check exact matches first (fastest)
+            if (IgnorableValidationErrorDescriptions.Contains(description))
+            {
+                return true;
+            }
+
+            // Check patterns for runtime-generated errors
+            return IgnorableValidationErrorPatterns.Any(pattern => description.StartsWith(pattern, StringComparison.Ordinal));
+        }
+
         public DocumentProcessor(IFileService fileService, IHyperlinkValidator hyperlinkValidator, ITextOptimizer textOptimizer, IReplacementService replacementService, ILoggingService logger, Core.Configuration.AppSettings appSettings, IRetryPolicyService retryPolicyService)
         {
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
@@ -2571,7 +2593,7 @@ namespace BulkEditor.Infrastructure.Services
 
                     using var wordDocument = WordprocessingDocument.Open(filePath, false);
                     var validationErrors = _validator.Validate(wordDocument)
-                        .Where(e => !IgnorableValidationErrorDescriptions.Contains(e.Description))
+                        .Where(e => !IsIgnorableValidationError(e.Description))
                         .ToList();
 
                     if (validationErrors.Any())
@@ -2618,7 +2640,7 @@ namespace BulkEditor.Infrastructure.Services
             try
             {
                 var validationErrors = _validator.Validate(wordDocument)
-                    .Where(e => !IgnorableValidationErrorDescriptions.Contains(e.Description))
+                    .Where(e => !IsIgnorableValidationError(e.Description))
                     .ToList();
 
                 if (validationErrors.Any())

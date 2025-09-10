@@ -109,40 +109,42 @@ namespace BulkEditor.Infrastructure.Utilities
                 var originalText = GetHyperlinkText(hyperlink);
                 var hyperlinkProperties = CloneHyperlinkProperties(hyperlink);
                 
-                // Create a deleted run with the original hyperlink
+                // CRITICAL FIX: Hyperlinks should be siblings to runs, not children of runs
+                // Create a deleted hyperlink element (not wrapped in a run)
                 var deletedRun = CreateDeletedRun();
                 var originalHyperlinkClone = (Hyperlink)hyperlink.CloneNode(true);
-                var deletedRunContent = new Run();
-                deletedRunContent.Append(originalHyperlinkClone);
-                deletedRun.Append(deletedRunContent);
                 
-                // Create an inserted run with the new hyperlink
+                // For track changes, we need to mark the hyperlink text as deleted
+                // but keep the hyperlink structure intact
+                foreach (var run in originalHyperlinkClone.Elements<Run>())
+                {
+                    var runContent = run.CloneNode(true);
+                    deletedRun.Append(runContent);
+                }
+                
+                // Create an inserted run with the new hyperlink text
                 var insertedRun = CreateInsertedRun();
                 var newHyperlink = CreateHyperlinkWithProperties(hyperlinkProperties, newText);
-                var insertedRunContent = new Run();
-                insertedRunContent.Append(newHyperlink);
-                insertedRun.Append(insertedRunContent);
+                
+                // Add the new hyperlink content as runs within the inserted element
+                foreach (var run in newHyperlink.Elements<Run>())
+                {
+                    var runContent = run.CloneNode(true);
+                    insertedRun.Append(runContent);
+                }
                 
                 // Replace the original hyperlink in the paragraph with proper error handling
                 try
                 {
-                    var parentRun = hyperlink.Parent as Run;
-                    if (parentRun != null)
-                    {
-                        // Insert track changes before the parent run
-                        paragraph.InsertBefore(deletedRun, parentRun);
-                        paragraph.InsertBefore(insertedRun, parentRun);
-                        
-                        // Remove the original run containing the hyperlink
-                        parentRun.Remove();
-                    }
-                    else
-                    {
-                        // Direct hyperlink in paragraph - replace directly
-                        paragraph.InsertBefore(deletedRun, hyperlink);
-                        paragraph.InsertBefore(insertedRun, hyperlink);
-                        hyperlink.Remove();
-                    }
+                    // CRITICAL FIX: Insert track changes and update hyperlink in place
+                    // rather than wrapping hyperlinks in runs (which violates schema)
+                    
+                    // Insert deleted and inserted track changes before the hyperlink
+                    paragraph.InsertBefore(deletedRun, hyperlink);
+                    paragraph.InsertBefore(insertedRun, hyperlink);
+                    
+                    // Update the original hyperlink in place with new text
+                    UpdateHyperlinkTextInternal(hyperlink, newText);
                 }
                 catch (Exception replaceEx)
                 {
@@ -227,12 +229,21 @@ namespace BulkEditor.Infrastructure.Utilities
             };
         }
 
+        // Thread-safe counter for generating sequential revision IDs
+        private static long _revisionIdCounter = 1;
+
         /// <summary>
         /// Generates a unique revision ID for track changes
+        /// Uses sequential integers to comply with OpenXML schema requirements
         /// </summary>
         private static string GenerateRevisionId()
         {
-            return DateTime.UtcNow.Ticks.ToString();
+            // Use Interlocked for thread-safe incrementing
+            var id = System.Threading.Interlocked.Increment(ref _revisionIdCounter);
+            
+            // OpenXML prefers simple integer IDs rather than large tick values
+            // Keep it under 10 digits to avoid schema validation issues
+            return (id % 999999999).ToString();
         }
 
         /// <summary>
