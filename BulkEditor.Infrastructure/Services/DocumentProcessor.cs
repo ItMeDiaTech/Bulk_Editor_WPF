@@ -1949,7 +1949,8 @@ namespace BulkEditor.Infrastructure.Services
                 // CRITICAL FIX: Get complete original URL including fragments for proper comparison
                 var completeOriginalUrl = BuildCompleteHyperlinkUrl(mainPart, openXmlHyperlink);
                 
-                var currentDisplayText = openXmlHyperlink.InnerText ?? string.Empty;
+                // CRITICAL FIX: Use the updated display text from hyperlink object (which includes Content ID and status)
+                var currentDisplayText = hyperlinkToUpdate.DisplayText ?? openXmlHyperlink.InnerText ?? string.Empty;
                 var alreadyExpired = currentDisplayText.Contains(" - Expired", StringComparison.OrdinalIgnoreCase);
                 var alreadyNotFound = currentDisplayText.Contains(" - Not Found", StringComparison.OrdinalIgnoreCase);
 
@@ -2000,10 +2001,11 @@ namespace BulkEditor.Infrastructure.Services
                 // CRITICAL FIX: Properly encode the fragment to prevent XSD validation errors with 0x21 (!) character
                 var targetSubAddress = Uri.EscapeDataString($"!/view?docid={docIdForUrl}");
 
-                // Build complete URL for validation/logging only (NOT for relationship creation)
-                var newUrl = !string.IsNullOrEmpty(docIdForUrl)
+                // CRITICAL FIX: Use the updated URL from hyperlink object (calculated by ProcessHyperlinkWithVbaLogicAsync)
+                // If not available, fall back to recalculating from Document ID
+                var newUrl = hyperlinkToUpdate.UpdatedUrl ?? (!string.IsNullOrEmpty(docIdForUrl)
                     ? targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress)
-                    : hyperlinkToUpdate.OriginalUrl;
+                    : hyperlinkToUpdate.OriginalUrl);
 
                 // STEP 3: Only update if URL actually changed to prevent unnecessary operations
                 // CRITICAL FIX: Compare complete URLs (including fragments) not just base addresses
@@ -2069,84 +2071,10 @@ namespace BulkEditor.Infrastructure.Services
                     }
                 }
 
-                // STEP 4: EXACT VBA LOGIC: Content_ID appending (lines 254-280 in Base_File.vba)
+                // STEP 4: Apply display text changes that were already calculated by ProcessHyperlinkWithVbaLogicAsync
                 var newDisplayText = currentDisplayText;
-                var displayTextChanged = false;
-
-                // CRITICAL FIX: Append Content_ID even for expired links (as per user requirement)
-                if (!string.IsNullOrEmpty(hyperlinkToUpdate.ContentId))
-                {
-                    // Get last 6 and last 5 digits like VBA
-                    // CRITICAL FIX: Add proper bounds checking to prevent IndexOutOfRangeException (Issue #12)
-                    string last6, last5;
-                    if (hyperlinkToUpdate.ContentId.Length >= 6)
-                    {
-                        last6 = hyperlinkToUpdate.ContentId.Substring(hyperlinkToUpdate.ContentId.Length - 6);
-                        last5 = last6.Length > 1 ? last6.Substring(1) : last6; // Safe substring
-                    }
-                    else if (hyperlinkToUpdate.ContentId.Length == 5)
-                    {
-                        // Pad 5-digit with leading zero like VBA methodology
-                        last6 = "0" + hyperlinkToUpdate.ContentId;
-                        last5 = hyperlinkToUpdate.ContentId; // Original 5 digits
-                    }
-                    else
-                    {
-                        // Handle shorter content IDs safely
-                        last6 = hyperlinkToUpdate.ContentId.PadLeft(6, '0');
-                        last5 = last6.Length > 1 ? last6.Substring(1) : last6;
-                    }
-
-                    var last5Pattern = $" ({last5})";
-                    var last6Pattern = $" ({last6})";
-
-                    // CRITICAL FIX: VBA Logic with safe substring operations (Issue #12)
-                    if (currentDisplayText.EndsWith(last5Pattern) && !currentDisplayText.EndsWith(last6Pattern))
-                    {
-                        // Safe substring operation with bounds checking
-                        if (currentDisplayText.Length >= last5Pattern.Length)
-                        {
-                            newDisplayText = currentDisplayText.Substring(0, currentDisplayText.Length - last5Pattern.Length) + last6Pattern;
-                            displayTextChanged = true;
-                            _logger.LogInformation("Upgraded 5-digit Content_ID to 6-digit: {Old} -> {New}", last5Pattern, last6Pattern);
-                        }
-                    }
-                    // VBA Logic: If Content_ID not already present, append it
-                    else if (!currentDisplayText.Contains(last6Pattern, StringComparison.OrdinalIgnoreCase))
-                    {
-                        newDisplayText = currentDisplayText.Trim() + last6Pattern;
-                        displayTextChanged = true;
-                        _logger.LogInformation("Appended Content_ID to hyperlink: {ContentId}", last6);
-                    }
-
-                    // DON'T UPDATE DISPLAY TEXT YET - Wait until after status suffix is added
-                    if (displayTextChanged)
-                    {
-                        document.ChangeLog.Changes.Add(new ChangeEntry
-                        {
-                            Type = ChangeType.ContentIdAdded,
-                            Description = "Content ID appended using atomic VBA logic",
-                            OldValue = currentDisplayText,
-                            NewValue = newDisplayText,
-                            ElementId = hyperlinkToUpdate.Id,
-                            Details = $"Content ID: {last6}"
-                        });
-                    }
-                }
-
-                // STEP 5: Handle status suffixes like VBA (Expired/Not Found) BEFORE updating display text
-                if (hyperlinkToUpdate.Status == HyperlinkStatus.Expired && !alreadyExpired)
-                {
-                    newDisplayText += " - Expired";
-                    displayTextChanged = true;
-                }
-                else if (hyperlinkToUpdate.Status == HyperlinkStatus.NotFound && !alreadyNotFound && !alreadyExpired)
-                {
-                    newDisplayText += " - Not Found";
-                    displayTextChanged = true;
-                }
-
-                // STEP 5.1: Apply ALL display text changes at once (Content ID + Status)
+                var displayTextChanged = !string.Equals(openXmlHyperlink.InnerText, currentDisplayText, StringComparison.Ordinal);
+                
                 if (displayTextChanged)
                 {
                     try
@@ -2156,25 +2084,11 @@ namespace BulkEditor.Infrastructure.Services
                         // CRITICAL FIX: Save the document after display text changes
                         mainPart.Document.Save();
 
-                        // Add status change to changelog if status was added
-                        if (hyperlinkToUpdate.Status == HyperlinkStatus.Expired || hyperlinkToUpdate.Status == HyperlinkStatus.NotFound)
-                        {
-                            var statusType = hyperlinkToUpdate.Status == HyperlinkStatus.Expired ? "Expired" : "Not Found";
-                            document.ChangeLog.Changes.Add(new ChangeEntry
-                            {
-                                Type = ChangeType.HyperlinkStatusAdded,
-                                Description = $"Added {statusType} status atomically",
-                                OldValue = currentDisplayText,
-                                NewValue = newDisplayText,
-                                ElementId = hyperlinkToUpdate.Id
-                            });
-                        }
-
-                        _logger.LogInformation("Updated hyperlink display text atomically: '{OldText}' -> '{NewText}'", currentDisplayText, newDisplayText);
+                        _logger.LogInformation("Applied display text changes to document: '{OldText}' -> '{NewText}'", openXmlHyperlink.InnerText, newDisplayText);
                     }
                     catch (Exception textEx)
                     {
-                        _logger.LogError(textEx, "Failed to update display text atomically: {RelId}", relationshipId);
+                        _logger.LogError(textEx, "Failed to update display text: {RelId}", relationshipId);
                         throw;
                     }
                 }
