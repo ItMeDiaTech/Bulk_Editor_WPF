@@ -1032,6 +1032,14 @@ namespace BulkEditor.Infrastructure.Services
                 // VBA: changedURL = (hl.Address <> targetAddress) Or (hl.SubAddress <> targetSub)
                 var targetUrl = targetAddress + "#" + Uri.UnescapeDataString(targetSub);
                 var changedURL = !string.Equals(hyperlink.OriginalUrl, targetUrl, StringComparison.OrdinalIgnoreCase);
+                
+                // CRITICAL FIX: Always mark file:// URLs as changed when we have a Document_ID
+                if (!changedURL && hyperlink.OriginalUrl.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                {
+                    changedURL = true;
+                    _logger.LogDebug("Forcing URL change for file:// URL with Document_ID: {OriginalUrl} -> {TargetUrl}", 
+                        hyperlink.OriginalUrl, targetUrl);
+                }
 
                 if (changedURL)
                 {
