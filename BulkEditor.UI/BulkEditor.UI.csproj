@@ -21,9 +21,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <AssemblyVersion>2.6.3.0</AssemblyVersion>
-    <FileVersion>2.6.3.0</FileVersion>
-    <Version>2.6.3.0</Version>
+    <AssemblyVersion>2.6.3.1</AssemblyVersion>
+    <FileVersion>2.6.3.1</FileVersion>
+    <Version>2.6.3.1</Version>
     <AssemblyTitle>Bulk Document Editor</AssemblyTitle>
     <AssemblyDescription>Bulk Document Editor for processing Word documents with hyperlink validation and content optimization</AssemblyDescription>
     <AssemblyCompany>DiaTech</AssemblyCompany>
