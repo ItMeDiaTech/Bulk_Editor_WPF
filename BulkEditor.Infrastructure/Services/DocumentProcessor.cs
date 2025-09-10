@@ -450,7 +450,66 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
+        /// Extracts the last 6 characters of a Content_ID with proper padding for consistent formatting
+        /// Handles various Content_ID formats and ensures a 6-digit result
+        /// </summary>
+        /// <param name="contentId">The Content_ID to process</param>
+        /// <returns>Last 6 characters of Content_ID, padded with leading zeros if needed</returns>
+        private string GetLast6OfContentId(string contentId)
+        {
+            if (string.IsNullOrWhiteSpace(contentId))
+                return "000000"; // Default 6-digit padding
+
+            try
+            {
+                // Extract numeric part from various Content_ID formats (like TSRC-PRD-123456, CMS-DOC-12345, etc.)
+                var match = System.Text.RegularExpressions.Regex.Match(contentId, @"(\d{1,6})");
+                string numericPart;
+                
+                if (match.Success)
+                {
+                    numericPart = match.Groups[1].Value;
+                }
+                else
+                {
+                    // If no numeric pattern found, try to use the whole string if it's numeric
+                    if (System.Text.RegularExpressions.Regex.IsMatch(contentId, @"^\d+$"))
+                    {
+                        numericPart = contentId;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Could not extract numeric part from Content_ID: {ContentId}. Using default padding.", contentId);
+                        return "000000";
+                    }
+                }
+
+                // Get last 6 characters or pad to 6 digits
+                string last6;
+                if (numericPart.Length >= 6)
+                {
+                    // Take the last 6 digits
+                    last6 = numericPart.Substring(numericPart.Length - 6);
+                }
+                else
+                {
+                    // Pad with leading zeros to make it 6 digits
+                    last6 = numericPart.PadLeft(6, '0');
+                }
+
+                _logger.LogDebug("Extracted Last 6 of Content_ID: '{ContentId}' -> '{Last6}'", contentId, last6);
+                return last6;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error extracting Last 6 of Content_ID from: {ContentId}. Using default padding.", contentId);
+                return "000000";
+            }
+        }
+
+        /// <summary>
         /// Handles title differences between current hyperlink and API response
+        /// Enhanced to use "Last 6 of Content_ID" format and remove trailing whitespace
         /// </summary>
         private async Task HandleTitleDifferenceAsync(BulkEditor.Core.Entities.Document document, Hyperlink hyperlink, TitleComparisonResult titleComparison, CancellationToken cancellationToken)
         {
@@ -460,28 +519,30 @@ namespace BulkEditor.Infrastructure.Services
 
                 if (validationSettings.AutoReplaceTitles)
                 {
-                    // Replace the title with API title and append Content ID
-                    var newDisplayText = $"{titleComparison.ApiTitle} ({titleComparison.ContentId})";
+                    // Enhanced logic: Replace title with API title (trailing whitespace removed) and append Last 6 of Content_ID
+                    var cleanApiTitle = titleComparison.ApiTitle.TrimEnd();
+                    var last6OfContentId = GetLast6OfContentId(titleComparison.ContentId);
+                    var newDisplayText = $"{cleanApiTitle} ({last6OfContentId})";
 
                     // Update the hyperlink in the document
                     await UpdateHyperlinkTitleInDocumentAsync(document.FilePath, hyperlink, newDisplayText, cancellationToken);
 
                     titleComparison.WasReplaced = true;
-                    titleComparison.ActionTaken = "Title replaced with API response";
+                    titleComparison.ActionTaken = "Title replaced with API response using Last 6 of Content_ID format";
 
-                    // Log the replacement
+                    // Log the replacement with enhanced details
                     document.ChangeLog.Changes.Add(new ChangeEntry
                     {
                         Type = ChangeType.TitleReplaced,
-                        Description = "Title replaced with API response",
+                        Description = "Title replaced with API response using Last 6 of Content_ID format",
                         OldValue = titleComparison.CurrentTitle,
-                        NewValue = titleComparison.ApiTitle,
+                        NewValue = cleanApiTitle,
                         ElementId = hyperlink.Id,
-                        Details = $"Content ID: {titleComparison.ContentId}"
+                        Details = $"Content ID: {titleComparison.ContentId}, Last 6: {last6OfContentId}, Full new title: {newDisplayText}"
                     });
 
-                    _logger.LogInformation("Replaced hyperlink title: '{OldTitle}' -> '{NewTitle}' (Content ID: {ContentId})",
-                        titleComparison.CurrentTitle, titleComparison.ApiTitle, titleComparison.ContentId);
+                    _logger.LogInformation("Replaced hyperlink title: '{OldTitle}' -> '{NewTitle}' (Content ID: {ContentId}, Last 6: {Last6})",
+                        titleComparison.CurrentTitle, cleanApiTitle, titleComparison.ContentId, last6OfContentId);
                 }
                 else if (validationSettings.ReportTitleDifferences)
                 {

@@ -307,10 +307,11 @@ namespace BulkEditor.Infrastructure.Services
                     return result;
                 }
 
-                // Extract current title by removing Content ID suffix " (123456)"
+                // Extract current title by removing Content ID suffix " (Last 5-6 of Content_ID)" and trailing whitespace
                 var currentDisplayText = hyperlink.DisplayText ?? string.Empty;
                 var currentTitle = ExtractTitleFromDisplayText(currentDisplayText);
-                var apiTitle = apiRecord.Title.Trim();
+                // Remove trailing whitespace from API title for accurate comparison
+                var apiTitle = apiRecord.Title.TrimEnd();
 
                 result.CurrentTitle = currentTitle;
                 result.ApiTitle = apiTitle;
@@ -336,16 +337,80 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Extracts title from display text by removing Content ID suffix
+        /// Enhanced to specifically handle "Last 5-6 of Content_ID" patterns and trailing whitespace
         /// </summary>
         private string ExtractTitleFromDisplayText(string displayText)
         {
             if (string.IsNullOrEmpty(displayText))
                 return string.Empty;
 
-            // Remove Content ID pattern " (123456)" from the end
-            var titleWithoutContentId = _contentIdRegex.Replace(displayText, "").Trim();
+            // Enhanced logic: Remove Content ID pattern " (Last 5-6 of Content_ID)" from the end
+            // This matches patterns like " (123456)", " (12345)", etc. at the end of the string
+            var titleWithoutContentId = _contentIdRegex.Replace(displayText, "");
+            
+            // Remove any trailing whitespace after Content_ID removal
+            var cleanTitle = titleWithoutContentId.TrimEnd();
 
-            return titleWithoutContentId;
+            _logger.LogDebug("Extracted title from display text: '{DisplayText}' -> '{CleanTitle}'", displayText, cleanTitle);
+            return cleanTitle;
+        }
+
+        /// <summary>
+        /// Extracts the last 6 characters of a Content_ID with proper padding for consistent formatting
+        /// Handles various Content_ID formats and ensures a 6-digit result
+        /// </summary>
+        /// <param name="contentId">The Content_ID to process</param>
+        /// <returns>Last 6 characters of Content_ID, padded with leading zeros if needed</returns>
+        private string GetLast6OfContentId(string contentId)
+        {
+            if (string.IsNullOrWhiteSpace(contentId))
+                return "000000"; // Default 6-digit padding
+
+            try
+            {
+                // Extract numeric part from various Content_ID formats (like TSRC-PRD-123456, CMS-DOC-12345, etc.)
+                var match = System.Text.RegularExpressions.Regex.Match(contentId, @"(\d{1,6})");
+                string numericPart;
+                
+                if (match.Success)
+                {
+                    numericPart = match.Groups[1].Value;
+                }
+                else
+                {
+                    // If no numeric pattern found, try to use the whole string if it's numeric
+                    if (System.Text.RegularExpressions.Regex.IsMatch(contentId, @"^\d+$"))
+                    {
+                        numericPart = contentId;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Could not extract numeric part from Content_ID: {ContentId}. Using default padding.", contentId);
+                        return "000000";
+                    }
+                }
+
+                // Get last 6 characters or pad to 6 digits
+                string last6;
+                if (numericPart.Length >= 6)
+                {
+                    // Take the last 6 digits
+                    last6 = numericPart.Substring(numericPart.Length - 6);
+                }
+                else
+                {
+                    // Pad with leading zeros to make it 6 digits
+                    last6 = numericPart.PadLeft(6, '0');
+                }
+
+                _logger.LogDebug("Extracted Last 6 of Content_ID: '{ContentId}' -> '{Last6}'", contentId, last6);
+                return last6;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error extracting Last 6 of Content_ID from: {ContentId}. Using default padding.", contentId);
+                return "000000";
+            }
         }
 
         /// <summary>
