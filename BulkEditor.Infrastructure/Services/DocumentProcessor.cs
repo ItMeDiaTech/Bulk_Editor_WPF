@@ -4,6 +4,7 @@ using BulkEditor.Core.Services;
 using BulkEditor.Infrastructure.Utilities;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
+using DocumentFormat.OpenXml;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
@@ -661,22 +662,42 @@ namespace BulkEditor.Infrastructure.Services
 
                 // Get the base address from the relationship
                 var relationship = mainPart.GetReferenceRelationship(relId);
-                var baseAddress = Uri.UnescapeDataString(relationship.Uri.ToString());
+                var rawUri = relationship.Uri.ToString();
+                var decodedUri = Uri.UnescapeDataString(rawUri);
 
-                // Check for fragment/subaddress in multiple places
+                // CRITICAL FIX: Handle URLs that already have encoded fragments in the base address
+                string baseAddress;
                 string fragment = null;
 
-                // 1. Check DocLocation property (most common for external links with fragments)
-                if (!string.IsNullOrEmpty(openXmlHyperlink.DocLocation?.Value))
+                // Check if the decoded URI already contains a fragment (malformed URLs with %23)
+                if (decodedUri.Contains("#"))
                 {
-                    fragment = openXmlHyperlink.DocLocation.Value;
-                    _logger.LogDebug("Found fragment in DocLocation: {Fragment}", fragment);
+                    // Split the already-complete URL to separate base and fragment
+                    var parts = decodedUri.Split('#');
+                    baseAddress = parts[0];
+                    if (parts.Length > 1)
+                    {
+                        fragment = parts[1];
+                        _logger.LogDebug("Found encoded fragment in base URI: {Fragment} from URL: {DecodedUri}", fragment, decodedUri);
+                    }
                 }
-                // 2. Check Anchor property (typically for internal bookmarks)
-                else if (!string.IsNullOrEmpty(openXmlHyperlink.Anchor?.Value))
+                else
                 {
-                    fragment = openXmlHyperlink.Anchor.Value;
-                    _logger.LogDebug("Found fragment in Anchor: {Fragment}", fragment);
+                    baseAddress = decodedUri;
+                    
+                    // Check for fragment/subaddress in DocLocation and Anchor properties
+                    // 1. Check DocLocation property (most common for external links with fragments)
+                    if (!string.IsNullOrEmpty(openXmlHyperlink.DocLocation?.Value))
+                    {
+                        fragment = openXmlHyperlink.DocLocation.Value;
+                        _logger.LogDebug("Found fragment in DocLocation: {Fragment}", fragment);
+                    }
+                    // 2. Check Anchor property (typically for internal bookmarks)
+                    else if (!string.IsNullOrEmpty(openXmlHyperlink.Anchor?.Value))
+                    {
+                        fragment = openXmlHyperlink.Anchor.Value;
+                        _logger.LogDebug("Found fragment in Anchor: {Fragment}", fragment);
+                    }
                 }
 
                 // Combine address and fragment exactly like VBA
@@ -1954,17 +1975,23 @@ namespace BulkEditor.Infrastructure.Services
                     // Create new relationship with validation
                     try
                     {
-                        // CRITICAL FIX: Use separate Address and SubAddress like VBA (Issue #8)
-                        // VBA: .Address = targetAddress, .SubAddress = targetSub
+                        // CRITICAL FIX: Create relationship with base address only (Issue #8)
+                        // The fragment will be set via DocLocation property on the hyperlink element
                         var addressUri = new Uri(targetAddress);
-                        var newRelationship = mainPart.AddHyperlinkRelationship(addressUri, true, targetSubAddress);
+                        var newRelationship = mainPart.AddHyperlinkRelationship(addressUri, true);
                         newRelationshipId = newRelationship.Id;
 
-                        _logger.LogDebug("Created new relationship atomically with VBA Address/SubAddress: {NewRelId} -> {Address}#{SubAddress}",
-                            newRelationshipId, targetAddress, targetSubAddress);
+                        _logger.LogDebug("Created new relationship atomically: {NewRelId} -> {Address}",
+                            newRelationshipId, targetAddress);
 
                         // Update the hyperlink element to use the new relationship ID
                         openXmlHyperlink.Id = newRelationshipId;
+
+                        // CRITICAL FIX: Set the DocLocation property for the fragment (Issue #8)
+                        // This is equivalent to VBA's .SubAddress property
+                        var unescapedFragment = Uri.UnescapeDataString(targetSubAddress);
+                        openXmlHyperlink.DocLocation = new StringValue(unescapedFragment);
+                        _logger.LogDebug("Set DocLocation fragment: {Fragment}", unescapedFragment);
 
                         // Only delete old relationship after successful update
                         try
