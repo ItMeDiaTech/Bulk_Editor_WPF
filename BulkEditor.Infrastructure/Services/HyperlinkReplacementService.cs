@@ -1074,9 +1074,50 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 // CRITICAL FIX: Build URL using proper VBA Address/SubAddress separation (Issues #8-10)
-                var urlDocumentId = !string.IsNullOrEmpty(documentRecord.Document_ID)
-                    ? documentRecord.Document_ID
-                    : rule.ContentId; // Fallback to rule identifier
+                // Enhanced to handle Content_ID in docid parameter scenarios
+
+                // Get the current hyperlink URL to check if it contains Content_ID in docid parameter
+                var currentHyperlinkUrl = GetCurrentHyperlinkUrl(mainPart, openXmlHyperlink);
+                var originalDocId = ExtractDocIdFromUrl(currentHyperlinkUrl);
+
+                // Determine the correct ID to use for URL building
+                string urlDocumentId;
+                if (!string.IsNullOrEmpty(documentRecord.Document_ID))
+                {
+                    // Always prefer Document_ID when available
+                    urlDocumentId = documentRecord.Document_ID;
+
+                    // Log if we're replacing Content_ID with Document_ID in docid parameter
+                    if (!string.IsNullOrEmpty(originalDocId) &&
+                        !string.IsNullOrEmpty(documentRecord.Content_ID) &&
+                        string.Equals(originalDocId, documentRecord.Content_ID, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogInformation("CONTENT_ID_TO_DOCUMENT_ID_REPLACEMENT: Replacing Content_ID '{ContentId}' " +
+                            "with Document_ID '{DocumentId}' in docid parameter. Original URL: '{OriginalUrl}'",
+                            documentRecord.Content_ID, documentRecord.Document_ID, currentHyperlinkUrl);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(documentRecord.Content_ID))
+                {
+                    // Use Content_ID as fallback when Document_ID is not available
+                    urlDocumentId = documentRecord.Content_ID;
+
+                    // Log warning if Content_ID is retained in docid parameter
+                    if (!string.IsNullOrEmpty(originalDocId) &&
+                        string.Equals(originalDocId, documentRecord.Content_ID, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogWarning("CONTENT_ID_RETAINED_IN_URL: Original URL contains Content_ID '{ContentId}' in docid parameter, " +
+                            "but no Document_ID available from API. URL will retain Content_ID. Original: '{OriginalUrl}'",
+                            documentRecord.Content_ID, currentHyperlinkUrl);
+                    }
+                }
+                else
+                {
+                    // Fallback to rule identifier
+                    urlDocumentId = rule.ContentId;
+                    _logger.LogWarning("NO_DOCUMENT_OR_CONTENT_ID: Using rule Content_ID '{RuleContentId}' as fallback for URL building. " +
+                        "API response may be incomplete. Original: '{OriginalUrl}'", rule.ContentId, currentHyperlinkUrl);
+                }
 
                 var cleanDocumentId = FilterHtmlElementsFromUrl(urlDocumentId);
 
@@ -1183,7 +1224,7 @@ namespace BulkEditor.Infrastructure.Services
 
                             _logger.LogDebug("Updated hyperlink with VBA-compatible Address/SubAddress: {Address}#{SubAddress}",
                                 targetAddress, targetSubAddress);
-                            
+
                             // CRITICAL FIX: Set DocLocation for the fragment (required for Word to show complete URL)
                             // This matches what DocumentProcessor.cs does for regular hyperlinks
                             if (!string.IsNullOrEmpty(targetSubAddress))
@@ -1650,6 +1691,59 @@ namespace BulkEditor.Infrastructure.Services
             public string ContentId { get; set; } = string.Empty;
             public bool WasReplaced { get; set; }
             public string ErrorMessage { get; set; } = string.Empty;
+        }
+        /// <summary>
+        /// Gets the current complete URL from a hyperlink including fragment
+        /// CRITICAL FIX: Added to support Content_ID detection in docid parameters
+        /// </summary>
+        private string GetCurrentHyperlinkUrl(MainDocumentPart mainPart, OpenXmlHyperlink openXmlHyperlink)
+        {
+            try
+            {
+                var relId = openXmlHyperlink.Id?.Value;
+                if (string.IsNullOrEmpty(relId))
+                    return string.Empty;
+
+                // Get the base address from the relationship
+                var relationship = mainPart.GetReferenceRelationship(relId);
+                var rawUri = relationship.Uri.ToString();
+                var decodedUri = Uri.UnescapeDataString(rawUri);
+
+                // Check for fragment/subaddress in DocLocation and Anchor properties
+                string fragment = null;
+
+                // Handle URLs that already have encoded fragments in the base address
+                if (decodedUri.Contains("#"))
+                {
+                    // Already complete URL
+                    return decodedUri;
+                }
+                else
+                {
+                    // Check DocLocation property (most common for external links with fragments)
+                    if (!string.IsNullOrEmpty(openXmlHyperlink.DocLocation?.Value))
+                    {
+                        fragment = openXmlHyperlink.DocLocation.Value;
+                    }
+                    // Check Anchor property (typically for internal bookmarks)
+                    else if (!string.IsNullOrEmpty(openXmlHyperlink.Anchor?.Value))
+                    {
+                        fragment = openXmlHyperlink.Anchor.Value;
+                    }
+                }
+
+                // Combine address and fragment
+                var completeUrl = !string.IsNullOrEmpty(fragment)
+                    ? decodedUri + "#" + fragment
+                    : decodedUri;
+
+                return completeUrl;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting complete hyperlink URL for relationship: {RelId}", openXmlHyperlink.Id?.Value);
+                return string.Empty;
+            }
         }
     }
 

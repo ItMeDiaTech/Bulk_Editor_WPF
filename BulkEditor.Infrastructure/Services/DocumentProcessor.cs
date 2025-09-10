@@ -226,34 +226,34 @@ namespace BulkEditor.Infrastructure.Services
                             batchProgress.SuccessfulDocuments = successful;
                             batchProgress.TotalHyperlinksFound += document.Hyperlinks.Count;
                             batchProgress.TotalHyperlinksProcessed += document.Hyperlinks.Count(h => !string.IsNullOrEmpty(h.UpdatedUrl));
-                            
+
                             // CRITICAL FIX: Track unique hyperlinks that have been changed (any type of change)
                             // Check for URL changes, title changes, or any modification
                             foreach (var hyperlink in document.Hyperlinks)
                             {
                                 bool hasChanged = false;
-                                
+
                                 // Check if URL was updated
                                 if (!string.IsNullOrEmpty(hyperlink.UpdatedUrl) && hyperlink.UpdatedUrl != hyperlink.OriginalUrl)
                                 {
                                     hasChanged = true;
                                 }
-                                
+
                                 // Check if display text was updated (from change log)
-                                if (document.ChangeLog.Changes.Any(c => 
-                                    (c.Type == ChangeType.HyperlinkUpdated || c.Type == ChangeType.TitleChanged || c.Type == ChangeType.TitleReplaced || c.Type == ChangeType.HyperlinkStatusAdded || c.Type == ChangeType.ContentIdAdded) 
+                                if (document.ChangeLog.Changes.Any(c =>
+                                    (c.Type == ChangeType.HyperlinkUpdated || c.Type == ChangeType.TitleChanged || c.Type == ChangeType.TitleReplaced || c.Type == ChangeType.HyperlinkStatusAdded || c.Type == ChangeType.ContentIdAdded)
                                     && c.ElementId == hyperlink.Id))
                                 {
                                     hasChanged = true;
                                 }
-                                
+
                                 // Add to unique set if any change occurred
                                 if (hasChanged)
                                 {
                                     batchProgress.UniqueHyperlinksChanged.Add($"{document.FileName}:{hyperlink.Id}");
                                 }
                             }
-                            
+
                             // Update count based on unique changes
                             batchProgress.TotalHyperlinksUpdated = batchProgress.UniqueHyperlinksChanged.Count;
 
@@ -713,7 +713,7 @@ namespace BulkEditor.Infrastructure.Services
                 else
                 {
                     baseAddress = decodedUri;
-                    
+
                     // Check for fragment/subaddress in DocLocation and Anchor properties
                     // 1. Check DocLocation property (most common for external links with fragments)
                     if (!string.IsNullOrEmpty(openXmlHyperlink.DocLocation?.Value))
@@ -730,11 +730,11 @@ namespace BulkEditor.Infrastructure.Services
                 }
 
                 // Combine address and fragment exactly like VBA
-                var completeUrl = !string.IsNullOrEmpty(fragment) 
-                    ? baseAddress + "#" + fragment 
+                var completeUrl = !string.IsNullOrEmpty(fragment)
+                    ? baseAddress + "#" + fragment
                     : baseAddress;
 
-                _logger.LogDebug("Built complete URL: BaseAddress='{BaseAddress}', Fragment='{Fragment}', Complete='{CompleteUrl}'", 
+                _logger.LogDebug("Built complete URL: BaseAddress='{BaseAddress}', Fragment='{Fragment}', Complete='{CompleteUrl}'",
                     baseAddress, fragment ?? "", completeUrl);
 
                 return completeUrl;
@@ -800,6 +800,36 @@ namespace BulkEditor.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error extracting Lookup_ID from URL: {Url}. Error: {Error}", fullUrl, ex.Message);
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Extracts docid parameter from URLs following Base_File.vba methodology
+        /// CRITICAL FIX: Added to support Content_ID detection in docid parameters
+        /// </summary>
+        private string ExtractDocIdFromUrl(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
+
+            try
+            {
+                // Check for docid parameter in URL with word boundary
+                var docIdMatch = System.Text.RegularExpressions.Regex.Match(input, @"docid=([^&\s#]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (docIdMatch.Success)
+                {
+                    // CRITICAL FIX: Handle URL encoding (Issue #3)
+                    var rawDocId = docIdMatch.Groups[1].Value.Trim();
+                    return Uri.UnescapeDataString(rawDocId);
+                }
+
+                // Return empty if no docid found
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Error extracting docid from URL: {Input}. Error: {Error}", input, ex.Message);
                 return string.Empty;
             }
         }
@@ -1044,6 +1074,7 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// CRITICAL FIX: Process individual hyperlink with exact VBA logic (lines 228-306)
+        /// Enhanced to handle Content_ID in docid parameter scenarios
         /// </summary>
         private async Task ProcessHyperlinkWithVbaLogicAsync(Hyperlink hyperlink, DocumentRecord rec, BulkEditor.Core.Entities.Document document, bool alreadyExpired, bool alreadyNotFound, CancellationToken cancellationToken)
         {
@@ -1051,23 +1082,70 @@ namespace BulkEditor.Infrastructure.Services
             {
                 var dispText = hyperlink.DisplayText ?? string.Empty;
 
+                // CRITICAL FIX: Determine correct ID for URL building
+                string idForUrl;
+                if (!string.IsNullOrEmpty(rec.Document_ID))
+                {
+                    // Always prefer Document_ID when available
+                    idForUrl = rec.Document_ID;
+                    _logger.LogDebug("Using Document_ID for URL: '{DocumentId}'", idForUrl);
+                }
+                else if (!string.IsNullOrEmpty(rec.Content_ID))
+                {
+                    // Check if original URL contains Content_ID in docid parameter
+                    var originalDocId = ExtractDocIdFromUrl(hyperlink.OriginalUrl);
+                    var isContentIdInOriginalDocId = !string.IsNullOrEmpty(originalDocId) &&
+                        string.Equals(originalDocId, rec.Content_ID, StringComparison.OrdinalIgnoreCase);
+
+                    if (isContentIdInOriginalDocId)
+                    {
+                        _logger.LogWarning("CONTENT_ID_IN_DOCID_VBA: Original URL contains Content_ID '{ContentId}' in docid parameter, " +
+                            "but no Document_ID available from API. Using Content_ID as fallback. URL: '{OriginalUrl}'",
+                            rec.Content_ID, hyperlink.OriginalUrl);
+                    }
+
+                    idForUrl = rec.Content_ID;
+                    _logger.LogDebug("Using Content_ID for URL: '{ContentId}'", idForUrl);
+                }
+                else
+                {
+                    // No ID available - should not happen
+                    _logger.LogError("NO_ID_FOR_VBA_URL: Neither Document_ID nor Content_ID available for hyperlink. URL: '{OriginalUrl}'",
+                        hyperlink.OriginalUrl);
+                    return; // Skip processing this hyperlink
+                }
+
                 // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
                 // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
                 var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
 
                 // CRITICAL FIX: Properly encode the fragment to prevent XSD validation errors with 0x21 (!) character
-                var targetSub = Uri.EscapeDataString($"!/view?docid={rec.Document_ID}");
+                var targetSub = Uri.EscapeDataString($"!/view?docid={idForUrl}");
 
                 // VBA: changedURL = (hl.Address <> targetAddress) Or (hl.SubAddress <> targetSub)
                 var targetUrl = targetAddress + "#" + Uri.UnescapeDataString(targetSub);
                 var changedURL = !string.Equals(hyperlink.OriginalUrl, targetUrl, StringComparison.OrdinalIgnoreCase);
-                
-                // CRITICAL FIX: Always mark file:// URLs as changed when we have a Document_ID
+
+                // CRITICAL FIX: Always mark file:// URLs as changed when we have a valid ID
                 if (!changedURL && hyperlink.OriginalUrl.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
                 {
                     changedURL = true;
-                    _logger.LogDebug("Forcing URL change for file:// URL with Document_ID: {OriginalUrl} -> {TargetUrl}", 
+                    _logger.LogDebug("Forcing URL change for file:// URL with ID: {OriginalUrl} -> {TargetUrl}",
                         hyperlink.OriginalUrl, targetUrl);
+                }
+
+                // CRITICAL FIX: Also check for Content_ID in docid parameter that needs updating to Document_ID
+                if (!changedURL && !string.IsNullOrEmpty(rec.Document_ID) && !string.IsNullOrEmpty(rec.Content_ID))
+                {
+                    var originalDocId = ExtractDocIdFromUrl(hyperlink.OriginalUrl);
+                    if (!string.IsNullOrEmpty(originalDocId) &&
+                        string.Equals(originalDocId, rec.Content_ID, StringComparison.OrdinalIgnoreCase))
+                    {
+                        changedURL = true;
+                        _logger.LogInformation("DOCID_CONTENT_TO_DOCUMENT_ID: Forcing URL change to replace Content_ID '{ContentId}' " +
+                            "with Document_ID '{DocumentId}' in docid parameter. Original: '{OriginalUrl}' -> New: '{TargetUrl}'",
+                            rec.Content_ID, rec.Document_ID, hyperlink.OriginalUrl, targetUrl);
+                    }
                 }
 
                 if (changedURL)
@@ -1956,7 +2034,7 @@ namespace BulkEditor.Infrastructure.Services
 
                 // CRITICAL FIX: Final save to ensure all hyperlink updates are persisted
                 mainPart.Document.Save();
-                
+
                 _logger.LogInformation("Hyperlink updates completed atomically in session for document: {FileName}", document.FileName);
                 await Task.CompletedTask;
             }
@@ -1982,52 +2060,58 @@ namespace BulkEditor.Infrastructure.Services
                 // STEP 1: Validate current state and capture original data
                 var originalRelationship = mainPart.GetReferenceRelationship(relationshipId);
                 originalUri = originalRelationship.Uri.ToString(); // Keep for logging/fallback
-                
+
                 // CRITICAL FIX: Get complete original URL including fragments for proper comparison
                 var completeOriginalUrl = BuildCompleteHyperlinkUrl(mainPart, openXmlHyperlink);
-                
+
                 // CRITICAL FIX: Use the updated display text from hyperlink object (which includes Content ID and status)
                 var currentDisplayText = hyperlinkToUpdate.DisplayText ?? openXmlHyperlink.InnerText ?? string.Empty;
                 var alreadyExpired = currentDisplayText.Contains(" - Expired", StringComparison.OrdinalIgnoreCase);
                 var alreadyNotFound = currentDisplayText.Contains(" - Not Found", StringComparison.OrdinalIgnoreCase);
 
-                _logger.LogDebug("Starting atomic hyperlink update: {RelId}, Complete Original URL: {CompleteOriginalUrl}, Base URI: {BaseUri}", 
+                _logger.LogDebug("Starting atomic hyperlink update: {RelId}, Complete Original URL: {CompleteOriginalUrl}, Base URI: {BaseUri}",
                     relationshipId, completeOriginalUrl, originalUri);
 
                 // STEP 2: Calculate new URL using proper VBA Address/SubAddress separation (Issue #8)
-                // CRITICAL FIX: Handle case where Content_ID is in URL field and we need Document_ID
+                // CRITICAL FIX: Handle case where Content_ID is in docid parameter and we need Document_ID
                 string docIdForUrl;
+
+                // Enhanced Content_ID detection in docid parameter
+                var docIdInUrl = ExtractDocIdFromUrl(completeOriginalUrl);
+                var isContentIdInDocId = !string.IsNullOrEmpty(docIdInUrl) &&
+                    (!string.IsNullOrEmpty(hyperlinkToUpdate.ContentId) &&
+                     string.Equals(docIdInUrl, hyperlinkToUpdate.ContentId, StringComparison.OrdinalIgnoreCase));
+
                 if (!string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId))
                 {
-                    // Use Document_ID if available
+                    // Always prefer Document_ID when available
                     docIdForUrl = hyperlinkToUpdate.DocumentId;
+                    _logger.LogDebug("Using Document_ID for URL rebuild: '{DocumentId}' (original URL: '{OriginalUrl}')",
+                        docIdForUrl, completeOriginalUrl);
+                }
+                else if (isContentIdInDocId && !string.IsNullOrEmpty(hyperlinkToUpdate.ContentId))
+                {
+                    // CRITICAL FIX: Content_ID found in docid parameter but no Document_ID available
+                    // This indicates the API lookup may have failed or returned Content_ID only
+                    // Log this as a warning and use Content_ID as fallback
+                    docIdForUrl = hyperlinkToUpdate.ContentId;
+                    _logger.LogWarning("CONTENT_ID_IN_DOCID: Found Content_ID '{ContentId}' in docid parameter but no Document_ID available. " +
+                        "URL will be rebuilt with Content_ID as fallback. Original URL: '{OriginalUrl}'",
+                        hyperlinkToUpdate.ContentId, completeOriginalUrl);
                 }
                 else if (!string.IsNullOrEmpty(hyperlinkToUpdate.ContentId))
                 {
-                    // Check if the original URL contains a Content_ID pattern and we need to use Document_ID instead
-                    var originalUrlLower = completeOriginalUrl.ToLowerInvariant();
-                    var contentIdLower = hyperlinkToUpdate.ContentId.ToLowerInvariant();
-                    
-                    if (originalUrlLower.Contains(contentIdLower))
-                    {
-                        // The original URL contains the Content_ID anywhere (file://, https://, etc.)
-                        // We should rebuild with Document_ID if available, otherwise keep Content_ID
-                        docIdForUrl = !string.IsNullOrEmpty(hyperlinkToUpdate.DocumentId) 
-                            ? hyperlinkToUpdate.DocumentId 
-                            : hyperlinkToUpdate.ContentId;
-                        _logger.LogDebug("Found Content_ID '{ContentId}' anywhere in original URL '{OriginalUrl}', using Document_ID '{DocumentId}' for rebuild", 
-                            hyperlinkToUpdate.ContentId, completeOriginalUrl, docIdForUrl);
-                    }
-                    else
-                    {
-                        // Use Content_ID as fallback
-                        docIdForUrl = hyperlinkToUpdate.ContentId;
-                    }
+                    // Content_ID available but not in docid parameter
+                    docIdForUrl = hyperlinkToUpdate.ContentId;
+                    _logger.LogDebug("Using Content_ID for URL rebuild: '{ContentId}' (original URL: '{OriginalUrl}')",
+                        docIdForUrl, completeOriginalUrl);
                 }
                 else
                 {
-                    // No ID available, keep original URL
+                    // No ID available - this should not happen if hyperlink was processed correctly
                     docIdForUrl = string.Empty;
+                    _logger.LogError("NO_ID_AVAILABLE: No Document_ID or Content_ID available for URL rebuild. Original URL: '{OriginalUrl}'",
+                        completeOriginalUrl);
                 }
 
                 // CRITICAL FIX: Parse URL from UpdatedUrl or calculate from Document ID
@@ -2039,13 +2123,13 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     // Use the URL calculated by ProcessHyperlinkWithVbaLogicAsync
                     newUrl = hyperlinkToUpdate.UpdatedUrl;
-                    
+
                     // Parse the URL to separate base address and fragment for OpenXML
                     var parts = newUrl.Split('#', 2);
                     targetAddress = parts[0];
                     targetSubAddress = parts.Length > 1 ? parts[1] : string.Empty;
-                    
-                    _logger.LogInformation("DEBUG: Using UpdatedUrl: '{UpdatedUrl}' -> Base: '{BaseAddress}', Fragment: '{Fragment}', Parts.Length: {PartsLength}", 
+
+                    _logger.LogInformation("DEBUG: Using UpdatedUrl: '{UpdatedUrl}' -> Base: '{BaseAddress}', Fragment: '{Fragment}', Parts.Length: {PartsLength}",
                         hyperlinkToUpdate.UpdatedUrl, targetAddress, targetSubAddress, parts.Length);
                 }
                 else
@@ -2058,7 +2142,7 @@ namespace BulkEditor.Infrastructure.Services
                         targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
                         targetSubAddress = $"!/view?docid={docIdForUrl}";
                         newUrl = targetAddress + "#" + targetSubAddress;
-                        
+
                         _logger.LogDebug("Calculated URL: Base={BaseAddress}, Fragment={Fragment}", targetAddress, targetSubAddress);
                     }
                     else
@@ -2068,7 +2152,7 @@ namespace BulkEditor.Infrastructure.Services
                         var parts = newUrl.Split('#', 2);
                         targetAddress = parts[0];
                         targetSubAddress = parts.Length > 1 ? parts[1] : string.Empty;
-                        
+
                         _logger.LogDebug("Using Original URL: Base={BaseAddress}, Fragment={Fragment}", targetAddress, targetSubAddress);
                     }
                 }
@@ -2097,18 +2181,18 @@ namespace BulkEditor.Infrastructure.Services
 
                         // CRITICAL FIX: Set the DocLocation property for the fragment (Issue #8)
                         // This is equivalent to VBA's .SubAddress property
-                        _logger.LogInformation("DEBUG: About to set DocLocation - targetSubAddress: '{TargetSubAddress}', isEmpty: {IsEmpty}", 
+                        _logger.LogInformation("DEBUG: About to set DocLocation - targetSubAddress: '{TargetSubAddress}', isEmpty: {IsEmpty}",
                             targetSubAddress, string.IsNullOrEmpty(targetSubAddress));
-                            
+
                         if (!string.IsNullOrEmpty(targetSubAddress))
                         {
                             // If fragment came from UpdatedUrl, use it as-is; if calculated, unescape it
-                            var fragmentForDocLocation = hyperlinkToUpdate.UpdatedUrl != null 
+                            var fragmentForDocLocation = hyperlinkToUpdate.UpdatedUrl != null
                                 ? targetSubAddress  // Already unescaped from URL parsing
                                 : Uri.UnescapeDataString(targetSubAddress); // Needs unescaping from calculation
-                            
+
                             openXmlHyperlink.DocLocation = new StringValue(fragmentForDocLocation);
-                            _logger.LogInformation("DEBUG: Set DocLocation fragment: '{Fragment}' (from UpdatedUrl: {FromUpdatedUrl})", 
+                            _logger.LogInformation("DEBUG: Set DocLocation fragment: '{Fragment}' (from UpdatedUrl: {FromUpdatedUrl})",
                                 fragmentForDocLocation, hyperlinkToUpdate.UpdatedUrl != null);
                         }
                         else
@@ -2155,13 +2239,13 @@ namespace BulkEditor.Infrastructure.Services
                 // STEP 4: Apply display text changes that were already calculated by ProcessHyperlinkWithVbaLogicAsync
                 var newDisplayText = currentDisplayText;
                 var displayTextChanged = !string.Equals(openXmlHyperlink.InnerText, currentDisplayText, StringComparison.Ordinal);
-                
+
                 if (displayTextChanged)
                 {
                     try
                     {
                         OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
-                        
+
                         // CRITICAL FIX: Save the document after display text changes
                         mainPart.Document.Save();
 
