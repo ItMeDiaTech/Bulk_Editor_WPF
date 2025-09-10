@@ -361,6 +361,7 @@ namespace BulkEditor.UI.ViewModels
             }
         }
 
+
         [RelayCommand]
         private void ClearAllHyperlinkRules()
         {
@@ -472,6 +473,7 @@ namespace BulkEditor.UI.ViewModels
                 _notificationService.ShowError("Import Error", "Failed to import text rules.", ex);
             }
         }
+
 
         [RelayCommand]
         private void ClearAllTextRules()

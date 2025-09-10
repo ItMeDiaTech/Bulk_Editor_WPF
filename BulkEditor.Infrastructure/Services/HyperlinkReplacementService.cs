@@ -1084,13 +1084,13 @@ namespace BulkEditor.Infrastructure.Services
                 // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
                 var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
 
-                // CRITICAL FIX: Properly encode the fragment to prevent XSD validation errors with 0x21 (!) character
-                // The exclamation mark needs to be URL encoded for OpenXML compatibility
-                var targetSubAddress = Uri.EscapeDataString($"!/view?docid={cleanDocumentId}");
+                // CRITICAL FIX: Don't URL encode the fragment - this causes '%' characters which are invalid in OpenXML relationship IDs
+                // OpenXML can handle special characters like '!' and '?' directly in fragments
+                var targetSubAddress = $"!/view?docid={cleanDocumentId}";
 
                 // Build complete URL for validation and logging only
                 // NOTE: This is for logging/validation - actual relationship uses separate Address/SubAddress
-                var newUrl = targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress);
+                var newUrl = targetAddress + "#" + targetSubAddress;
 
                 // Update the hyperlink display text
                 OpenXmlHelper.UpdateHyperlinkText(openXmlHyperlink, newDisplayText);
@@ -1113,7 +1113,7 @@ namespace BulkEditor.Infrastructure.Services
                         // 3. Create complete URI with fragment for external links
 
                         // Build the complete external URL with fragment
-                        var completeUri = new Uri(targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress));
+                        var completeUri = new Uri(targetAddress + "#" + targetSubAddress);
 
                         // CRITICAL FIX: Check if URL needs updating (detect HTML-encoded differences)
                         string? currentUrl = null;

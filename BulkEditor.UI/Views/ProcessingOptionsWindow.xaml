@@ -180,7 +180,7 @@
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"/>
-                                            <MenuItem Header="Copy All" Command="{Binding CopyAllHyperlinkRulesCommand}"/>
+                                            <MenuItem Header="Copy All" IsEnabled="False" ToolTip="Feature temporarily disabled"/>
                                             <Separator/>
                                             <MenuItem Header="Paste" Command="ApplicationCommands.Paste" InputGestureText="Ctrl+V"/>
                                         </ContextMenu>
@@ -243,7 +243,7 @@
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"/>
-                                            <MenuItem Header="Copy All" Command="{Binding CopyAllTextRulesCommand}"/>
+                                            <MenuItem Header="Copy All" IsEnabled="False" ToolTip="Feature temporarily disabled"/>
                                             <Separator/>
                                             <MenuItem Header="Paste" Command="ApplicationCommands.Paste" InputGestureText="Ctrl+V"/>
                                         </ContextMenu>
@@ -289,7 +289,7 @@
                         Background="#9E9E9E"
                         Foreground="White"/>
                 <Button Content="Save Settings"
-                        Command="{Binding SaveSettingsAsyncCommand}"
+                        Command="{Binding SaveSettingsCommand}"
                         Background="#4CAF50"
                         Foreground="White"
                         Padding="16,8"/>
