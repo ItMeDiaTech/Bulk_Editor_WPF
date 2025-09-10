@@ -1685,8 +1685,17 @@ namespace BulkEditor.Infrastructure.Services
                 var settingsPart = wordDocument.MainDocumentPart.DocumentSettingsPart;
                 if (settingsPart == null)
                 {
-                    settingsPart = wordDocument.MainDocumentPart.AddNewPart<DocumentSettingsPart>();
-                    settingsPart.Settings = new DocumentFormat.OpenXml.Wordprocessing.Settings();
+                    try
+                    {
+                        settingsPart = wordDocument.MainDocumentPart.AddNewPart<DocumentSettingsPart>();
+                        settingsPart.Settings = new DocumentFormat.OpenXml.Wordprocessing.Settings();
+                        _logger.LogDebug("Created new DocumentSettingsPart for track changes");
+                    }
+                    catch (Exception partEx)
+                    {
+                        _logger.LogError("Failed to create DocumentSettingsPart: {Error}", partEx.Message);
+                        throw;
+                    }
                 }
 
                 // Get or create settings element
@@ -1695,26 +1704,72 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     settings = new DocumentFormat.OpenXml.Wordprocessing.Settings();
                     settingsPart.Settings = settings;
+                    _logger.LogDebug("Created new Settings element");
                 }
 
-                // Enable track revisions
+                // Check if track revisions is already enabled
                 var trackRevisions = settings.Elements<DocumentFormat.OpenXml.Wordprocessing.TrackRevisions>().FirstOrDefault();
-                if (trackRevisions == null)
+                if (trackRevisions != null)
+                {
+                    _logger.LogDebug("Track revisions already enabled in document");
+                    return;
+                }
+
+                // Enable track revisions with proper schema placement
+                try
                 {
                     trackRevisions = new DocumentFormat.OpenXml.Wordprocessing.TrackRevisions();
-                    settings.AppendChild(trackRevisions);
+                    
+                    // ENHANCED FIX: Insert TrackRevisions in correct schema order
+                    // Try to place it after common early settings elements but before complex ones
+                    var insertionPoint = settings.Elements().FirstOrDefault(e => 
+                        e.LocalName == "documentProtection" || 
+                        e.LocalName == "view" || 
+                        e.LocalName == "zoom" ||
+                        e.LocalName == "defaultTabStop");
+                    
+                    if (insertionPoint != null)
+                    {
+                        settings.InsertAfter(trackRevisions, insertionPoint);
+                        _logger.LogDebug("Inserted TrackRevisions after {ElementName}", insertionPoint.LocalName);
+                    }
+                    else if (settings.FirstChild != null)
+                    {
+                        settings.InsertBefore(trackRevisions, settings.FirstChild);
+                        _logger.LogDebug("Inserted TrackRevisions at beginning of Settings");
+                    }
+                    else
+                    {
+                        settings.AppendChild(trackRevisions);
+                        _logger.LogDebug("Appended TrackRevisions as first child");
+                    }
+                }
+                catch (Exception schemaEx)
+                {
+                    _logger.LogError("Schema error when adding TrackRevisions: {Error}", schemaEx.Message);
+                    throw;
                 }
 
-                // CRITICAL FIX: Save settings immediately after enabling track changes
-                settingsPart.Settings.Save();
-
-                _logger.LogInformation("Change tracking enabled for document - all subsequent changes will be tracked");
+                // CRITICAL FIX: Save settings and validate
+                try
+                {
+                    settingsPart.Settings.Save();
+                    _logger.LogInformation("Change tracking enabled successfully - all subsequent changes will be tracked");
+                }
+                catch (Exception saveEx)
+                {
+                    _logger.LogError("Failed to save settings after enabling track changes: {Error}", saveEx.Message);
+                    throw;
+                }
             }
             catch (Exception ex)
             {
-                // CRITICAL FIX: Don't let track changes failure break document processing
-                _logger.LogWarning("Failed to enable change tracking - processing will continue without tracking: {Error}", ex.Message);
-                // Continue processing without throwing
+                // ENHANCED FIX: More detailed error handling
+                _logger.LogWarning("Failed to enable change tracking - processing will continue without tracking. Error: {Error}, Stack: {Stack}", 
+                    ex.Message, ex.StackTrace);
+                
+                // Don't throw - continue processing without track changes
+                // Track changes failure should not break document processing
             }
         }
 
