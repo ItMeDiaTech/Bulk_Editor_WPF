@@ -61,54 +61,89 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    // Get all text content from the paragraph (consolidated)
-                    var paragraphText = GetParagraphText(paragraph);
-                    
-                    if (string.IsNullOrEmpty(paragraphText))
-                        continue;
-
-                    var originalText = paragraphText;
-                    var modifiedText = originalText;
-                    var replacementsMadeInParagraph = 0;
-
-                    foreach (var rule in activeRules)
+                    // CRITICAL FIX: Handle complex paragraphs (with hyperlinks) differently
+                    if (HasComplexElements(paragraph))
                     {
-                        // Use exact text replacement (case-insensitive find, exact replace)
-                        var replacementResult = ReplaceTextExact(
-                            modifiedText, rule.SourceText, rule.ReplacementText);
-
-                        if (replacementResult != modifiedText)
+                        // For complex paragraphs, apply replacement rules directly to individual text elements
+                        var originalText = GetParagraphText(paragraph);
+                        
+                        if (!string.IsNullOrEmpty(originalText))
                         {
-                            modifiedText = replacementResult;
-                            replacementsMadeInParagraph++;
+                            // Check if any rules would apply to this paragraph's text
+                            var wouldApply = activeRules.Any(rule => 
+                                ReplaceTextExact(originalText, rule.SourceText, rule.ReplacementText) != originalText);
+                            
+                            if (wouldApply)
+                            {
+                                UpdateComplexParagraphText(paragraph, activeRules);
+                                totalReplacements++; // Count as one replacement for the paragraph
+                                
+                                // Log the change in document
+                                document.ChangeLog.Changes.Add(new ChangeEntry
+                                {
+                                    Type = ChangeType.TextReplaced,
+                                    Description = "Text replaced in complex paragraph (element-level)",
+                                    OldValue = originalText,
+                                    NewValue = GetParagraphText(paragraph), // Get updated text
+                                    ElementId = Guid.NewGuid().ToString(),
+                                    Details = "Applied replacement rules to individual text elements"
+                                });
+
+                                _logger.LogDebug("Text replacement in complex paragraph: '{OriginalText}'", originalText);
+                            }
                         }
                     }
-
-                    // Update paragraph if any replacements were made
-                    if (replacementsMadeInParagraph > 0)
+                    else
                     {
-                        // CRITICAL FIX: Validate paragraph structure before modification
-                        if (ValidateParagraphForTextReplacement(paragraph))
-                        {
-                            UpdateParagraphText(paragraph, modifiedText, trackChanges);
-                            totalReplacements += replacementsMadeInParagraph;
+                        // Handle simple paragraphs with the existing consolidated approach
+                        var paragraphText = GetParagraphText(paragraph);
+                        
+                        if (string.IsNullOrEmpty(paragraphText))
+                            continue;
 
-                            // Log the change in document
-                            document.ChangeLog.Changes.Add(new ChangeEntry
+                        var originalText = paragraphText;
+                        var modifiedText = originalText;
+                        var replacementsMadeInParagraph = 0;
+
+                        foreach (var rule in activeRules)
+                        {
+                            // Use exact text replacement (case-insensitive find, exact replace)
+                            var replacementResult = ReplaceTextExact(
+                                modifiedText, rule.SourceText, rule.ReplacementText);
+
+                            if (replacementResult != modifiedText)
                             {
-                                Type = ChangeType.TextReplaced,
-                                Description = "Text replaced using replacement rules (paragraph-level)",
-                                OldValue = originalText,
-                                NewValue = modifiedText,
-                                ElementId = Guid.NewGuid().ToString(),
-                                Details = $"Applied {replacementsMadeInParagraph} replacement rule(s)"
-                            });
-
-                            _logger.LogDebug("Text replacement in session paragraph: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
+                                modifiedText = replacementResult;
+                                replacementsMadeInParagraph++;
+                            }
                         }
-                        else
+
+                        // Update paragraph if any replacements were made
+                        if (replacementsMadeInParagraph > 0)
                         {
-                            _logger.LogWarning("Skipped text replacement for paragraph due to complex structure that could cause document corruption");
+                            // CRITICAL FIX: Validate paragraph structure before modification
+                            if (ValidateParagraphForTextReplacement(paragraph))
+                            {
+                                UpdateParagraphText(paragraph, modifiedText, trackChanges);
+                                totalReplacements += replacementsMadeInParagraph;
+
+                                // Log the change in document
+                                document.ChangeLog.Changes.Add(new ChangeEntry
+                                {
+                                    Type = ChangeType.TextReplaced,
+                                    Description = "Text replaced using replacement rules (paragraph-level)",
+                                    OldValue = originalText,
+                                    NewValue = modifiedText,
+                                    ElementId = Guid.NewGuid().ToString(),
+                                    Details = $"Applied {replacementsMadeInParagraph} replacement rule(s)"
+                                });
+
+                                _logger.LogDebug("Text replacement in session paragraph: '{OriginalText}' -> '{NewText}'", originalText, modifiedText);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Skipped text replacement for paragraph due to validation failure");
+                            }
                         }
                     }
                 }
@@ -406,8 +441,10 @@ namespace BulkEditor.Infrastructure.Services
             // Check if paragraph contains complex elements (hyperlinks, fields, etc.)
             if (HasComplexElements(paragraph))
             {
-                // For complex paragraphs, only update simple text elements to avoid corruption
-                UpdateSimpleTextElementsOnly(paragraph, newText);
+                // For complex paragraphs, we need to apply replacements differently
+                // This method is called after paragraph-level processing, so we can't apply rules here
+                // Log a warning that complex paragraph text replacement needs special handling
+                _logger.LogDebug("Complex paragraph detected - text replacement should be handled at element level");
                 return;
             }
 
@@ -446,45 +483,59 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
-        /// Checks if a paragraph contains complex elements that shouldn't be modified
-        /// CRITICAL FIX: Simplified - only truly dangerous elements
+        /// Checks if a paragraph contains complex elements that need careful handling
+        /// CRITICAL FIX: Include hyperlinks for proper structure preservation
         /// </summary>
         private bool HasComplexElements(Paragraph paragraph)
         {
-            // Only check for genuinely dangerous elements that can corrupt documents
-            // Allow normal hyperlinks, simple fields, and formatted text
-            return paragraph.Descendants<FieldCode>().Any() ||
+            // Check for elements that need careful text replacement to preserve structure
+            return paragraph.Descendants<DocumentFormat.OpenXml.Wordprocessing.Hyperlink>().Any() ||
+                   paragraph.Descendants<FieldCode>().Any() ||
                    paragraph.Descendants<Drawing>().Any() ||
-                   paragraph.Descendants<FieldChar>().Count() > 2; // Complex field structures only
+                   paragraph.Descendants<FieldChar>().Count() > 2; // Complex field structures
         }
 
         /// <summary>
-        /// Updates only simple text elements, preserving complex structure
+        /// Updates text elements individually while preserving complex structure like hyperlinks
+        /// CRITICAL FIX: Applies replacement rules directly to each text element
         /// </summary>
-        private void UpdateSimpleTextElementsOnly(Paragraph paragraph, string newText)
+        private void UpdateComplexParagraphText(Paragraph paragraph, IEnumerable<TextReplacementRule> rules)
         {
-            // For complex paragraphs, find the first simple text element and update it
-            var firstTextElement = paragraph.Descendants<Text>()
-                .FirstOrDefault(t => IsSimpleTextElement(t));
+            // Find all text elements that can be safely modified
+            var textElements = paragraph.Descendants<Text>()
+                .Where(t => IsSimpleTextElement(t) && !string.IsNullOrWhiteSpace(t.Text))
+                .ToList();
 
-            if (firstTextElement != null)
+            if (!textElements.Any())
             {
-                firstTextElement.Text = newText;
-                
-                // Remove other simple text elements to avoid duplication
-                var otherTextElements = paragraph.Descendants<Text>()
-                    .Where(t => t != firstTextElement && IsSimpleTextElement(t))
-                    .ToList();
-                
-                foreach (var textElement in otherTextElements)
+                _logger.LogDebug("No simple text elements found for replacement in complex paragraph");
+                return;
+            }
+
+            // Apply replacement rules to each individual text element
+            var replacementsMade = 0;
+            foreach (var textElement in textElements)
+            {
+                var currentText = textElement.Text ?? string.Empty;
+                var originalText = currentText;
+
+                // Apply each replacement rule to this text element
+                foreach (var rule in rules)
                 {
-                    textElement.Remove();
+                    currentText = ReplaceTextExact(currentText, rule.SourceText, rule.ReplacementText);
+                }
+
+                // Update the text element if changes were made
+                if (currentText != originalText)
+                {
+                    textElement.Text = currentText;
+                    replacementsMade++;
                 }
             }
-            else
+
+            if (replacementsMade > 0)
             {
-                // No simple text elements found, log warning and skip
-                _logger.LogWarning("Cannot safely update complex paragraph structure, skipping text replacement");
+                _logger.LogDebug("Applied text replacement to {Count} text elements in complex paragraph", replacementsMade);
             }
         }
 
