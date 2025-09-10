@@ -89,26 +89,44 @@ namespace BulkEditor.Infrastructure.Services
 
                     var currentDisplayText = openXmlHyperlink.InnerText?.Trim();
                     if (string.IsNullOrEmpty(currentDisplayText))
+                    {
+                        _logger.LogDebug("Skipping hyperlink with empty display text");
                         continue;
+                    }
 
                     // Remove any existing Content ID from display text for comparison
                     var cleanDisplayText = RemoveContentIdFromText(currentDisplayText).Trim().ToLowerInvariant();
+                    _logger.LogDebug("Processing hyperlink: Original='{OriginalText}', Clean='{CleanText}'", currentDisplayText, cleanDisplayText);
 
                     foreach (var rule in activeRules)
                     {
                         var ruleTitleLower = rule.TitleToMatch.Trim().ToLowerInvariant();
+                        _logger.LogDebug("Checking rule '{RuleId}': TitleToMatch='{TitleToMatch}', ContentId='{ContentId}'", 
+                            rule.Id, rule.TitleToMatch, rule.ContentId);
 
                         // Check if the title matches based on configured match mode
                         if (DoesTextMatch(cleanDisplayText, ruleTitleLower, GetHyperlinkMatchMode()))
                         {
+                            _logger.LogInformation("HYPERLINK_MATCH_FOUND: Hyperlink text '{CleanText}' matches rule '{RuleTitle}' using {MatchMode} mode", 
+                                cleanDisplayText, ruleTitleLower, GetHyperlinkMatchMode());
+                            
                             var result = await ProcessHyperlinkReplacementAsync(mainPart, openXmlHyperlink, rule, document, cancellationToken).ConfigureAwait(false);
                             if (result.WasReplaced)
                             {
                                 replacementsMade++;
-                                _logger.LogInformation("Replaced hyperlink in session: '{OriginalTitle}' -> '{NewTitle}' with Content ID: {ContentId}",
+                                _logger.LogInformation("HYPERLINK_REPLACED: '{OriginalTitle}' -> '{NewTitle}' with Content ID: {ContentId}",
                                     result.OriginalTitle, result.NewTitle, result.ContentId);
                             }
+                            else
+                            {
+                                _logger.LogWarning("HYPERLINK_REPLACEMENT_FAILED: Match found but replacement failed. Error: {Error}", 
+                                    result.ErrorMessage ?? "Unknown error");
+                            }
                             break; // Only apply first matching rule
+                        }
+                        else
+                        {
+                            _logger.LogDebug("No match: '{CleanText}' does not match '{RuleTitle}'", cleanDisplayText, ruleTitleLower);
                         }
                     }
                 }
@@ -897,7 +915,18 @@ namespace BulkEditor.Infrastructure.Services
                 // Add cancellation check before expensive lookup operation
                 cancellationToken.ThrowIfCancellationRequested();
 
+                _logger.LogInformation("API_LOOKUP_START: Looking up document for identifier '{Identifier}' (Content_ID or Document_ID)", rule.ContentId);
                 var documentRecord = await LookupDocumentByIdentifierAsync(rule.ContentId, cancellationToken).ConfigureAwait(false);
+                
+                if (documentRecord != null)
+                {
+                    _logger.LogInformation("API_LOOKUP_SUCCESS: Found document - Title='{Title}', Content_ID='{ContentId}', Document_ID='{DocumentId}', Status='{Status}'", 
+                        documentRecord.Title, documentRecord.Content_ID, documentRecord.Document_ID, documentRecord.Status);
+                }
+                else
+                {
+                    _logger.LogWarning("API_LOOKUP_MISSING: No document found for identifier '{Identifier}'", rule.ContentId);
+                }
 
                 // Handle missing lookup identifier response (when server returns no response)
                 if (documentRecord == null)
