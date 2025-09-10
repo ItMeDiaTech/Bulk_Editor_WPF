@@ -1993,19 +1993,37 @@ namespace BulkEditor.Infrastructure.Services
                     docIdForUrl = string.Empty;
                 }
 
-                // CRITICAL FIX: Separate Address and SubAddress exactly like VBA (Issue #8)
-                // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
-                // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
-                var targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
+                // CRITICAL FIX: Parse URL from UpdatedUrl or calculate from Document ID
+                string targetAddress;
+                string targetSubAddress;
+                string newUrl;
 
-                // CRITICAL FIX: Properly encode the fragment to prevent XSD validation errors with 0x21 (!) character
-                var targetSubAddress = Uri.EscapeDataString($"!/view?docid={docIdForUrl}");
-
-                // CRITICAL FIX: Use the updated URL from hyperlink object (calculated by ProcessHyperlinkWithVbaLogicAsync)
-                // If not available, fall back to recalculating from Document ID
-                var newUrl = hyperlinkToUpdate.UpdatedUrl ?? (!string.IsNullOrEmpty(docIdForUrl)
-                    ? targetAddress + "#" + Uri.UnescapeDataString(targetSubAddress)
-                    : hyperlinkToUpdate.OriginalUrl);
+                if (!string.IsNullOrEmpty(hyperlinkToUpdate.UpdatedUrl))
+                {
+                    // Use the URL calculated by ProcessHyperlinkWithVbaLogicAsync
+                    newUrl = hyperlinkToUpdate.UpdatedUrl;
+                    
+                    // Parse the URL to separate base address and fragment for OpenXML
+                    var parts = newUrl.Split('#', 2);
+                    targetAddress = parts[0];
+                    targetSubAddress = parts.Length > 1 ? parts[1] : string.Empty;
+                    
+                    _logger.LogDebug("Using UpdatedUrl: Base={BaseAddress}, Fragment={Fragment}", targetAddress, targetSubAddress);
+                }
+                else
+                {
+                    // Fall back to recalculating from Document ID
+                    // VBA: targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/"
+                    // VBA: targetSub = "!/view?docid=" & rec("Document_ID")
+                    targetAddress = "https://thesource.cvshealth.com/nuxeo/thesource/";
+                    targetSubAddress = $"!/view?docid={docIdForUrl}";
+                    
+                    newUrl = !string.IsNullOrEmpty(docIdForUrl)
+                        ? targetAddress + "#" + targetSubAddress
+                        : hyperlinkToUpdate.OriginalUrl;
+                        
+                    _logger.LogDebug("Calculated URL: Base={BaseAddress}, Fragment={Fragment}", targetAddress, targetSubAddress);
+                }
 
                 // STEP 3: Only update if URL actually changed to prevent unnecessary operations
                 // CRITICAL FIX: Compare complete URLs (including fragments) not just base addresses
@@ -2031,9 +2049,16 @@ namespace BulkEditor.Infrastructure.Services
 
                         // CRITICAL FIX: Set the DocLocation property for the fragment (Issue #8)
                         // This is equivalent to VBA's .SubAddress property
-                        var unescapedFragment = Uri.UnescapeDataString(targetSubAddress);
-                        openXmlHyperlink.DocLocation = new StringValue(unescapedFragment);
-                        _logger.LogDebug("Set DocLocation fragment: {Fragment}", unescapedFragment);
+                        if (!string.IsNullOrEmpty(targetSubAddress))
+                        {
+                            // If fragment came from UpdatedUrl, use it as-is; if calculated, unescape it
+                            var fragmentForDocLocation = hyperlinkToUpdate.UpdatedUrl != null 
+                                ? targetSubAddress  // Already unescaped from URL parsing
+                                : Uri.UnescapeDataString(targetSubAddress); // Needs unescaping from calculation
+                            
+                            openXmlHyperlink.DocLocation = new StringValue(fragmentForDocLocation);
+                            _logger.LogDebug("Set DocLocation fragment: {Fragment}", fragmentForDocLocation);
+                        }
 
                         // Only delete old relationship after successful update
                         try
