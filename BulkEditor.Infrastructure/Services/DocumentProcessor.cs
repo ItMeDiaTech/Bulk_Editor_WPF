@@ -2016,7 +2016,8 @@ namespace BulkEditor.Infrastructure.Services
                     targetAddress = parts[0];
                     targetSubAddress = parts.Length > 1 ? parts[1] : string.Empty;
                     
-                    _logger.LogDebug("Using UpdatedUrl: Base={BaseAddress}, Fragment={Fragment}", targetAddress, targetSubAddress);
+                    _logger.LogInformation("DEBUG: Using UpdatedUrl: '{UpdatedUrl}' -> Base: '{BaseAddress}', Fragment: '{Fragment}', Parts.Length: {PartsLength}", 
+                        hyperlinkToUpdate.UpdatedUrl, targetAddress, targetSubAddress, parts.Length);
                 }
                 else
                 {
@@ -2067,6 +2068,9 @@ namespace BulkEditor.Infrastructure.Services
 
                         // CRITICAL FIX: Set the DocLocation property for the fragment (Issue #8)
                         // This is equivalent to VBA's .SubAddress property
+                        _logger.LogInformation("DEBUG: About to set DocLocation - targetSubAddress: '{TargetSubAddress}', isEmpty: {IsEmpty}", 
+                            targetSubAddress, string.IsNullOrEmpty(targetSubAddress));
+                            
                         if (!string.IsNullOrEmpty(targetSubAddress))
                         {
                             // If fragment came from UpdatedUrl, use it as-is; if calculated, unescape it
@@ -2075,7 +2079,12 @@ namespace BulkEditor.Infrastructure.Services
                                 : Uri.UnescapeDataString(targetSubAddress); // Needs unescaping from calculation
                             
                             openXmlHyperlink.DocLocation = new StringValue(fragmentForDocLocation);
-                            _logger.LogDebug("Set DocLocation fragment: {Fragment}", fragmentForDocLocation);
+                            _logger.LogInformation("DEBUG: Set DocLocation fragment: '{Fragment}' (from UpdatedUrl: {FromUpdatedUrl})", 
+                                fragmentForDocLocation, hyperlinkToUpdate.UpdatedUrl != null);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("DEBUG: DocLocation NOT set because targetSubAddress is empty");
                         }
 
                         // Only delete old relationship after successful update
