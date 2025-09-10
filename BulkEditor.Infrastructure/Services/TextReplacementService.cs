@@ -75,7 +75,7 @@ namespace BulkEditor.Infrastructure.Services
                             
                             if (wouldApply)
                             {
-                                UpdateComplexParagraphText(paragraph, activeRules);
+                                UpdateComplexParagraphText(paragraph, activeRules, trackChanges);
                                 totalReplacements++; // Count as one replacement for the paragraph
                                 
                                 // Log the change in document
@@ -391,24 +391,22 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Updates paragraph text while preserving formatting structure
-        /// Uses consolidation approach - creates a single run with the new text
+        /// Supports track changes using run-level processing for proper deletion/insertion tracking
         /// </summary>
         private void UpdateParagraphText(Paragraph paragraph, string newText, bool trackChanges = false)
         {
-            // CRITICAL FIX: Text replacement track changes are disabled due to OpenXML schema complexity
-            // Similar to hyperlinks, text replacement with track changes can cause document corruption
-            // when dealing with complex paragraph structures (hyperlinks, fields, formatting, etc.)
-            
-            if (trackChanges)
-            {
-                // Log that track changes are not supported for text replacement
-                _logger.LogDebug("Track changes requested for text replacement, but text track changes can cause schema violations with complex content. Using non-tracked update.");
-            }
-            
             try
             {
-                // Always use non-tracked updates for text replacement to ensure schema compliance
-                UpdateParagraphTextInternal(paragraph, newText);
+                if (trackChanges)
+                {
+                    // Use run-level track changes for proper deletion/insertion tracking
+                    UpdateParagraphTextWithTrackChanges(paragraph, newText);
+                }
+                else
+                {
+                    // Use standard non-tracked update
+                    UpdateParagraphTextInternal(paragraph, newText);
+                }
             }
             catch (Exception ex)
             {
@@ -426,6 +424,78 @@ namespace BulkEditor.Infrastructure.Services
                 {
                     _logger.LogWarning("No simple text elements found for fallback text replacement");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Updates paragraph text with track changes using run-level processing
+        /// Creates proper deletion and insertion tracking for Word visibility
+        /// </summary>
+        private void UpdateParagraphTextWithTrackChanges(Paragraph paragraph, string newText)
+        {
+            var oldText = GetParagraphText(paragraph);
+            
+            if (oldText == newText)
+            {
+                _logger.LogDebug("No text changes detected, skipping track changes processing");
+                return;
+            }
+            
+            // For simple paragraphs, apply track changes at run level
+            var runs = paragraph.Elements<Run>().ToList();
+            if (!runs.Any())
+            {
+                // No runs exist, create a simple tracked insertion
+                var insertedRun = OpenXmlHelper.CreateTrackedInsertion(newText);
+                paragraph.Append(insertedRun);
+                _logger.LogDebug("Created tracked insertion for new text in empty paragraph");
+                return;
+            }
+
+            // Process each run to apply track changes using the existing OpenXMLHelper method
+            var textChanged = false;
+            foreach (var run in runs.ToList()) // ToList to avoid modification during enumeration
+            {
+                var runText = string.Join("", run.Descendants<Text>().Select(t => t.Text ?? ""));
+                
+                if (string.IsNullOrEmpty(runText))
+                    continue;
+
+                // Check if this run's text needs to be changed
+                // We'll do a simple approach: if the run contains text that should be different in newText,
+                // mark the whole run as deleted and create a new insertion
+                if (oldText.Contains(runText) && !newText.Contains(runText))
+                {
+                    // This run's text is being removed or changed
+                    var deletedRun = OpenXmlHelper.CreateTrackedDeletion(run);
+                    paragraph.InsertBefore(deletedRun, run);
+                    run.Remove();
+                    textChanged = true;
+                    _logger.LogDebug("Created tracked deletion for run text: '{RunText}'", runText);
+                }
+            }
+
+            // If we made deletions, add the new text as an insertion
+            if (textChanged && !string.IsNullOrEmpty(newText))
+            {
+                // Find the first run to get formatting
+                var firstRun = paragraph.Elements<Run>().FirstOrDefault();
+                var formatting = firstRun?.GetFirstChild<RunProperties>();
+                
+                var insertedRun = OpenXmlHelper.CreateTrackedInsertion(newText, formatting);
+                
+                // Insert at the beginning of the paragraph (after any deleted runs)
+                var lastDeletedRun = paragraph.Elements<DeletedRun>().LastOrDefault();
+                if (lastDeletedRun != null)
+                {
+                    paragraph.InsertAfter(insertedRun, lastDeletedRun);
+                }
+                else
+                {
+                    paragraph.PrependChild(insertedRun);
+                }
+                
+                _logger.LogDebug("Created tracked insertion for new text: '{NewText}'", newText);
             }
         }
 
@@ -497,9 +567,9 @@ namespace BulkEditor.Infrastructure.Services
 
         /// <summary>
         /// Updates text elements individually while preserving complex structure like hyperlinks
-        /// CRITICAL FIX: Applies replacement rules directly to each text element
+        /// Supports track changes for individual text elements using OpenXMLHelper
         /// </summary>
-        private void UpdateComplexParagraphText(Paragraph paragraph, IEnumerable<TextReplacementRule> rules)
+        private void UpdateComplexParagraphText(Paragraph paragraph, IEnumerable<TextReplacementRule> rules, bool trackChanges = false)
         {
             // Find all text elements that can be safely modified
             var textElements = paragraph.Descendants<Text>()
@@ -522,11 +592,31 @@ namespace BulkEditor.Infrastructure.Services
                 // Apply each replacement rule to this text element
                 foreach (var rule in rules)
                 {
-                    currentText = ReplaceTextExact(currentText, rule.SourceText, rule.ReplacementText);
+                    if (trackChanges && currentText.Contains(rule.SourceText))
+                    {
+                        // Use OpenXMLHelper for run-level track changes
+                        var parentRun = textElement.Ancestors<Run>().FirstOrDefault();
+                        if (parentRun != null)
+                        {
+                            OpenXmlHelper.ReplaceTextInRun(parentRun, rule.SourceText, rule.ReplacementText, trackChanges);
+                            replacementsMade++;
+                            _logger.LogDebug("Applied tracked text replacement in complex paragraph run: '{OldText}' -> '{NewText}'", rule.SourceText, rule.ReplacementText);
+                        }
+                        else
+                        {
+                            // Fallback to direct text replacement if no parent run found
+                            currentText = ReplaceTextExact(currentText, rule.SourceText, rule.ReplacementText);
+                        }
+                    }
+                    else
+                    {
+                        // Standard text replacement without track changes
+                        currentText = ReplaceTextExact(currentText, rule.SourceText, rule.ReplacementText);
+                    }
                 }
 
-                // Update the text element if changes were made
-                if (currentText != originalText)
+                // Update the text element if changes were made (for non-tracked changes)
+                if (currentText != originalText && !trackChanges)
                 {
                     textElement.Text = currentText;
                     replacementsMade++;
@@ -535,7 +625,8 @@ namespace BulkEditor.Infrastructure.Services
 
             if (replacementsMade > 0)
             {
-                _logger.LogDebug("Applied text replacement to {Count} text elements in complex paragraph", replacementsMade);
+                var trackingStatus = trackChanges ? "with track changes" : "without track changes";
+                _logger.LogDebug("Applied text replacement to {Count} elements in complex paragraph {TrackingStatus}", replacementsMade, trackingStatus);
             }
         }
 
