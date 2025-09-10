@@ -1,6 +1,93 @@
-
-[2025-09-09 23:05:11.935 -04:00 INF] DEBUG: Using UpdatedUrl: 'https://thesource.cvshealth.com/nuxeo/thesource/#!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5' -> Base: 'https://thesource.cvshealth.com/nuxeo/thesource/', Fragment: '!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5', Parts.Length: 2
-[2025-09-09 23:05:11.935 -04:00 INF] DEBUG: About to set DocLocation - targetSubAddress: '!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5', isEmpty: false
-[2025-09-09 23:05:11.936 -04:00 INF] DEBUG: Set DocLocation fragment: '!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5' (from UpdatedUrl: true)
-[2025-09-09 23:05:11.938 -04:00 INF] Applied display text changes to document: 'Aetna Senior Compass - Copay Overrides (066440)' -> 'Aetna Senior Compass - Copay Overrides (066440)'
-[2025-09-09 23:05:11.938 -04:00 INF] Updated hyperlink atomically with VBA logic: rId8 -> #!/view?docid=910a5039-91f5-4424-9036-0842d5c1b8b5, Display: 'Aetna Senior Compass - Copay Overrides (066440)'
+[2025-09-10 13:17:45.830 -04:00 ERR] Background task failed: Document Processing (ID: 11485832-b6f6-4bfb-a224-83a996b42f29)
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+[2025-09-10 13:17:45.940 -04:00 ERR] Error during batch processing
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.ProcessDocumentsAsync()
+[2025-09-10 13:17:45.941 -04:00 ERR] Error notification: Processing Failed - An error occurred during document processing.
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.ProcessDocumentsAsync()
+[2025-09-10 13:18:18.733 -04:00 INF] Registered background task: Document Processing (ID: ff3d7a0f-d20c-46bb-b577-c10d91c8f0c6)
+[2025-09-10 13:18:18.733 -04:00 INF] Starting background task: Document Processing (ID: ff3d7a0f-d20c-46bb-b577-c10d91c8f0c6)
+[2025-09-10 13:18:18.734 -04:00 INF] Cleaned up and ended session: "1b5dd9c4-7243-4c09-bb4f-35138d52ee51"
+[2025-09-10 13:18:18.735 -04:00 INF] Started new session: "fab68ffb-7afe-4f41-af00-75f680bf368c"
+[2025-09-10 13:18:18.735 -04:00 INF] Processing session "fab68ffb-7afe-4f41-af00-75f680bf368c" started.
+[2025-09-10 13:18:18.735 -04:00 ERR] File not found: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx
+[2025-09-10 13:18:18.735 -04:00 ERR] Background task failed: Document Processing (ID: ff3d7a0f-d20c-46bb-b577-c10d91c8f0c6)
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+[2025-09-10 13:18:18.736 -04:00 ERR] Error during batch processing
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.ProcessDocumentsAsync()
+[2025-09-10 13:18:18.736 -04:00 ERR] Error notification: Processing Failed - An error occurred during document processing.
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.ProcessDocumentsAsync()
+[2025-09-10 13:18:28.526 -04:00 INF] Starting save settings process
+[2025-09-10 13:18:28.526 -04:00 INF] Settings updated from properties
+[2025-09-10 13:18:28.529 -04:00 INF] Settings validation passed
+[2025-09-10 13:18:28.529 -04:00 INF] Settings copied to original
+[2025-09-10 13:18:28.530 -04:00 INF] Configuration service initialized
+[2025-09-10 13:18:28.551 -04:00 INF] Settings saved to file successfully
+[2025-09-10 13:18:28.565 -04:00 INF] Settings dialog closed with success result
+[2025-09-10 13:18:28.565 -04:00 INF] Success notification: Settings Saved - Application settings have been updated successfully.
+[2025-09-10 13:18:28.565 -04:00 INF] Settings updated by user
+[2025-09-10 13:18:30.099 -04:00 INF] Document removed from list: TestDoc3_Backup - Copy - Copy (2).docx
+[2025-09-10 13:18:32.262 -04:00 INF] Starting file selection dialog
+[2025-09-10 13:18:35.012 -04:00 INF] Files selected: 1
+[2025-09-10 13:18:35.012 -04:00 INF] Starting file addition process for 1 files
+[2025-09-10 13:18:35.013 -04:00 INF] File validation completed: 1 valid, 0 invalid
+[2025-09-10 13:18:35.014 -04:00 INF] Validation completed: 1 valid, 0 invalid files
+[2025-09-10 13:18:35.015 -04:00 INF] Creating DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy - Copy.docx
+[2025-09-10 13:18:35.015 -04:00 INF] Successfully created DocumentListItemViewModel for: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy - Copy.docx
+[2025-09-10 13:18:35.015 -04:00 INF] Added DocumentListItemViewModel to collection: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy - Copy.docx
+[2025-09-10 13:18:35.016 -04:00 INF] Applying FilterDocuments to refresh UI display
+[2025-09-10 13:18:35.016 -04:00 INF] Successfully applied FilterDocuments via Dispatcher
+[2025-09-10 13:18:35.016 -04:00 INF] Success notification: Files Added - Successfully added 2 document(s) for processing.
+[2025-09-10 13:18:36.364 -04:00 INF] Registered background task: Document Processing (ID: 545c3534-dda2-409b-aeca-9105c7b1c29c)
+[2025-09-10 13:18:36.364 -04:00 INF] Starting background task: Document Processing (ID: 545c3534-dda2-409b-aeca-9105c7b1c29c)
+[2025-09-10 13:18:36.366 -04:00 INF] Cleaned up and ended session: "fab68ffb-7afe-4f41-af00-75f680bf368c"
+[2025-09-10 13:18:36.366 -04:00 INF] Started new session: "c3cf0375-ecb6-46f9-8a90-846932697342"
+[2025-09-10 13:18:36.366 -04:00 INF] Processing session "c3cf0375-ecb6-46f9-8a90-846932697342" started.
+[2025-09-10 13:18:36.366 -04:00 ERR] File not found: C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx
+[2025-09-10 13:18:36.367 -04:00 ERR] Background task failed: Document Processing (ID: 545c3534-dda2-409b-aeca-9105c7b1c29c)
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+[2025-09-10 13:18:36.367 -04:00 ERR] Error during batch processing
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.ProcessDocumentsAsync()
+[2025-09-10 13:18:36.368 -04:00 ERR] Error notification: Processing Failed - An error occurred during document processing.
+System.IO.FileNotFoundException: The specified file to back up was not found.
+File name: 'C:\Users\C551465\Documents\TestFolder\TestDoc3_Backup - Copy (36) - Copy - Copy.docx'
+   at BulkEditor.Infrastructure.Services.BackupService.CreateBackupAsync(String filePath, Session session)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.<ProcessDocumentsAsync>b__68_0(CancellationToken cancellationToken)
+   at BulkEditor.Infrastructure.Services.BackgroundTaskService.StartTaskAsync[T](String taskId, Func`2 taskFunc)
+   at BulkEditor.UI.ViewModels.MainWindowViewModel.ProcessDocumentsAsync()
