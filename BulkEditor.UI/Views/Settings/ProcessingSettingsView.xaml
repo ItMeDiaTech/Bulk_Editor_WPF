@@ -108,21 +108,6 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Processing Options -->
-            <GroupBox Header="Processing Options">
-                <StackPanel>
-                    <TextBlock Text="All detailed processing options including backup settings, concurrency controls, and timeout settings have been moved to the dedicated 'Processing Options' window."
-                               FontStyle="Italic" 
-                               Foreground="Gray" 
-                               Margin="0,0,0,8"
-                               TextWrapping="Wrap"/>
-                    <TextBlock Text="Click the 'Processing Options' button next to 'Process Documents' to configure these settings."
-                               FontStyle="Italic" 
-                               Foreground="#2196F3" 
-                               Margin="0,0,0,8"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
-            </GroupBox>
 
         </StackPanel>
     </ScrollViewer>

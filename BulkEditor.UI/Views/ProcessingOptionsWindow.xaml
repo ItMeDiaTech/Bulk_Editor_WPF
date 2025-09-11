@@ -103,43 +103,6 @@
                             </StackPanel>
                         </GroupBox>
 
-                        <!-- Processing Settings -->
-                        <GroupBox Header="Processing Settings">
-                            <StackPanel>
-                                <CheckBox Content="Create backup before processing"
-                                          IsChecked="{Binding CreateBackupBeforeProcessing}"/>
-
-                                <Grid Margin="0,8,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Maximum Concurrent Documents:" VerticalAlignment="Center"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Slider Name="MaxConcurrentSlider"
-                                                Value="{Binding MaxConcurrentDocuments}"
-                                                Minimum="1" Maximum="50"
-                                                Width="150"
-                                                TickFrequency="5"
-                                                IsSnapToTickEnabled="True"/>
-                                        <TextBlock Text="{Binding ElementName=MaxConcurrentSlider, Path=Value}"
-                                                   Margin="8,0,0,0"
-                                                   VerticalAlignment="Center"
-                                                   MinWidth="30"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="150"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Timeout per document (minutes):" VerticalAlignment="Center"/>
-                                    <TextBox Grid.Column="1" Text="{Binding TimeoutPerDocumentMinutes}"
-                                             HorizontalAlignment="Stretch"/>
-                                </Grid>
-                            </StackPanel>
-                        </GroupBox>
 
                     </StackPanel>
                 </ScrollViewer>
