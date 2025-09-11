@@ -1664,8 +1664,8 @@ namespace BulkEditor.Infrastructure.Services
                         _logger.LogInformation("Hyperlink processing skipped for {FileName}: No hyperlinks found in document", document.FileName);
                     }
 
-                    // STEP 9.5: Alternative title-only validation workflow (if enabled and hyperlink processing was skipped)
-                    if (_appSettings.Validation.ValidateTitlesOnly && !(_appSettings.Processing.UpdateHyperlinks && _appSettings.Processing.ValidateHyperlinks && document.Hyperlinks.Any() && !skipApiCalls))
+                    // STEP 9.5: Title-only validation workflow (if enabled - can run alongside or instead of hyperlink processing)
+                    if (_appSettings.Validation.ValidateTitlesOnly && document.Hyperlinks.Any())
                     {
                         progress?.Report("Validating titles only...");
                         _logger.LogInformation("Starting title-only validation workflow for {FileName}", document.FileName);
