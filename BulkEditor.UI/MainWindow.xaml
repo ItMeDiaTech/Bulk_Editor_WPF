@@ -25,535 +25,120 @@
         <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
     </Window.Resources>
 
-    <!-- Main App Bar -->
-    <materialDesign:DialogHost Identifier="RootDialog">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+    <!-- Simplified Working MaterialDesign UI -->
+    <Grid Background="{DynamicResource BackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-            <!-- Material Design App Bar -->
-            <materialDesign:ColorZone Grid.Row="0" 
-                                    Mode="PrimaryMid" 
-                                    Padding="{DynamicResource LargeSpacing}"
-                                    materialDesign:ElevationAssist.Elevation="Dp4">
-                <DockPanel>
-                    <!-- App Title Section -->
-                    <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                        <TextBlock Text="Bulk Document Editor"
-                                   Style="{DynamicResource MaterialDesignHeadline6TextBlock}"
-                                   FontSize="{DynamicResource HeadlineFontSize}"
-                                   FontWeight="{DynamicResource HeadlineFontWeight}"
-                                   Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"
-                                   Margin="0,0,0,4"/>
-                        <TextBlock Text="Enterprise document processing with advanced hyperlink management"
-                                   Style="{DynamicResource MaterialDesignCaptionTextBlock}"
-                                   FontSize="{DynamicResource SubtitleFontSize}"
-                                   Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"
-                                   Opacity="0.87"/>
-                    </StackPanel>
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource PrimaryBrush}" Padding="20">
+            <StackPanel>
+                <TextBlock Text="Bulk Document Editor" 
+                          FontSize="24" FontWeight="Bold" 
+                          Foreground="White" 
+                          HorizontalAlignment="Center"/>
+                <TextBlock Text="Enterprise document processing with advanced hyperlink management" 
+                          FontSize="14" 
+                          Foreground="White" 
+                          HorizontalAlignment="Center" 
+                          Opacity="0.9" 
+                          Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
 
-                    <!-- Action Buttons -->
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="SELECT FILES"
-                                Command="{Binding SelectFilesCommand}"
-                                Style="{StaticResource MaterialDesignRaisedButton}"
-                                materialDesign:ButtonAssist.CornerRadius="{DynamicResource ButtonCornerRadius}"
-                                Background="{DynamicResource SecondaryHueMidBrush}"
-                                Margin="{DynamicResource MediumSpacing}"/>
-                        <Button Content="SETTINGS"
-                                Command="{Binding OpenSettingsCommand}"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                materialDesign:ButtonAssist.CornerRadius="{DynamicResource ButtonCornerRadius}"
-                                BorderBrush="{DynamicResource PrimaryHueMidForegroundBrush}"
-                                Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"
-                                Margin="{DynamicResource MediumSpacing}"/>
-                        <Button Content="CLEAR ALL"
-                                Command="{Binding ClearDocumentsCommand}"
-                                Style="{StaticResource MaterialDesignFlatButton}"
-                                Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"
-                                Margin="{DynamicResource MediumSpacing}"/>
-                    </StackPanel>
-                </DockPanel>
-            </materialDesign:ColorZone>
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
 
-            <!-- Main Content Area -->
-            <Grid Grid.Row="1" Margin="{DynamicResource LargeSpacing}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MinWidth="600"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="380" MinWidth="320"/>
-                </Grid.ColumnDefinitions>
+            <!-- Document List Area -->
+            <Border Grid.Column="0" 
+                    Background="White" 
+                    BorderBrush="#E0E0E0" 
+                    BorderThickness="1" 
+                    CornerRadius="4" 
+                    Padding="20" 
+                    Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="Documents" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <TextBlock Text="Drag and drop Word documents here or use the Select Files button" 
+                              FontSize="14" 
+                              Foreground="Gray" 
+                              HorizontalAlignment="Center" 
+                              VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
 
-                <!-- Documents Area Card -->
-                <materialDesign:Card Grid.Column="0"
-                                   Style="{StaticResource ModernCardStyle}"
-                                   materialDesign:ElevationAssist.Elevation="Dp2"
-                                   AllowDrop="True"
-                                   Drop="DocumentsArea_Drop"
-                                   DragOver="DocumentsArea_DragOver"
-                                   DragEnter="DocumentsArea_DragEnter"
-                                   DragLeave="DocumentsArea_DragLeave">
-                    <controls:SimpleDocumentListView DataContext="{Binding}"/>
-                </materialDesign:Card>
-
-                <!-- Splitter -->
-                <GridSplitter Grid.Column="1" 
-                            Width="{DynamicResource SmallSpacing}"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Stretch"
-                            Background="{DynamicResource DividerBrush}"
-                            ResizeBehavior="PreviousAndNext"/>
-
-                <!-- Control Panel Card -->
-                <materialDesign:Card Grid.Column="2"
-                                   Style="{StaticResource ModernCardStyle}"
-                                   materialDesign:ElevationAssist.Elevation="Dp2">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                                materialDesign:ScrollViewerAssist.IsAutoHideEnabled="True">
-                        <StackPanel>
-
-                            <!-- Processing Section -->
-                            <Expander Header="Processing" 
-                                    IsExpanded="True"
-                                    Style="{StaticResource MaterialDesignExpander}"
-                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
-                                <Expander.HeaderTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}"
-                                                 Style="{StaticResource SectionHeaderStyle}"/>
-                                    </DataTemplate>
-                                </Expander.HeaderTemplate>
-                                <StackPanel Margin="0,{DynamicResource MediumSpacing},0,0">
-                                    <Button Content="PROCESS DOCUMENTS"
-                                            Command="{Binding ProcessDocumentsCommand}"
-                                            Style="{StaticResource PrimaryActionButtonStyle}"
-                                            Margin="0,0,0,{DynamicResource MediumSpacing}"
-                                            HorizontalAlignment="Stretch"/>
-
-                                    <Button Content="PROCESSING OPTIONS"
-                                            Command="{Binding OpenProcessingSettingsCommand}"
-                                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                                            materialDesign:ButtonAssist.CornerRadius="{DynamicResource ButtonCornerRadius}"
-                                            Margin="0,0,0,{DynamicResource MediumSpacing}"
-                                            HorizontalAlignment="Stretch"/>
-
-                                    <Button Content="REVERT LAST PROCESS"
-                                            Command="{Binding RevertLastSessionCommand}"
-                                            Style="{StaticResource WarningButtonStyle}"
-                                            Margin="0,0,0,{DynamicResource MediumSpacing}"
-                                            HorizontalAlignment="Stretch"
-                                            IsEnabled="{Binding IsRevertEnabled}"
-                                            Visibility="{Binding IsRevertEnabled, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                                    <Button Content="CANCEL PROCESSING"
-                                            Command="{Binding CancelProcessingCommand}"
-                                            Style="{StaticResource DangerButtonStyle}"
-                                            HorizontalAlignment="Stretch"
-                                            Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Expander>
-
-                            <!-- Progress Section -->
-                            <Expander Header="Progress" 
-                                    IsExpanded="True"
-                                    Style="{StaticResource MaterialDesignExpander}"
-                                    Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
-                                <Expander.HeaderTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}"
-                                                 Style="{StaticResource SectionHeaderStyle}"/>
-                                    </DataTemplate>
-                                </Expander.HeaderTemplate>
-                                <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp1" 
-                                                   Margin="0,{DynamicResource MediumSpacing},0,0">
-                                    <StackPanel Margin="{DynamicResource ContentPadding}">
-                                        <!-- Overall Progress -->
-                                        <Grid Margin="0,0,0,{DynamicResource MediumSpacing}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="Overall Progress" 
-                                                     Style="{StaticResource BodyTextStyle}"
-                                                     FontWeight="{DynamicResource SubtitleFontWeight}"/>
-                                            <TextBlock Grid.Column="1" 
-                                                     Text="{Binding OverallProgress, StringFormat='{}{0:F1}%'}" 
-                                                     Style="{StaticResource BodyTextStyle}"
-                                                     FontWeight="SemiBold" 
-                                                     Foreground="{DynamicResource SuccessBrush}"/>
-                                        </Grid>
-                                        
-                                        <ProgressBar Value="{Binding OverallProgress}"
-                                                   Maximum="100"
-                                                   Height="8"
-                                                   Style="{StaticResource MaterialDesignLinearProgressBar}"
-                                                   Foreground="{DynamicResource SuccessBrush}"
-                                                   Margin="0,0,0,{DynamicResource MediumSpacing}"/>
-                                        
-                                        <!-- Status and Stats -->
-                                        <Grid Margin="0,0,0,{DynamicResource MediumSpacing}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <materialDesign:Chip Grid.Column="0" 
-                                                               Content="{Binding ProcessedDocuments, StringFormat='{}{0} / {}{1} docs', ConverterParameter={Binding TotalDocuments}}"
-                                                               Background="{DynamicResource InfoBrush}"
-                                                               Foreground="White"/>
-                                            <materialDesign:Chip Grid.Column="2" 
-                                                               Content="{Binding ElapsedTime}"
-                                                               Background="{DynamicResource WarningBrush}"
-                                                               Foreground="White"/>
-                                        </Grid>
-                                        
-                                        <!-- Current Operation -->
-                                        <TextBlock Text="{Binding CurrentOperation}"
-                                                 Style="{StaticResource CaptionTextStyle}"
-                                                 TextTrimming="CharacterEllipsis"
-                                                 Visibility="{Binding CurrentOperation, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                    </StackPanel>
-                                </materialDesign:Card>
-                            </Expander>
-
-                            <!-- Statistics Section -->
-                            <Expander Header="Statistics" 
-                                    IsExpanded="True"
-                                    Style="{StaticResource MaterialDesignExpander}"
-                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
-                                <Expander.HeaderTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}"
-                                                 Style="{StaticResource SectionHeaderStyle}"/>
-                                    </DataTemplate>
-                                </Expander.HeaderTemplate>
-                                <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp1" 
-                                                   Margin="0,{DynamicResource MediumSpacing},0,0">
-                                    <Grid Margin="{DynamicResource ContentPadding}">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Document Stats -->
-                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,{DynamicResource MediumSpacing},0">
-                                            <materialDesign:Card Background="{DynamicResource SuccessBrush}" 
-                                                               Padding="{DynamicResource MediumSpacing}" 
-                                                               Margin="0,0,0,{DynamicResource SmallSpacing}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding ProcessedDocuments}" 
-                                                             Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
-                                                             Foreground="White" 
-                                                             HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Processed" 
-                                                             Style="{StaticResource CaptionTextStyle}"
-                                                             Foreground="White" 
-                                                             HorizontalAlignment="Center"/>
-                                                </StackPanel>
-                                            </materialDesign:Card>
-                                            
-                                            <materialDesign:Card Background="{DynamicResource ErrorBrush}" 
-                                                               Padding="{DynamicResource MediumSpacing}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding FailedDocuments}" 
-                                                             Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
-                                                             Foreground="White" 
-                                                             HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Failed" 
-                                                             Style="{StaticResource CaptionTextStyle}"
-                                                             Foreground="White" 
-                                                             HorizontalAlignment="Center"/>
-                                                </StackPanel>
-                                            </materialDesign:Card>
-                                        </StackPanel>
-
-                                        <!-- Hyperlink Stats -->
-                                        <StackPanel Grid.Row="0" Grid.Column="1">
-                                            <materialDesign:Card Background="{DynamicResource InfoBrush}" 
-                                                               Padding="{DynamicResource MediumSpacing}" 
-                                                               Margin="0,0,0,{DynamicResource SmallSpacing}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding TotalHyperlinksFound}" 
-                                                             Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
-                                                             Foreground="White" 
-                                                             HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Links Found" 
-                                                             Style="{StaticResource CaptionTextStyle}"
-                                                             Foreground="White" 
-                                                             HorizontalAlignment="Center"/>
-                                                </StackPanel>
-                                            </materialDesign:Card>
-                                            
-                                            <materialDesign:Card Background="{DynamicResource WarningBrush}" 
-                                                               Padding="{DynamicResource MediumSpacing}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding TotalHyperlinksUpdated}" 
-                                                             Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
-                                                             Foreground="White" 
-                                                             HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Links Updated" 
-                                                             Style="{StaticResource CaptionTextStyle}"
-                                                             Foreground="White" 
-                                                             HorizontalAlignment="Center"/>
-                                                </StackPanel>
-                                            </materialDesign:Card>
-                                        </StackPanel>
-
-                                        <!-- Status -->
-                                        <materialDesign:Card Grid.Row="1" Grid.ColumnSpan="2" 
-                                                           Background="{DynamicResource SurfaceBrush}" 
-                                                           Padding="{DynamicResource MediumSpacing}" 
-                                                           Margin="0,{DynamicResource MediumSpacing},0,0">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <materialDesign:PackIcon Kind="Information" 
-                                                                       VerticalAlignment="Center" 
-                                                                       Foreground="{DynamicResource InfoBrush}"
-                                                                       Margin="0,0,{DynamicResource MediumSpacing},0"/>
-                                                <TextBlock Grid.Column="1" 
-                                                         Text="{Binding StatusMessage}" 
-                                                         Style="{StaticResource BodyTextStyle}"
-                                                         TextTrimming="CharacterEllipsis"
-                                                         VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </materialDesign:Card>
-                                    </Grid>
-                                </materialDesign:Card>
-                            </Expander>
-
-                            <!-- Recent Errors Section -->
-                            <Expander Header="Recent Issues" 
-                                    IsExpanded="False"
-                                    Style="{StaticResource MaterialDesignExpander}"
-                                    Visibility="{Binding RecentErrors.Count, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
-                                <Expander.HeaderTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="AlertCircle" 
-                                                                   Foreground="{DynamicResource ErrorBrush}" 
-                                                                   VerticalAlignment="Center" 
-                                                                   Margin="0,0,{DynamicResource SmallSpacing},0"/>
-                                            <TextBlock Text="{Binding}"
-                                                     Style="{StaticResource SectionHeaderStyle}"
-                                                     Foreground="{DynamicResource ErrorBrush}"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </Expander.HeaderTemplate>
-                                <ItemsControl ItemsSource="{Binding RecentErrors}" 
-                                            Margin="0,{DynamicResource MediumSpacing},0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <materialDesign:Card Background="{DynamicResource ErrorBrush}" 
-                                                               Margin="0,0,0,{DynamicResource SmallSpacing}"
-                                                               Padding="{DynamicResource MediumSpacing}">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <materialDesign:PackIcon Kind="Error" 
-                                                                           Foreground="White" 
-                                                                           VerticalAlignment="Top" 
-                                                                           Margin="0,0,{DynamicResource MediumSpacing},0"/>
-                                                    <TextBlock Grid.Column="1" 
-                                                             Text="{Binding}" 
-                                                             Style="{StaticResource BodyTextStyle}"
-                                                             Foreground="White" 
-                                                             TextWrapping="Wrap"/>
-                                                </Grid>
-                                            </materialDesign:Card>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Expander>
-
-                            <!-- Background Tasks Section -->
-                            <Expander Header="Active Tasks" 
-                                    IsExpanded="True"
-                                    Style="{StaticResource MaterialDesignExpander}"
-                                    Visibility="{Binding ActiveTasks.Count, Converter={StaticResource CountToVisibilityConverter}}"
-                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
-                                <Expander.HeaderTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="Cog" 
-                                                                   Foreground="{DynamicResource InfoBrush}" 
-                                                                   VerticalAlignment="Center" 
-                                                                   Margin="0,0,{DynamicResource SmallSpacing},0">
-                                                <materialDesign:PackIcon.RenderTransform>
-                                                    <RotateTransform/>
-                                                </materialDesign:PackIcon.RenderTransform>
-                                                <materialDesign:PackIcon.Triggers>
-                                                    <EventTrigger RoutedEvent="Loaded">
-                                                        <BeginStoryboard>
-                                                            <Storyboard RepeatBehavior="Forever">
-                                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle" 
-                                                                               From="0" To="360" Duration="0:0:2"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </EventTrigger>
-                                                </materialDesign:PackIcon.Triggers>
-                                            </materialDesign:PackIcon>
-                                            <TextBlock Text="{Binding}"
-                                                     Style="{StaticResource SectionHeaderStyle}"
-                                                     Foreground="{DynamicResource InfoBrush}"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </Expander.HeaderTemplate>
-                                <ItemsControl ItemsSource="{Binding ActiveTasks}" 
-                                            Margin="0,{DynamicResource MediumSpacing},0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <materialDesign:Card Background="{DynamicResource InfoBrush}" 
-                                                               Margin="0,0,0,{DynamicResource SmallSpacing}"
-                                                               Padding="{DynamicResource MediumSpacing}">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Text="{Binding Name}" 
-                                                                 Style="{StaticResource BodyTextStyle}"
-                                                                 FontWeight="SemiBold"
-                                                                 Foreground="White"/>
-                                                        <TextBlock Text="{Binding Description}" 
-                                                                 Style="{StaticResource CaptionTextStyle}"
-                                                                 Foreground="White"
-                                                                 TextWrapping="Wrap"
-                                                                 Margin="0,{DynamicResource SmallSpacing},0,0"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                                                        <materialDesign:Chip Content="{Binding Status}" 
-                                                                           Background="White" 
-                                                                           Foreground="{DynamicResource InfoBrush}"
-                                                                           FontSize="{DynamicResource CaptionFontSize}"
-                                                                           Margin="0,0,0,{DynamicResource SmallSpacing}"/>
-                                                        <TextBlock Text="{Binding ElapsedTime, StringFormat='hh\\:mm\\:ss'}" 
-                                                                 Style="{StaticResource CaptionTextStyle}"
-                                                                 Foreground="White"
-                                                                 HorizontalAlignment="Right"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </materialDesign:Card>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Expander>
-
-                            <!-- Quick Actions Section -->
-                            <Expander Header="Quick Actions" 
-                                    IsExpanded="True"
-                                    Style="{StaticResource MaterialDesignExpander}">
-                                <Expander.HeaderTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}"
-                                                 Style="{StaticResource SectionHeaderStyle}"/>
-                                    </DataTemplate>
-                                </Expander.HeaderTemplate>
-                                <StackPanel Margin="0,{DynamicResource MediumSpacing},0,0">
-                                    <Button Content="EXPORT RESULTS"
-                                            Command="{Binding ExportResultsCommand}"
-                                            Style="{StaticResource SecondaryButtonStyle}"
-                                            HorizontalAlignment="Stretch"
-                                            Margin="0,0,0,{DynamicResource MediumSpacing}"/>
-                                    
-                                    <Button Content="OPEN LOGS FOLDER"
-                                            Style="{StaticResource FlatButtonStyle}"
-                                            HorizontalAlignment="Stretch"/>
-                                </StackPanel>
-                            </Expander>
-
-                        </StackPanel>
-                    </ScrollViewer>
-                </materialDesign:Card>
-            </Grid>
-
-            <!-- Material Design Status Bar -->
-            <materialDesign:ColorZone Grid.Row="2" 
-                                    Mode="PrimaryLight" 
-                                    Padding="{DynamicResource LargeSpacing}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Status Indicator -->
-                    <materialDesign:PackIcon Grid.Column="0"
-                                           Kind="{Binding StatusIcon}"
-                                           Foreground="{Binding StatusIconColor}"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,{DynamicResource MediumSpacing},0"
-                                           Visibility="{Binding ShowStatusIcon, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                    <!-- Status Message -->
-                    <TextBlock Grid.Column="1"
-                             Text="{Binding StatusMessage}"
-                             Style="{StaticResource BodyTextStyle}"
-                             VerticalAlignment="Center"/>
-
-                    <!-- Progress Info -->
-                    <StackPanel Grid.Column="2" 
-                               Orientation="Horizontal" 
-                               VerticalAlignment="Center"
-                               Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
-                               Margin="24,0">
-                        <ProgressBar Value="{Binding ProgressValue}"
-                                   Maximum="100"
-                                   Width="120"
-                                   Height="6"
-                                   Style="{StaticResource MaterialDesignLinearProgressBar}"
-                                   Margin="0,0,{DynamicResource MediumSpacing},0"/>
-                        <TextBlock Text="{Binding ProgressValue, StringFormat='{}{0:F0}%'}"
-                                 Style="{StaticResource CaptionTextStyle}"
-                                 VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <!-- App Version -->
-                    <materialDesign:Chip Grid.Column="3"
-                                       Content="{Binding ApplicationVersion}"
-                                       Background="{DynamicResource PrimaryHueDarkBrush}"
-                                       Foreground="{DynamicResource PrimaryHueDarkForegroundBrush}"
-                                       FontSize="{DynamicResource CaptionFontSize}"/>
-                </Grid>
-            </materialDesign:ColorZone>
-
-            <!-- Material Design Loading Overlay -->
-            <Grid Grid.RowSpan="3"
-                  Background="#80000000"
-                  Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
-                <materialDesign:Card HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Padding="{DynamicResource ExtraLargeSpacing}"
-                                   materialDesign:ElevationAssist.Elevation="Dp8">
-                    <StackPanel>
-                        <ProgressBar Width="240"
-                                   Height="6"
-                                   IsIndeterminate="True"
-                                   Style="{StaticResource MaterialDesignLinearProgressBar}"
-                                   Margin="0,0,0,{DynamicResource LargeSpacing}"/>
-                        <TextBlock Text="{Binding BusyMessage}"
-                                 Style="{StaticResource BodyTextStyle}"
-                                 HorizontalAlignment="Center"
-                                 TextAlignment="Center"/>
-                    </StackPanel>
-                </materialDesign:Card>
-            </Grid>
+            <!-- Control Panel -->
+            <Border Grid.Column="1" 
+                    Background="White" 
+                    BorderBrush="#E0E0E0" 
+                    BorderThickness="1" 
+                    CornerRadius="4" 
+                    Padding="20" 
+                    Margin="10,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="Actions" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                    
+                    <Button Content="SELECT FILES" 
+                            Command="{Binding SelectFilesCommand}" 
+                            Background="{DynamicResource SuccessBrush}" 
+                            Foreground="White" 
+                            Padding="15,10" 
+                            Margin="0,0,0,10" 
+                            BorderThickness="0"/>
+                    
+                    <Button Content="PROCESS DOCUMENTS" 
+                            Command="{Binding ProcessDocumentsCommand}" 
+                            Background="{DynamicResource PrimaryBrush}" 
+                            Foreground="White" 
+                            Padding="15,10" 
+                            Margin="0,0,0,10" 
+                            BorderThickness="0"/>
+                    
+                    <Button Content="SETTINGS" 
+                            Command="{Binding OpenSettingsCommand}" 
+                            Background="{DynamicResource InfoBrush}" 
+                            Foreground="White" 
+                            Padding="15,10" 
+                            Margin="0,0,0,10" 
+                            BorderThickness="0"/>
+                    
+                    <Button Content="CLEAR ALL" 
+                            Command="{Binding ClearDocumentsCommand}" 
+                            Background="{DynamicResource WarningBrush}" 
+                            Foreground="White" 
+                            Padding="15,10" 
+                            BorderThickness="0"/>
+                </StackPanel>
+            </Border>
         </Grid>
-    </materialDesign:DialogHost>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="#F5F5F5" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                          Text="{Binding StatusMessage}" 
+                          VerticalAlignment="Center"/>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding TotalDocuments, StringFormat='{}{0} documents'}" 
+                              Margin="0,0,15,0" 
+                              VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ApplicationVersion}" 
+                              VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

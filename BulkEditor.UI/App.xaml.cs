@@ -3,12 +3,16 @@ using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Core.Services;
 using BulkEditor.Infrastructure.Services;
+using BulkEditor.UI.Services;
 using BulkEditor.UI.ViewModels;
+using BulkEditor.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace BulkEditor.UI
@@ -26,196 +30,146 @@ namespace BulkEditor.UI
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            
-            // Show main window immediately to prevent freezing
-            _ = Task.Run(async () => 
+
+            // Initialize services and show MainWindow
+            InitializeApplicationAndShowMainWindow();
+        }
+
+        private void InitializeApplicationAndShowMainWindow()
+        {
+            try
             {
+                // Create temporary logger for startup
+                var tempLogger = new BulkEditor.Infrastructure.Services.SerilogService();
+
+                // Initialize configuration service
+                var configService = new ConfigurationService(tempLogger);
+                var initTask = Task.Run(async () =>
+                {
+                    await configService.InitializeAsync();
+                    await configService.MigrateSettingsAsync();
+                    return await configService.LoadSettingsAsync();
+                });
+                var appSettings = initTask.GetAwaiter().GetResult();
+
+                // Configure Serilog
+                ConfigureSerilog(appSettings);
+
+                // Configure services
+                var services = new ServiceCollection();
+
+                // Register core instances
+                services.AddSingleton<IConfigurationService>(configService);
+                services.AddSingleton(appSettings);
+                services.AddSingleton<Microsoft.Extensions.Options.IOptions<AppSettings>>(
+                    Microsoft.Extensions.Options.Options.Create(appSettings));
+
+                // Register infrastructure services
+                services.AddSingleton<BulkEditor.Core.Interfaces.ILoggingService, BulkEditor.Infrastructure.Services.SerilogService>();
+                services.AddSingleton<BulkEditor.Core.Interfaces.IFileService, BulkEditor.Infrastructure.Services.FileService>();
+                services.AddSingleton<BulkEditor.Core.Services.IRetryPolicyService, BulkEditor.Infrastructure.Services.RetryPolicyService>();
+                services.AddSingleton<BulkEditor.Core.Services.IStructuredLoggingService, BulkEditor.Infrastructure.Services.StructuredLoggingService>();
+                services.AddSingleton<BulkEditor.Core.Services.IBackgroundTaskService, BulkEditor.Infrastructure.Services.BackgroundTaskService>();
+
+                // Configure HttpClient properly
+                services.AddSingleton<System.Net.Http.HttpClient>(provider =>
+                {
+                    var httpClient = new HttpClient();
+                    httpClient.Timeout = TimeSpan.FromSeconds(30);
+                    var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", $"BulkEditor/{version} (+https://github.com/ItMeDiaTech/Bulk_Editor_WPF)");
+                    httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+                    return httpClient;
+                });
+
+                services.AddSingleton<BulkEditor.Core.Interfaces.IHttpService, BulkEditor.Infrastructure.Services.HttpService>();
+                services.AddSingleton<BulkEditor.Core.Interfaces.ICacheService, BulkEditor.Infrastructure.Services.MemoryCacheService>();
+                services.AddSingleton<BulkEditor.Core.Services.IDatabaseService, BulkEditor.Infrastructure.Services.SqliteService>();
+
+                // Document Processing Services
+                services.AddScoped<BulkEditor.Core.Interfaces.IDocumentProcessor, BulkEditor.Infrastructure.Services.DocumentProcessor>();
+                services.AddScoped<BulkEditor.Core.Interfaces.IHyperlinkValidator, BulkEditor.Infrastructure.Services.HyperlinkValidator>();
+                services.AddScoped<BulkEditor.Core.Interfaces.ITextOptimizer, BulkEditor.Infrastructure.Services.TextOptimizer>();
+                services.AddScoped<BulkEditor.Core.Interfaces.IReplacementService, BulkEditor.Infrastructure.Services.ReplacementService>();
+                services.AddScoped<BulkEditor.Core.Interfaces.IHyperlinkReplacementService, BulkEditor.Infrastructure.Services.HyperlinkReplacementService>();
+                services.AddScoped<BulkEditor.Core.Interfaces.ITextReplacementService, BulkEditor.Infrastructure.Services.TextReplacementService>();
+
+                // Application services
+                services.AddScoped<IApplicationService, BulkEditor.Application.Services.ApplicationService>();
+
+                // Session and backup services
+                services.AddSingleton<ISessionManager, SessionManager>();
+                services.AddSingleton<IBackupService, BackupService>();
+                services.AddSingleton<IUndoService, UndoService>();
+
+                // Update services
+                services.AddSingleton<IUpdateService, GitHubUpdateService>(provider =>
+                {
+                    var httpClient = provider.GetRequiredService<System.Net.Http.HttpClient>();
+                    var logger = provider.GetRequiredService<BulkEditor.Core.Interfaces.ILoggingService>();
+                    var configServiceProvider = provider.GetRequiredService<IConfigurationService>();
+                    return new GitHubUpdateService(httpClient, logger, configServiceProvider,
+                        appSettings.Update.GitHubOwner, appSettings.Update.GitHubRepository);
+                });
+                services.AddSingleton<BulkEditor.Application.Services.UpdateManager>();
+
+                // UI Services
+                services.AddSingleton<BulkEditor.UI.Services.INotificationService, BulkEditor.UI.Services.NotificationService>();
+                services.AddSingleton<BulkEditor.Core.Interfaces.IThemeService, BulkEditor.UI.Services.ThemeService>();
+                services.AddSingleton<BulkEditor.UI.Services.IThemeManager, BulkEditor.UI.Services.ThemeManager>();
+
+                // Register ViewModels
+                services.AddTransient<MainWindowViewModel>();
+                services.AddTransient<SettingsViewModel>();
+
+                // Register Windows
+                services.AddTransient<MainWindow>();
+                services.AddTransient<SettingsWindow>();
+
+                // Build service provider
+                _serviceProvider = services.BuildServiceProvider();
+
+                // INITIALIZE THEME BEFORE CREATING WINDOW
                 try
                 {
-                    await InitializeApplicationAsync().ConfigureAwait(false);
+                    var themeManager = _serviceProvider.GetRequiredService<IThemeManager>();
+                    themeManager.ApplyTheme(appSettings.UI?.ThemeConfiguration ?? new ThemeSettings());
                 }
                 catch (Exception ex)
                 {
-                    await Dispatcher.BeginInvoke(() =>
-                    {
-                        MessageBox.Show($"Application startup failed: {ex.Message}", "Startup Error",
-                            MessageBoxButton.OK, MessageBoxImage.Error);
-                        Shutdown(1);
-                    });
+                    Log.Warning(ex, "Failed to apply theme during startup, using defaults");
                 }
-            });
-        }
 
-        private async Task InitializeApplicationAsync()
-        {
-            // Create temporary logger for ConfigurationService (minimal configuration)
-            var tempLogger = new BulkEditor.Infrastructure.Services.SerilogService();
-
-            // Initialize configuration service early to avoid double registration
-            var configService = new ConfigurationService(tempLogger);
-            await configService.InitializeAsync().ConfigureAwait(false);
-            await configService.MigrateSettingsAsync().ConfigureAwait(false);
-            var appSettings = await configService.LoadSettingsAsync().ConfigureAwait(false);
-
-            // CRITICAL FIX: Configure Serilog only ONCE with proper settings
-            ConfigureSerilog(appSettings);
-
-            // Configure services
-            var services = new ServiceCollection();
-
-            // Register core instances
-            services.AddSingleton<IConfigurationService>(configService);
-            services.AddSingleton(appSettings);
-
-            // CRITICAL FIX: Register IOptions<AppSettings> for dependency injection
-            services.AddSingleton<Microsoft.Extensions.Options.IOptions<AppSettings>>(provider =>
-                Microsoft.Extensions.Options.Options.Create(appSettings));
-
-            // Register infrastructure services
-            services.AddSingleton<BulkEditor.Core.Interfaces.ILoggingService, BulkEditor.Infrastructure.Services.SerilogService>();
-            services.AddSingleton<BulkEditor.Core.Interfaces.IFileService, BulkEditor.Infrastructure.Services.FileService>();
-            services.AddSingleton<BulkEditor.Core.Services.IRetryPolicyService, BulkEditor.Infrastructure.Services.RetryPolicyService>();
-            services.AddSingleton<BulkEditor.Core.Services.IStructuredLoggingService, BulkEditor.Infrastructure.Services.StructuredLoggingService>();
-            services.AddSingleton<BulkEditor.Core.Services.IBackgroundTaskService, BulkEditor.Infrastructure.Services.BackgroundTaskService>();
-
-            // Configure HttpClient properly with all necessary headers and settings
-            services.AddSingleton<System.Net.Http.HttpClient>(provider =>
-            {
-                var httpClient = new HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(30);
-                // CRITICAL FIX: More specific User-Agent to comply with GitHub API guidelines
-                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
-                httpClient.DefaultRequestHeaders.Add("User-Agent", $"BulkEditor/{version} (+https://github.com/ItMeDiaTech/Bulk_Editor_WPF)");
-                httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
-                return httpClient;
-            });
-
-            services.AddSingleton<BulkEditor.Core.Interfaces.IHttpService, BulkEditor.Infrastructure.Services.HttpService>();
-            services.AddSingleton<BulkEditor.Core.Interfaces.ICacheService, BulkEditor.Infrastructure.Services.MemoryCacheService>();
-
-            // Database Service
-            services.AddSingleton<BulkEditor.Core.Services.IDatabaseService, BulkEditor.Infrastructure.Services.SqliteService>();
-
-            // Document Processing Services
-            services.AddScoped<BulkEditor.Core.Interfaces.IDocumentProcessor, BulkEditor.Infrastructure.Services.DocumentProcessor>();
-            services.AddScoped<BulkEditor.Core.Interfaces.IHyperlinkValidator, BulkEditor.Infrastructure.Services.HyperlinkValidator>();
-            services.AddScoped<BulkEditor.Core.Interfaces.ITextOptimizer, BulkEditor.Infrastructure.Services.TextOptimizer>();
-
-            // Replacement Services
-            services.AddScoped<BulkEditor.Core.Interfaces.IReplacementService, BulkEditor.Infrastructure.Services.ReplacementService>();
-            services.AddScoped<BulkEditor.Core.Interfaces.IHyperlinkReplacementService, BulkEditor.Infrastructure.Services.HyperlinkReplacementService>();
-            services.AddScoped<BulkEditor.Core.Interfaces.ITextReplacementService, BulkEditor.Infrastructure.Services.TextReplacementService>();
-
-            // Register application services
-            services.AddScoped<IApplicationService, BulkEditor.Application.Services.ApplicationService>();
-
-            // Register undo/revert services
-            services.AddSingleton<ISessionManager, SessionManager>();
-            services.AddSingleton<IBackupService, BackupService>();
-            services.AddSingleton<IUndoService, UndoService>();
-
-            // Register update services
-            services.AddSingleton<IUpdateService, GitHubUpdateService>(provider =>
-            {
-                var httpClient = provider.GetRequiredService<System.Net.Http.HttpClient>();
-                var logger = provider.GetRequiredService<BulkEditor.Core.Interfaces.ILoggingService>();
-                var configServiceProvider = provider.GetRequiredService<IConfigurationService>();
-                return new GitHubUpdateService(httpClient, logger, configServiceProvider,
-                    appSettings.Update.GitHubOwner, appSettings.Update.GitHubRepository);
-            });
-            services.AddSingleton<BulkEditor.Application.Services.UpdateManager>();
-
-            // Register UI Services
-            services.AddSingleton<BulkEditor.UI.Services.INotificationService, BulkEditor.UI.Services.NotificationService>();
-            services.AddSingleton<BulkEditor.Core.Interfaces.IThemeService, BulkEditor.UI.Services.ThemeService>();
-            services.AddSingleton<BulkEditor.UI.Services.IThemeManager, BulkEditor.UI.Services.ThemeManager>();
-
-            // Register ViewModels and Views
-            services.AddTransient<MainWindowViewModel>();
-            services.AddTransient<SettingsViewModel>();
-            services.AddTransient<MainWindow>();
-            services.AddTransient<BulkEditor.UI.Views.SettingsWindow>();
-
-            // Build service provider
-            _serviceProvider = services.BuildServiceProvider();
-
-            // Show main window immediately on UI thread
-            await Dispatcher.BeginInvoke(() =>
-            {
+                // CREATE AND SHOW MAIN WINDOW WITH DEPENDENCY INJECTION
                 var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
                 mainWindow.Show();
-            });
 
-            // Initialize long-running services with timeout protection
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            
-            try
-            {
-                // Initialize database with timeout
-                var databaseService = _serviceProvider.GetRequiredService<BulkEditor.Core.Services.IDatabaseService>();
-                await databaseService.InitializeAsync().WaitAsync(cts.Token).ConfigureAwait(false);
-
-                // Initialize theme on UI thread
-                await Dispatcher.BeginInvoke(() =>
+                // Initialize other services after window is shown
+                Task.Run(async () =>
                 {
                     try
                     {
-                        var themeManager = _serviceProvider.GetRequiredService<BulkEditor.UI.Services.IThemeManager>();
-                        themeManager.ApplyTheme(appSettings.UI.ThemeConfiguration);
-                        Log.Information("Theme applied successfully");
+                        // Initialize database
+                        var databaseService = _serviceProvider.GetRequiredService<IDatabaseService>();
+                        await databaseService.InitializeAsync();
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "Failed to apply theme, using defaults");
+                        Log.Error(ex, "Error during service initialization");
                     }
                 });
-
-                // Initialize update manager with timeout and offline mode respect (non-critical, can fail)
-                if (!appSettings.Offline.OfflineModeEnabled || !appSettings.Offline.SkipUpdateCheckWhenOffline)
-                {
-                    try
-                    {
-                        _updateManager = _serviceProvider.GetRequiredService<BulkEditor.Application.Services.UpdateManager>();
-                        await _updateManager.StartAsync().WaitAsync(cts.Token).ConfigureAwait(false);
-
-                        // Subscribe to update events
-                        var updateService = _serviceProvider.GetRequiredService<IUpdateService>();
-                        if (updateService is GitHubUpdateService githubUpdateService)
-                        {
-                            githubUpdateService.UpdateRequiresRestart += OnUpdateRequiresRestart;
-                        }
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        Log.Warning("Update manager initialization timed out, continuing without updates");
-                        if (appSettings.Offline.AllowStartupWithoutNetwork)
-                        {
-                            Log.Information("Continuing startup in offline mode");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Warning(ex, "Update manager initialization failed, continuing without updates");
-                        if (appSettings.Offline.AllowStartupWithoutNetwork)
-                        {
-                            Log.Information("Network unavailable, continuing startup in offline mode");
-                        }
-                    }
-                }
-                else
-                {
-                    Log.Information("Skipping update check - offline mode enabled");
-                }
             }
-            catch (TaskCanceledException)
+            catch (Exception ex)
             {
-                Log.Error("Critical services initialization timed out");
-                throw new TimeoutException("Application initialization timed out");
+                MessageBox.Show(
+                    $"Application failed to start: {ex.Message}",
+                    "Startup Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                Shutdown(1);
             }
-
-            // Log successful startup
-            Log.Information("Application started successfully");
         }
+
 
         protected override void OnExit(ExitEventArgs e)
         {

@@ -13,7 +13,7 @@
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
         <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="{DynamicResource ButtonCornerRadius}"/>
-        <Setter Property="materialDesign:RippleAssist.IsDisabled" Value="{Binding EnableRipple, Source={x:Static Application.Current}, Converter={StaticResource InverseBooleanConverter}, FallbackValue=False}"/>
+        <Setter Property="materialDesign:RippleAssist.IsDisabled" Value="False"/>
         <Setter Property="Margin" Value="{DynamicResource SmallSpacing}"/>
     </Style>
 
@@ -79,7 +79,7 @@
     <!-- Floating Action Button Style -->
     <Style x:Key="FloatingActionButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MaterialDesignFloatingActionButton}">
         <Setter Property="Background" Value="{DynamicResource SecondaryBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource OnSecondaryBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
         <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp6"/>
         <Setter Property="Width" Value="56"/>
         <Setter Property="Height" Value="56"/>
@@ -96,7 +96,7 @@
     <!-- Toggle Button Style -->
     <Style x:Key="ToggleButtonStyle" TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource MaterialDesignSwitchToggleButton}">
         <Setter Property="materialDesign:ToggleButtonAssist.SwitchTrackOnBackground" Value="{DynamicResource PrimaryBrush}"/>
-        <Setter Property="materialDesign:ToggleButtonAssist.SwitchTrackOffBackground" Value="{DynamicResource DisabledBrush}"/>
+        <Setter Property="materialDesign:ToggleButtonAssist.SwitchTrackOffBackground" Value="#BDBDBD"/>
     </Style>
 
 </ResourceDictionary>

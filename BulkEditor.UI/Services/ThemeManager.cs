@@ -17,32 +17,32 @@ namespace BulkEditor.UI.Services
         /// Apply theme settings to the application
         /// </summary>
         void ApplyTheme(ThemeSettings themeSettings);
-        
+
         /// <summary>
         /// Get current theme settings
         /// </summary>
         ThemeSettings GetCurrentTheme();
-        
+
         /// <summary>
         /// Switch between light and dark themes
         /// </summary>
         void ToggleBaseTheme();
-        
+
         /// <summary>
         /// Apply custom color scheme
         /// </summary>
         void ApplyColorScheme(ColorScheme colorScheme);
-        
+
         /// <summary>
         /// Get available Material Design colors
         /// </summary>
         string[] GetAvailablePrimaryColors();
-        
+
         /// <summary>
         /// Get available Material Design secondary colors
         /// </summary>
         string[] GetAvailableSecondaryColors();
-        
+
         /// <summary>
         /// Event raised when theme changes
         /// </summary>
@@ -81,7 +81,7 @@ namespace BulkEditor.UI.Services
                 var baseTheme = themeSettings.BaseTheme.Equals("Dark", StringComparison.OrdinalIgnoreCase)
                     ? BaseTheme.Dark
                     : BaseTheme.Light;
-                
+
                 theme.SetBaseTheme(baseTheme);
 
                 // Apply primary color
@@ -90,7 +90,7 @@ namespace BulkEditor.UI.Services
                     theme.SetPrimaryColor(primaryColor);
                 }
 
-                // Apply secondary color  
+                // Apply secondary color
                 if (ColorHelper.TryParseColor(themeSettings.Colors.SecondaryColor, out var secondaryColor))
                 {
                     theme.SetSecondaryColor(secondaryColor);
@@ -112,10 +112,10 @@ namespace BulkEditor.UI.Services
                 ApplyEffects(themeSettings.Effects);
 
                 // Raise theme changed event
-                ThemeChanged?.Invoke(this, new BulkEditor.Core.Interfaces.ThemeChangedEventArgs 
-                { 
+                ThemeChanged?.Invoke(this, new BulkEditor.Core.Interfaces.ThemeChangedEventArgs
+                {
                     PreviousTheme = _currentTheme?.BaseTheme ?? "Light",
-                    NewTheme = themeSettings.BaseTheme 
+                    NewTheme = themeSettings.BaseTheme
                 });
             }
             catch (Exception ex)
@@ -137,7 +137,7 @@ namespace BulkEditor.UI.Services
             currentTheme.BaseTheme = currentTheme.BaseTheme.Equals("Light", StringComparison.OrdinalIgnoreCase)
                 ? "Dark"
                 : "Light";
-            
+
             ApplyTheme(currentTheme);
         }
 
@@ -210,21 +210,21 @@ namespace BulkEditor.UI.Services
             UpdateResourceSafely(app.Resources, "PrimaryVariantBrush", CreateBrushFromHex(colors.PrimaryVariant));
             UpdateResourceSafely(app.Resources, "SecondaryBrush", CreateBrushFromHex(colors.SecondaryColor));
             UpdateResourceSafely(app.Resources, "SecondaryVariantBrush", CreateBrushFromHex(colors.SecondaryVariant));
-            
+
             UpdateResourceSafely(app.Resources, "SurfaceBrush", CreateBrushFromHex(colors.SurfaceColor));
             UpdateResourceSafely(app.Resources, "BackgroundBrush", CreateBrushFromHex(colors.BackgroundColor));
             UpdateResourceSafely(app.Resources, "CardBrush", CreateBrushFromHex(colors.CardColor));
-            
+
             UpdateResourceSafely(app.Resources, "OnPrimaryBrush", CreateBrushFromHex(colors.OnPrimaryColor));
             UpdateResourceSafely(app.Resources, "OnSecondaryBrush", CreateBrushFromHex(colors.OnSecondaryColor));
             UpdateResourceSafely(app.Resources, "OnSurfaceBrush", CreateBrushFromHex(colors.OnSurfaceColor));
             UpdateResourceSafely(app.Resources, "OnBackgroundBrush", CreateBrushFromHex(colors.OnBackgroundColor));
-            
+
             UpdateResourceSafely(app.Resources, "ErrorBrush", CreateBrushFromHex(colors.ErrorColor));
             UpdateResourceSafely(app.Resources, "WarningBrush", CreateBrushFromHex(colors.WarningColor));
             UpdateResourceSafely(app.Resources, "SuccessBrush", CreateBrushFromHex(colors.SuccessColor));
             UpdateResourceSafely(app.Resources, "InfoBrush", CreateBrushFromHex(colors.InfoColor));
-            
+
             UpdateResourceSafely(app.Resources, "DisabledBrush", CreateBrushFromHex(colors.DisabledColor));
             UpdateResourceSafely(app.Resources, "BorderBrush", CreateBrushFromHex(colors.BorderColor));
             UpdateResourceSafely(app.Resources, "DividerBrush", CreateBrushFromHex(colors.DividerColor));
@@ -238,13 +238,13 @@ namespace BulkEditor.UI.Services
 
             UpdateResourceSafely(app.Resources, "AppFontFamily", new FontFamily(typography.FontFamily));
             UpdateResourceSafely(app.Resources, "HeadlineFontFamily", new FontFamily(typography.HeadlineFontFamily));
-            
+
             UpdateResourceSafely(app.Resources, "HeadlineFontSize", typography.HeadlineSize * typography.FontSizeScale);
             UpdateResourceSafely(app.Resources, "TitleFontSize", typography.TitleSize * typography.FontSizeScale);
             UpdateResourceSafely(app.Resources, "SubtitleFontSize", typography.SubtitleSize * typography.FontSizeScale);
             UpdateResourceSafely(app.Resources, "BodyFontSize", typography.BodySize * typography.FontSizeScale);
             UpdateResourceSafely(app.Resources, "CaptionFontSize", typography.CaptionSize * typography.FontSizeScale);
-            
+
             UpdateResourceSafely(app.Resources, "HeadlineFontWeight", ParseFontWeight(typography.HeadlineWeight));
             UpdateResourceSafely(app.Resources, "TitleFontWeight", ParseFontWeight(typography.TitleWeight));
             UpdateResourceSafely(app.Resources, "SubtitleFontWeight", ParseFontWeight(typography.SubtitleWeight));
@@ -257,16 +257,24 @@ namespace BulkEditor.UI.Services
             var app = System.Windows.Application.Current;
             if (app?.Resources == null) return;
 
-            UpdateResourceSafely(app.Resources, "BaseSpacing", layout.BaseSpacing);
-            UpdateResourceSafely(app.Resources, "SmallSpacing", layout.BaseSpacing * layout.SmallSpacing);
-            UpdateResourceSafely(app.Resources, "MediumSpacing", layout.BaseSpacing * layout.MediumSpacing);
-            UpdateResourceSafely(app.Resources, "LargeSpacing", layout.BaseSpacing * layout.LargeSpacing);
-            UpdateResourceSafely(app.Resources, "ExtraLargeSpacing", layout.BaseSpacing * layout.ExtraLargeSpacing);
-            
+            // Numeric spacing values for Width, Height, and other numeric properties
+            UpdateResourceSafely(app.Resources, "BaseSpacingValue", layout.BaseSpacing);
+            UpdateResourceSafely(app.Resources, "SmallSpacingValue", layout.BaseSpacing * layout.SmallSpacing);
+            UpdateResourceSafely(app.Resources, "MediumSpacingValue", layout.BaseSpacing * layout.MediumSpacing);
+            UpdateResourceSafely(app.Resources, "LargeSpacingValue", layout.BaseSpacing * layout.LargeSpacing);
+            UpdateResourceSafely(app.Resources, "ExtraLargeSpacingValue", layout.BaseSpacing * layout.ExtraLargeSpacing);
+
+            // Thickness spacing values for Margin properties
+            UpdateResourceSafely(app.Resources, "BaseSpacing", new Thickness(layout.BaseSpacing));
+            UpdateResourceSafely(app.Resources, "SmallSpacing", new Thickness(layout.BaseSpacing * layout.SmallSpacing));
+            UpdateResourceSafely(app.Resources, "MediumSpacing", new Thickness(layout.BaseSpacing * layout.MediumSpacing));
+            UpdateResourceSafely(app.Resources, "LargeSpacing", new Thickness(layout.BaseSpacing * layout.LargeSpacing));
+            UpdateResourceSafely(app.Resources, "ExtraLargeSpacing", new Thickness(layout.BaseSpacing * layout.ExtraLargeSpacing));
+
             UpdateResourceSafely(app.Resources, "CornerRadius", new CornerRadius(layout.CornerRadius));
             UpdateResourceSafely(app.Resources, "CardCornerRadius", new CornerRadius(layout.CardRadius));
             UpdateResourceSafely(app.Resources, "ButtonCornerRadius", new CornerRadius(layout.ButtonRadius));
-            
+
             UpdateResourceSafely(app.Resources, "ContentPadding", new Thickness(layout.ContentPadding));
             UpdateResourceSafely(app.Resources, "CardPadding", new Thickness(layout.CardPadding));
             UpdateResourceSafely(app.Resources, "ButtonPadding", new Thickness(layout.ButtonPadding));
@@ -281,11 +289,11 @@ namespace BulkEditor.UI.Services
             UpdateResourceSafely(app.Resources, "ShadowOpacity", effects.ShadowOpacity);
             UpdateResourceSafely(app.Resources, "ShadowBlurRadius", effects.ShadowBlurRadius);
             UpdateResourceSafely(app.Resources, "ShadowDepth", effects.ShadowDepth);
-            
+
             UpdateResourceSafely(app.Resources, "EnableAnimations", effects.EnableAnimations);
             UpdateResourceSafely(app.Resources, "AnimationSpeed", effects.AnimationSpeed);
             UpdateResourceSafely(app.Resources, "TransitionDuration", TimeSpan.FromMilliseconds(effects.TransitionDuration));
-            
+
             UpdateResourceSafely(app.Resources, "EnableRipple", effects.EnableRipple);
             UpdateResourceSafely(app.Resources, "RippleOpacity", effects.RippleOpacity);
         }
@@ -315,7 +323,9 @@ namespace BulkEditor.UI.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating resource '{key}': {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating resource '{key}' with value '{value}' (Type: {value?.GetType().Name}): {ex.Message}");
+                // Log the stack trace to help identify where the error is coming from
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
 
@@ -346,7 +356,7 @@ namespace BulkEditor.UI.Services
         public static bool TryParseColor(string hexColor, out Color color)
         {
             color = Colors.Transparent;
-            
+
             if (string.IsNullOrWhiteSpace(hexColor))
                 return false;
 
@@ -354,7 +364,7 @@ namespace BulkEditor.UI.Services
             {
                 // Remove # if present
                 var hex = hexColor.TrimStart('#');
-                
+
                 // Parse the color
                 if (hex.Length == 6)
                 {

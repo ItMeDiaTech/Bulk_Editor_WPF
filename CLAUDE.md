@@ -141,3 +141,5 @@ BulkEditor.sln
 - **Terminology Accuracy**: "Lookup_ID" is JSON property name, not identifier type
 - **Comprehensive Logging**: Enhanced API request/response logging with performance metrics
 
+- Keep all dynamic resources. Instead of removing or changing files completely, instead look and see if an additional framework needs to be included in the project or the nuget config file
+- don't use static values in UI. Always use dynamic

@@ -7,10 +7,10 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800"
-             TextElement.Foreground="{DynamicResource OnSurfaceBrush}"
-             TextElement.FontWeight="{DynamicResource BodyFontWeight}"
-             TextElement.FontSize="{DynamicResource BodyFontSize}"
-             TextElement.FontFamily="{DynamicResource AppFontFamily}">
+             TextElement.Foreground="#212121"
+             TextElement.FontWeight="Normal"
+             TextElement.FontSize="14"
+             TextElement.FontFamily="Segoe UI">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
@@ -22,9 +22,9 @@
             <materialDesign:Chip Background="{Binding StatusBackgroundColor}"
                                Foreground="White"
                                Content="{Binding StatusDisplayText}"
-                               FontSize="{DynamicResource CaptionFontSize}"
+                               FontSize="12"
                                FontWeight="Medium"
-                               Margin="{DynamicResource SmallSpacing}"
+                               Margin="4"
                                ToolTip="{Binding StatusDisplayText}"
                                IsEnabled="False">
                 <materialDesign:Chip.Style>
@@ -36,12 +36,12 @@
                                         <StackPanel>
                                             <TextBlock Text="{Binding StatusTopText}"
                                                      Foreground="White"
-                                                     FontSize="{DynamicResource CaptionFontSize}"
+                                                     FontSize="12"
                                                      FontWeight="Medium"
                                                      HorizontalAlignment="Center"/>
                                             <TextBlock Text="{Binding StatusBottomText}"
                                                      Foreground="White"
-                                                     FontSize="{DynamicResource CaptionFontSize}"
+                                                     FontSize="12"
                                                      FontWeight="Medium"
                                                      HorizontalAlignment="Center"/>
                                         </StackPanel>
@@ -57,9 +57,9 @@
         <!-- Modern Material Design Document Item Template -->
         <DataTemplate x:Key="DocumentItemTemplate" DataType="{x:Type vm:DocumentListItemViewModel}">
             <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp1"
-                               Margin="0,0,0,{DynamicResource SmallSpacing}"
-                               Background="{DynamicResource CardBrush}"
-                               Padding="{DynamicResource ContentPadding}">
+                               Margin="0,0,0,4"
+                               Background="#FFFFFF"
+                               Padding="16">
                 <materialDesign:Card.Style>
                     <Style TargetType="materialDesign:Card">
                         <Style.Triggers>
@@ -100,12 +100,12 @@
                         <MenuItem Header="Remove" 
                                 Command="{Binding RemoveCommand}">
                             <MenuItem.Icon>
-                                <materialDesign:PackIcon Kind="Delete" Foreground="{DynamicResource ErrorBrush}"/>
+                                <materialDesign:PackIcon Kind="Delete" Foreground="#F44336"/>
                             </MenuItem.Icon>
                         </MenuItem>
                     </ContextMenu>
                 </materialDesign:Card.ContextMenu>
-                <Grid Margin="{DynamicResource ContentPadding}">
+                <Grid Margin="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -118,7 +118,7 @@
                     <materialDesign:PackIcon Grid.Column="0"
                                            Kind="FileDocumentOutline"
                                            Width="24" Height="24"
-                                           Foreground="{DynamicResource PrimaryBrush}"
+                                           Foreground="#2196F3"
                                            VerticalAlignment="Center"
                                            Margin="0,0,8,0"/>
 
@@ -126,7 +126,7 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Title}"
                                  Style="{StaticResource BodyTextStyle}"
-                                 FontWeight="{DynamicResource SubtitleFontWeight}"
+                                 FontWeight="SemiBold"
                                  TextTrimming="CharacterEllipsis"
                                  ToolTip="{Binding Title}"/>
                         <TextBlock Text="{Binding Location}"
@@ -165,7 +165,7 @@
                           ToolTip="Remove document from list"
                           VerticalAlignment="Center">
                         <materialDesign:PackIcon Kind="Close" 
-                                               Foreground="{DynamicResource ErrorBrush}"/>
+                                               Foreground="#F44336"/>
                     </Button>
                 </Grid>
             </materialDesign:Card>
@@ -181,7 +181,7 @@
         <!-- Material Design Header -->
         <materialDesign:ColorZone Grid.Row="0"
                                 Mode="PrimaryLight"
-                                Padding="{DynamicResource ContentPadding}"
+                                Padding="16"
                                 materialDesign:ElevationAssist.Elevation="Dp1">
             <Grid>
                 <Grid.RowDefinitions>
@@ -210,9 +210,9 @@
 
                     <materialDesign:Chip Grid.Column="2"
                                        Content="{Binding DocumentItems.Count, StringFormat='{}{0} docs'}"
-                                       Background="{DynamicResource PrimaryBrush}"
-                                       Foreground="{DynamicResource OnPrimaryBrush}"
-                                       FontSize="{DynamicResource CaptionFontSize}"
+                                       Background="#2196F3"
+                                       Foreground="White"
+                                       FontSize="12"
                                        VerticalAlignment="Center"/>
                 </Grid>
                 
@@ -225,22 +225,45 @@
                     
                     <TextBox Grid.Column="0"
                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                           Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                           materialDesign:HintAssist.Hint="Search by title or file path..."
-                           materialDesign:HintAssist.IsFloating="True"
-                           materialDesign:TextFieldAssist.HasLeadingIcon="True"
-                           materialDesign:TextFieldAssist.LeadingIcon="Magnify"
-                           FontSize="{DynamicResource BodyFontSize}"
-                           VerticalAlignment="Center"/>
+                           Background="White"
+                           BorderBrush="#CCCCCC"
+                           BorderThickness="1"
+                           Padding="8"
+                           FontSize="14"
+                           VerticalAlignment="Center">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <Border Background="{TemplateBinding Background}" 
+                                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="4">
+                                                <ScrollViewer x:Name="PART_ContentHost"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
                     
                     <Button Grid.Column="1"
                           Command="{Binding ClearSearchCommand}"
-                          Style="{StaticResource IconButtonStyle}"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          Width="32"
+                          Height="32"
                           ToolTip="Clear search"
                           Margin="8,0,0,0"
+                          Cursor="Hand"
                           Visibility="{Binding HasSearchText, Converter={StaticResource BoolToVisConverter}}">
-                        <materialDesign:PackIcon Kind="Close" 
-                                               Foreground="{DynamicResource ErrorBrush}"/>
+                        <TextBlock Text="✕" 
+                                   Foreground="#F44336"
+                                   FontSize="16"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                     </Button>
                 </Grid>
             </Grid>
@@ -251,7 +274,7 @@
                     VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Disabled"
                     materialDesign:ScrollViewerAssist.IsAutoHideEnabled="True"
-                    Padding="{DynamicResource ContentPadding}">
+                    Padding="16">
             <ItemsControl ItemsSource="{Binding DocumentItems}"
                         ItemTemplate="{StaticResource DocumentItemTemplate}"
                         Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisConverter}}">
@@ -280,17 +303,17 @@
                       Opacity="0.7">
                 <materialDesign:PackIcon Kind="FileDocumentMultiple"
                                        Width="64" Height="64"
-                                       Foreground="{DynamicResource DisabledBrush}"
+                                       Foreground="#BDBDBD"
                                        HorizontalAlignment="Center"
-                                       Margin="0,0,0,{DynamicResource LargeSpacing}"/>
+                                       Margin="0,0,0,16"/>
                 <TextBlock Text="No documents added"
                          Style="{StaticResource SubtitleTextStyle}"
                          HorizontalAlignment="Center"
-                         Foreground="{DynamicResource DisabledBrush}"/>
+                         Foreground="#BDBDBD"/>
                 <TextBlock Text="Drag and drop files here or use the Select Files button"
                          Style="{StaticResource CaptionTextStyle}"
                          HorizontalAlignment="Center"
-                         Foreground="{DynamicResource DisabledBrush}"
+                         Foreground="#BDBDBD"
                          Margin="0,4,0,0"/>
             </StackPanel>
         </Grid>

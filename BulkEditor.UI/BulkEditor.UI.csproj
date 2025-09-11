@@ -1,21 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\BulkEditor.Application\BulkEditor.Application.csproj" />
-    <ProjectReference Include="..\BulkEditor.Infrastructure\BulkEditor.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\version.json" Link="version.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -26,10 +10,48 @@
     <FileVersion>2.7.1.0</FileVersion>
     <Version>2.7.1.0</Version>
     <AssemblyTitle>Bulk Document Editor</AssemblyTitle>
-    <AssemblyDescription>Bulk Document Editor for processing Word documents with hyperlink validation and content optimization</AssemblyDescription>
+    <AssemblyDescription>Bulk Document Editor with Material Design 3</AssemblyDescription>
     <AssemblyCompany>DiaTech</AssemblyCompany>
     <AssemblyProduct>BulkEditor</AssemblyProduct>
     <AssemblyCopyright>Copyright (c) DiaTech 2024</AssemblyCopyright>
+
+    <!-- Material Design 3 Support -->
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultApplicationDefinition>true</EnableDefaultApplicationDefinition>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Material Design 3 Packages (Latest versions with MD3 support) -->
+    <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
+    <PackageReference Include="MaterialDesignColors" Version="5.2.1" />
+    <PackageReference Include="MaterialDesignThemes.MahApps" Version="5.2.1" />
+
+    <!-- Supporting packages for Material You features -->
+    <PackageReference Include="MaterialDesignExtensions" Version="3.3.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+
+    <!-- For dynamic theming support -->
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BulkEditor.Application\BulkEditor.Application.csproj" />
+    <ProjectReference Include="..\BulkEditor.Infrastructure\BulkEditor.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Material Design 3 Resource Files -->
+    <Resource Include="Resources\Fonts\**\*" />
+    <Resource Include="Resources\Icons\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\version.json" Link="version.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\appsettings.json" Link="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
