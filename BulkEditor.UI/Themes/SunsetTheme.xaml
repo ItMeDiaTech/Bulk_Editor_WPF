@@ -1,0 +1,52 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Sunset Theme - Warm Orange-Red Gradient Palette -->
+    
+    <!-- Primary Colors -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#D84315"/>
+    <SolidColorBrush x:Key="OnPrimaryBrush" Color="White"/>
+    <SolidColorBrush x:Key="PrimaryContainerBrush" Color="#FFDBCC"/>
+    <SolidColorBrush x:Key="OnPrimaryContainerBrush" Color="#2C0800"/>
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#C23A0F"/>
+    <SolidColorBrush x:Key="PrimaryPressedBrush" Color="#AD310A"/>
+    
+    <!-- Secondary Colors -->
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#FF8A65"/>
+    <SolidColorBrush x:Key="OnSecondaryBrush" Color="#1F0800"/>
+    <SolidColorBrush x:Key="SecondaryContainerBrush" Color="#FFE5DB"/>
+    <SolidColorBrush x:Key="OnSecondaryContainerBrush" Color="#2A0F00"/>
+    
+    <!-- Surface Colors -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#FFFBF9"/>
+    <SolidColorBrush x:Key="OnBackgroundBrush" Color="#1F1B19"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
+    <SolidColorBrush x:Key="OnSurfaceBrush" Color="#1F1B19"/>
+    <SolidColorBrush x:Key="SurfaceVariantBrush" Color="#F7F0ED"/>
+    <SolidColorBrush x:Key="OnSurfaceVariantBrush" Color="#52443D"/>
+    
+    <!-- Semantic State Colors -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#2E7D32"/>
+    <SolidColorBrush x:Key="OnSuccessBrush" Color="White"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#FF8F00"/>
+    <SolidColorBrush x:Key="OnWarningBrush" Color="White"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#D32F2F"/>
+    <SolidColorBrush x:Key="OnErrorBrush" Color="White"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="#1976D2"/>
+    <SolidColorBrush x:Key="OnInfoBrush" Color="White"/>
+    
+    <!-- Outline and Border Colors -->
+    <SolidColorBrush x:Key="OutlineBrush" Color="#85736B"/>
+    <SolidColorBrush x:Key="OutlineVariantBrush" Color="#D7C2B9"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#E5D4CA"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#F0E6DC"/>
+    
+    <!-- Card and Container Colors -->
+    <SolidColorBrush x:Key="CardBrush" Color="White"/>
+    <SolidColorBrush x:Key="ContainerBrush" Color="#FDF5F1"/>
+    
+    <!-- Container Hover/Pressed States -->
+    <SolidColorBrush x:Key="PrimaryContainerHoverBrush" Color="#FFCEB8"/>
+    <SolidColorBrush x:Key="PrimaryContainerPressedBrush" Color="#FFC1A4"/>
+
+</ResourceDictionary>

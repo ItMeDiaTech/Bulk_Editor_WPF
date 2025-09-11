@@ -1,0 +1,171 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    
+    <!-- Material Design 3 Typography Scale -->
+    <!-- https://m3.material.io/styles/typography/type-scale-tokens -->
+    
+    <!-- Font Family -->
+    <FontFamily x:Key="PrimaryFontFamily">Segoe UI</FontFamily>
+    <FontFamily x:Key="AppFontFamily">Segoe UI</FontFamily>
+    
+    <!-- Display Scale -->
+    <sys:Double x:Key="DisplayLargeFontSize">57</sys:Double>
+    <sys:Double x:Key="DisplayMediumFontSize">45</sys:Double>
+    <sys:Double x:Key="DisplaySmallFontSize">36</sys:Double>
+    <FontWeight x:Key="DisplayFontWeight">Normal</FontWeight>
+    
+    <!-- Headline Scale -->
+    <sys:Double x:Key="HeadlineLargeFontSize">32</sys:Double>
+    <sys:Double x:Key="HeadlineMediumFontSize">28</sys:Double>
+    <sys:Double x:Key="HeadlineSmallFontSize">24</sys:Double>
+    <FontWeight x:Key="HeadlineFontWeight">Normal</FontWeight>
+    
+    <!-- Title Scale -->
+    <sys:Double x:Key="TitleLargeFontSize">22</sys:Double>
+    <sys:Double x:Key="TitleMediumFontSize">16</sys:Double>
+    <sys:Double x:Key="TitleSmallFontSize">14</sys:Double>
+    <FontWeight x:Key="TitleLargeFontWeight">Normal</FontWeight>
+    <FontWeight x:Key="TitleMediumFontWeight">Medium</FontWeight>
+    <FontWeight x:Key="TitleSmallFontWeight">Medium</FontWeight>
+    
+    <!-- Body Scale -->
+    <sys:Double x:Key="BodyLargeFontSize">16</sys:Double>
+    <sys:Double x:Key="BodyMediumFontSize">14</sys:Double>
+    <sys:Double x:Key="BodySmallFontSize">12</sys:Double>
+    <FontWeight x:Key="BodyFontWeight">Normal</FontWeight>
+    
+    <!-- Label Scale -->
+    <sys:Double x:Key="LabelLargeFontSize">14</sys:Double>
+    <sys:Double x:Key="LabelMediumFontSize">12</sys:Double>
+    <sys:Double x:Key="LabelSmallFontSize">11</sys:Double>
+    <FontWeight x:Key="LabelFontWeight">Medium</FontWeight>
+    
+    <!-- Legacy Compatibility -->
+    <sys:Double x:Key="BodyFontSize">14</sys:Double>
+    <sys:Double x:Key="HeadlineFontSize">28</sys:Double>
+    <sys:Double x:Key="TitleFontSize">16</sys:Double>
+    <sys:Double x:Key="SubtitleFontSize">14</sys:Double>
+    <sys:Double x:Key="CaptionFontSize">12</sys:Double>
+    
+    <!-- Material Design 3 Text Styles -->
+    
+    <!-- Display Styles -->
+    <Style x:Key="DisplayLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource DisplayLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource DisplayFontWeight}"/>
+        <Setter Property="LineHeight" Value="64"/>
+    </Style>
+    
+    <Style x:Key="DisplayMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource DisplayMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource DisplayFontWeight}"/>
+        <Setter Property="LineHeight" Value="52"/>
+    </Style>
+    
+    <Style x:Key="DisplaySmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource DisplaySmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource DisplayFontWeight}"/>
+        <Setter Property="LineHeight" Value="44"/>
+    </Style>
+    
+    <!-- Headline Styles -->
+    <Style x:Key="HeadlineLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource HeadlineLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource HeadlineFontWeight}"/>
+        <Setter Property="LineHeight" Value="40"/>
+    </Style>
+    
+    <Style x:Key="HeadlineMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource HeadlineMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource HeadlineFontWeight}"/>
+        <Setter Property="LineHeight" Value="36"/>
+    </Style>
+    
+    <Style x:Key="HeadlineSmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource HeadlineSmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource HeadlineFontWeight}"/>
+        <Setter Property="LineHeight" Value="32"/>
+    </Style>
+    
+    <!-- Title Styles -->
+    <Style x:Key="TitleLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource TitleLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource TitleLargeFontWeight}"/>
+        <Setter Property="LineHeight" Value="28"/>
+    </Style>
+    
+    <Style x:Key="TitleMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource TitleMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource TitleMediumFontWeight}"/>
+        <Setter Property="LineHeight" Value="24"/>
+    </Style>
+    
+    <Style x:Key="TitleSmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource TitleSmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource TitleSmallFontWeight}"/>
+        <Setter Property="LineHeight" Value="20"/>
+    </Style>
+    
+    <!-- Body Styles -->
+    <Style x:Key="BodyLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource BodyLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource BodyFontWeight}"/>
+        <Setter Property="LineHeight" Value="24"/>
+    </Style>
+    
+    <Style x:Key="BodyMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource BodyMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource BodyFontWeight}"/>
+        <Setter Property="LineHeight" Value="20"/>
+    </Style>
+    
+    <Style x:Key="BodySmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource BodySmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource BodyFontWeight}"/>
+        <Setter Property="LineHeight" Value="16"/>
+    </Style>
+    
+    <!-- Label Styles -->
+    <Style x:Key="LabelLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
+        <Setter Property="LineHeight" Value="20"/>
+    </Style>
+    
+    <Style x:Key="LabelMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
+        <Setter Property="LineHeight" Value="16"/>
+    </Style>
+    
+    <Style x:Key="LabelSmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelSmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
+        <Setter Property="LineHeight" Value="16"/>
+    </Style>
+    
+    <!-- Legacy Styles for backward compatibility -->
+    <Style x:Key="SectionHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource HeadlineMediumTextStyle}"/>
+    <Style x:Key="SubtitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleMediumTextStyle}"/>
+    <Style x:Key="BodyTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyMediumTextStyle}"/>
+    <Style x:Key="CaptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodySmallTextStyle}">
+        <Setter Property="Opacity" Value="0.7"/>
+    </Style>
+
+</ResourceDictionary>

@@ -1,0 +1,167 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Modern Typography Scale System -->
+    
+    <!-- Font Families -->
+    <FontFamily x:Key="PrimaryFontFamily">Segoe UI</FontFamily>
+    <FontFamily x:Key="SecondaryFontFamily">Segoe UI</FontFamily>
+    <FontFamily x:Key="MonospaceFontFamily">Consolas</FontFamily>
+
+    <!-- Font Sizes - Modern Scale -->
+    <system:Double x:Key="DisplayFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">57</system:Double>
+    <system:Double x:Key="HeadlineLargeFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">32</system:Double>
+    <system:Double x:Key="HeadlineMediumFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">28</system:Double>
+    <system:Double x:Key="HeadlineSmallFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
+    <system:Double x:Key="TitleLargeFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">22</system:Double>
+    <system:Double x:Key="TitleMediumFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">16</system:Double>
+    <system:Double x:Key="TitleSmallFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
+    <system:Double x:Key="BodyLargeFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">16</system:Double>
+    <system:Double x:Key="BodyMediumFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
+    <system:Double x:Key="BodySmallFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
+    <system:Double x:Key="LabelLargeFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
+    <system:Double x:Key="LabelMediumFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
+    <system:Double x:Key="LabelSmallFontSize" xmlns:system="clr-namespace:System;assembly=mscorlib">11</system:Double>
+
+    <!-- Line Heights -->
+    <system:Double x:Key="DisplayLineHeight" xmlns:system="clr-namespace:System;assembly=mscorlib">1.12</system:Double>
+    <system:Double x:Key="HeadlineLineHeight" xmlns:system="clr-namespace:System;assembly=mscorlib">1.25</system:Double>
+    <system:Double x:Key="TitleLineHeight" xmlns:system="clr-namespace:System;assembly=mscorlib">1.43</system:Double>
+    <system:Double x:Key="BodyLineHeight" xmlns:system="clr-namespace:System;assembly=mscorlib">1.5</system:Double>
+    <system:Double x:Key="LabelLineHeight" xmlns:system="clr-namespace:System;assembly=mscorlib">1.33</system:Double>
+
+    <!-- Font Weights -->
+    <FontWeight x:Key="DisplayFontWeight">Normal</FontWeight>
+    <FontWeight x:Key="HeadlineFontWeight">Normal</FontWeight>
+    <FontWeight x:Key="TitleFontWeight">Medium</FontWeight>
+    <FontWeight x:Key="BodyFontWeight">Normal</FontWeight>
+    <FontWeight x:Key="LabelFontWeight">Medium</FontWeight>
+
+    <!-- Modern Text Styles -->
+    
+    <!-- Display Styles -->
+    <Style x:Key="DisplayTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource DisplayFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource DisplayFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource DisplayLineHeight}"/>
+    </Style>
+
+    <!-- Headline Styles -->
+    <Style x:Key="HeadlineLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource HeadlineLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource HeadlineFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource HeadlineLineHeight}"/>
+    </Style>
+
+    <Style x:Key="HeadlineMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource HeadlineMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource HeadlineFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource HeadlineLineHeight}"/>
+    </Style>
+
+    <Style x:Key="HeadlineSmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource HeadlineSmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource HeadlineFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource HeadlineLineHeight}"/>
+    </Style>
+
+    <!-- Title Styles -->
+    <Style x:Key="TitleLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource TitleLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource TitleFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource TitleLineHeight}"/>
+    </Style>
+
+    <Style x:Key="TitleMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource TitleMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource TitleFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource TitleLineHeight}"/>
+    </Style>
+
+    <Style x:Key="TitleSmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource TitleSmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource TitleFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource TitleLineHeight}"/>
+    </Style>
+
+    <!-- Body Styles -->
+    <Style x:Key="BodyLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource BodyLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource BodyFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource BodyLineHeight}"/>
+    </Style>
+
+    <Style x:Key="BodyMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource BodyMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource BodyFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource BodyLineHeight}"/>
+    </Style>
+
+    <Style x:Key="BodySmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource BodySmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource BodyFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnSurfaceVariantBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineHeight" Value="{StaticResource BodyLineHeight}"/>
+    </Style>
+
+    <!-- Label Styles -->
+    <Style x:Key="LabelLargeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelLargeFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="LineHeight" Value="{StaticResource LabelLineHeight}"/>
+    </Style>
+
+    <Style x:Key="LabelMediumTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnBackgroundBrush}"/>
+        <Setter Property="LineHeight" Value="{StaticResource LabelLineHeight}"/>
+    </Style>
+
+    <Style x:Key="LabelSmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelSmallFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnSurfaceVariantBrush}"/>
+        <Setter Property="LineHeight" Value="{StaticResource LabelLineHeight}"/>
+    </Style>
+
+    <!-- Legacy Aliases for Compatibility -->
+    <Style x:Key="SectionHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource HeadlineSmallTextStyle}"/>
+    <Style x:Key="SubtitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleMediumTextStyle}"/>
+    <Style x:Key="BodyTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyMediumTextStyle}"/>
+    <Style x:Key="CaptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodySmallTextStyle}"/>
+
+</ResourceDictionary>
