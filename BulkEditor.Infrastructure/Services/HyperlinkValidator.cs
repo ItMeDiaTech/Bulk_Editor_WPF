@@ -101,14 +101,24 @@ namespace BulkEditor.Infrastructure.Services
                     }
 
                     // Check for title differences and handle replacement/reporting
+                    _logger.LogInformation("🔄 INITIATING TITLE COMPARISON: Hyperlink_ID='{HyperlinkId}', Lookup_ID='{LookupId}', Content_ID='{ContentId}'",
+                        hyperlink.Id, result.LookupId, result.ContentId);
+
                     var titleComparison = await CheckTitleDifferenceAsync(hyperlink, result.LookupId, result.ContentId, cancellationToken).ConfigureAwait(false);
+                    
                     if (titleComparison.TitlesDiffer)
                     {
                         result.TitleComparison = titleComparison;
+                        _logger.LogInformation("✅ TITLE COMPARISON RESULT: TitleComparison ASSIGNED to result (TitlesDiffer=true) for Hyperlink_ID='{HyperlinkId}'", hyperlink.Id);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("🔄 TITLE COMPARISON RESULT: TitleComparison NOT ASSIGNED (TitlesDiffer=false) for Hyperlink_ID='{HyperlinkId}'", hyperlink.Id);
                     }
                 }
 
-                _logger.LogDebug("Hyperlink validation completed: {HyperlinkId} - Status: {Status}", hyperlink.Id, result.Status);
+                _logger.LogDebug("Hyperlink validation completed: {HyperlinkId} - Status: {Status}, TitleComparison: {HasTitleComparison}", 
+                    hyperlink.Id, result.Status, result.TitleComparison != null ? "ASSIGNED" : "NULL");
                 return result;
             }
             catch (Exception ex)
@@ -300,18 +310,28 @@ namespace BulkEditor.Infrastructure.Services
 
             try
             {
+                _logger.LogInformation("🔍 TITLE COMPARISON START: Lookup_ID='{LookupId}', Content_ID='{ContentId}', Hyperlink_ID='{HyperlinkId}'",
+                    lookupId, contentId, hyperlink.Id);
+
                 // Simulate API call to get document information
                 var apiRecord = await SimulateApiLookupAsync(lookupId, cancellationToken);
                 if (apiRecord == null || string.IsNullOrEmpty(apiRecord.Title))
                 {
+                    _logger.LogWarning("❌ TITLE COMPARISON ABORTED: No API record or title returned for Lookup_ID='{LookupId}'", lookupId);
                     return result;
                 }
+
+                _logger.LogInformation("📡 API RESPONSE: Lookup_ID='{LookupId}' -> Title='{ApiTitle}', Status='{Status}'",
+                    lookupId, apiRecord.Title, apiRecord.Status);
 
                 // Extract current title by removing Content ID suffix " (Last 5-6 of Content_ID)" and trailing whitespace
                 var currentDisplayText = hyperlink.DisplayText ?? string.Empty;
                 var currentTitle = ExtractTitleFromDisplayText(currentDisplayText);
                 // Remove trailing whitespace from API title for accurate comparison
                 var apiTitle = apiRecord.Title.TrimEnd();
+
+                _logger.LogInformation("🔄 TITLE EXTRACTION: DisplayText='{DisplayText}' -> ExtractedTitle='{CurrentTitle}', APITitle='{ApiTitle}'",
+                    currentDisplayText, currentTitle, apiTitle);
 
                 result.CurrentTitle = currentTitle;
                 result.ApiTitle = apiTitle;
@@ -322,8 +342,16 @@ namespace BulkEditor.Infrastructure.Services
                     result.TitlesDiffer = true;
                     result.ActionTaken = "Title difference detected";
 
-                    _logger.LogInformation("Title difference detected for lookup ID {LookupId}: Current='{CurrentTitle}', API='{ApiTitle}'",
+                    _logger.LogInformation("✅ TITLE DIFFERENCE DETECTED: Lookup_ID='{LookupId}', Current='{CurrentTitle}', API='{ApiTitle}', TitlesDiffer=TRUE",
                         lookupId, currentTitle, apiTitle);
+                }
+                else
+                {
+                    result.TitlesDiffer = false;
+                    result.ActionTaken = "Titles match - no action needed";
+
+                    _logger.LogInformation("🔄 TITLES MATCH: Lookup_ID='{LookupId}', Title='{Title}', TitlesDiffer=FALSE",
+                        lookupId, currentTitle);
                 }
 
                 return result;

@@ -383,7 +383,16 @@ namespace BulkEditor.Infrastructure.Services
                         // Handle title differences if detected
                         if (result.TitleComparison?.TitlesDiffer == true)
                         {
+                            _logger.LogInformation("📋 PROCESSING TITLE DIFFERENCE: Hyperlink_ID='{HyperlinkId}', TitleComparison Found - Calling HandleTitleDifferenceAsync", hyperlink.Id);
                             await HandleTitleDifferenceAsync(document, hyperlink, result.TitleComparison, cancellationToken);
+                        }
+                        else if (result.TitleComparison != null)
+                        {
+                            _logger.LogInformation("🔄 TITLE COMPARISON EXISTS BUT NO DIFFERENCE: Hyperlink_ID='{HyperlinkId}', TitlesDiffer=false", hyperlink.Id);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("❌ NO TITLE COMPARISON: Hyperlink_ID='{HyperlinkId}', TitleComparison=null", hyperlink.Id);
                         }
 
                         // Log change
@@ -627,13 +636,21 @@ namespace BulkEditor.Infrastructure.Services
                 foreach (var result in validationResults)
                 {
                     var hyperlink = document.Hyperlinks.FirstOrDefault(h => h.Id == result.HyperlinkId);
+                    _logger.LogInformation("🔍 TITLE-ONLY VALIDATION PROCESSING: Hyperlink_ID='{HyperlinkId}', TitleComparison={HasComparison}, TitlesDiffer={TitlesDiffer}",
+                        result.HyperlinkId, result.TitleComparison != null ? "EXISTS" : "NULL", result.TitleComparison?.TitlesDiffer ?? false);
+
                     if (hyperlink != null && result.TitleComparison != null && result.TitleComparison.TitlesDiffer)
                     {
+                        _logger.LogInformation("📋 TITLE-ONLY VALIDATION: Processing title difference for Hyperlink_ID='{HyperlinkId}'", hyperlink.Id);
                         await HandleTitleDifferenceAsync(document, hyperlink, result.TitleComparison, cancellationToken);
                         if (result.TitleComparison.WasReplaced)
                         {
                             titlesUpdated++;
                         }
+                    }
+                    else if (hyperlink == null)
+                    {
+                        _logger.LogWarning("❌ TITLE-ONLY VALIDATION: Hyperlink not found for Hyperlink_ID='{HyperlinkId}'", result.HyperlinkId);
                     }
                 }
 
