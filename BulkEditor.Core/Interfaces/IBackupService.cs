@@ -29,4 +29,17 @@ public interface IBackupService
     /// </summary>
     /// <param name="session">The session whose backups should be cleared.</param>
     void ClearBackups(Session session);
+
+    /// <summary>
+    /// Checks if any backup exists for the specified file across all sessions.
+    /// </summary>
+    /// <param name="filePath">The path to the file to check for existing backups.</param>
+    /// <returns>True if a backup exists for the file, otherwise false.</returns>
+    bool HasExistingBackup(string filePath);
+
+    /// <summary>
+    /// Removes all existing backups for the specified file across all sessions.
+    /// </summary>
+    /// <param name="filePath">The path to the file whose backups should be removed.</param>
+    void RemoveExistingBackups(string filePath);
 }

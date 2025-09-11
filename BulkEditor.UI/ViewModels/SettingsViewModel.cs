@@ -466,10 +466,33 @@ namespace BulkEditor.UI.ViewModels
             try
             {
                 await _configurationService.SaveSettingsAsync(_currentSettings);
+                
+                // CRITICAL FIX: Update the singleton AppSettings instance so changes take effect immediately
+                UpdateSingletonAppSettings();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error saving settings to file");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Updates the singleton AppSettings instance with new values so changes take effect immediately
+        /// </summary>
+        private void UpdateSingletonAppSettings()
+        {
+            try
+            {
+                // Use the existing CopySettingsTo method to update the singleton
+                CopySettingsTo(_currentSettings, _originalSettings);
+                
+                _logger.LogInformation("✅ MAIN SETTINGS SINGLETON UPDATED: AppSettings singleton instance updated with new values - AutoReplaceTitles: {AutoReplace}, API BaseUrl: '{BaseUrl}'",
+                    _originalSettings.Validation.AutoReplaceTitles, _originalSettings.Api.BaseUrl ?? "[Empty]");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating singleton AppSettings instance from main settings");
                 throw;
             }
         }

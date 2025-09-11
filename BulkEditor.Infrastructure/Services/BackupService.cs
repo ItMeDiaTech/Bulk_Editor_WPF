@@ -50,6 +50,9 @@ public class BackupService : IBackupService
             throw new FileNotFoundException("The specified file to back up was not found.", filePath);
         }
 
+        // Remove any existing backups for this file before creating a new one
+        RemoveExistingBackups(filePath);
+
         var sessionPath = Path.Combine(_backupRoot, session.SessionId.ToString());
         var backupPath = Path.Combine(sessionPath, Path.GetFileName(filePath));
 
@@ -108,6 +111,95 @@ public class BackupService : IBackupService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to clear backups for session: {SessionId}", session.SessionId);
+        }
+    }
+
+    /// <inheritdoc />
+    public bool HasExistingBackup(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            return false;
+        }
+
+        var fileName = Path.GetFileName(filePath);
+        
+        try
+        {
+            if (!Directory.Exists(_backupRoot))
+            {
+                return false;
+            }
+
+            // Check all session directories for a backup of this file
+            var sessionDirectories = Directory.GetDirectories(_backupRoot);
+            foreach (var sessionDir in sessionDirectories)
+            {
+                var backupPath = Path.Combine(sessionDir, fileName);
+                if (File.Exists(backupPath))
+                {
+                    _logger.LogDebug("Found existing backup for {FileName} in session {SessionDir}", fileName, Path.GetFileName(sessionDir));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check for existing backup of file: {FilePath}", filePath);
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public void RemoveExistingBackups(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            _logger.LogWarning("Cannot remove backups for non-existent file: {FilePath}", filePath);
+            return;
+        }
+
+        var fileName = Path.GetFileName(filePath);
+        var removedCount = 0;
+        
+        try
+        {
+            if (!Directory.Exists(_backupRoot))
+            {
+                return;
+            }
+
+            // Find and remove all existing backups for this file across all sessions
+            var sessionDirectories = Directory.GetDirectories(_backupRoot);
+            foreach (var sessionDir in sessionDirectories)
+            {
+                var backupPath = Path.Combine(sessionDir, fileName);
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                    removedCount++;
+                    _logger.LogInformation("Removed existing backup: {BackupPath}", backupPath);
+
+                    // Clean up empty session directories
+                    if (!Directory.GetFiles(sessionDir).Any() && !Directory.GetDirectories(sessionDir).Any())
+                    {
+                        Directory.Delete(sessionDir);
+                        _logger.LogInformation("Removed empty session directory: {SessionDir}", sessionDir);
+                    }
+                }
+            }
+
+            if (removedCount > 0)
+            {
+                _logger.LogInformation("Removed {Count} existing backup(s) for file: {FileName}", removedCount, fileName);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove existing backups for file: {FilePath}", filePath);
+            throw;
         }
     }
 }
