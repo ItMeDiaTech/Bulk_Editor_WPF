@@ -59,6 +59,22 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private int _timeoutPerDocumentMinutes = 10;
 
+        // Backup Settings
+        [ObservableProperty]
+        private string _backupDirectory = "Backups";
+
+        [ObservableProperty]
+        private bool _createTimestampedBackups = true;
+
+        [ObservableProperty]
+        private bool _compressBackups = false;
+
+        [ObservableProperty]
+        private bool _autoCleanupOldBackups = true;
+
+        [ObservableProperty]
+        private int _maxBackupAge = 30;
+
         // Replacement Rules
         [ObservableProperty]
         private ObservableCollection<HyperlinkReplacementRule> _hyperlinkRules = new();
@@ -137,6 +153,13 @@ namespace BulkEditor.UI.ViewModels
                     ReplaceCustomUserDefinedHyperlinks = currentSettings.Replacement.EnableHyperlinkReplacement;
                     ReplaceCustomUserDefinedText = currentSettings.Replacement.EnableTextReplacement;
 
+                    // Load backup settings
+                    BackupDirectory = currentSettings.Backup.BackupDirectory;
+                    CreateTimestampedBackups = currentSettings.Backup.CreateTimestampedBackups;
+                    CompressBackups = currentSettings.Backup.CompressBackups;
+                    AutoCleanupOldBackups = currentSettings.Backup.AutoCleanupOldBackups;
+                    MaxBackupAge = currentSettings.Backup.MaxBackupAge;
+
                     // Load custom replacement rules
                     HyperlinkRules.Clear();
                     if (currentSettings.Replacement.HyperlinkRules != null)
@@ -210,6 +233,13 @@ namespace BulkEditor.UI.ViewModels
                 currentSettings.Replacement.EnableHyperlinkReplacement = ReplaceCustomUserDefinedHyperlinks;
                 currentSettings.Replacement.EnableTextReplacement = ReplaceCustomUserDefinedText;
 
+                // Update backup settings
+                currentSettings.Backup.BackupDirectory = BackupDirectory;
+                currentSettings.Backup.CreateTimestampedBackups = CreateTimestampedBackups;
+                currentSettings.Backup.CompressBackups = CompressBackups;
+                currentSettings.Backup.AutoCleanupOldBackups = AutoCleanupOldBackups;
+                currentSettings.Backup.MaxBackupAge = MaxBackupAge;
+
                 // Save custom replacement rules
                 currentSettings.Replacement.HyperlinkRules = HyperlinkRules.ToList();
                 currentSettings.Replacement.TextRules = TextRules.ToList();
@@ -282,6 +312,13 @@ namespace BulkEditor.UI.ViewModels
                 CreateBackupBeforeProcessing = true;
                 MaxConcurrentDocuments = 5;
                 TimeoutPerDocumentMinutes = 10;
+
+                // Reset backup settings to defaults
+                BackupDirectory = "Backups";
+                CreateTimestampedBackups = true;
+                CompressBackups = false;
+                AutoCleanupOldBackups = true;
+                MaxBackupAge = 30;
 
                 // Clear all rules
                 HyperlinkRules.Clear();
@@ -499,6 +536,22 @@ namespace BulkEditor.UI.ViewModels
 
 
         [RelayCommand]
+        private void BrowseBackupDirectory()
+        {
+            var dialog = new OpenFolderDialog
+            {
+                Title = "Select Backup Directory",
+                InitialDirectory = BackupDirectory
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                BackupDirectory = dialog.FolderName;
+                _logger.LogInformation("Backup directory selected: {Directory}", BackupDirectory);
+            }
+        }
+
+        [RelayCommand]
         private void ClearAllTextRules()
         {
             var result = MessageBox.Show(
@@ -545,8 +598,15 @@ namespace BulkEditor.UI.ViewModels
                 _appSettings.Replacement.HyperlinkRules = newSettings.Replacement.HyperlinkRules;
                 _appSettings.Replacement.TextRules = newSettings.Replacement.TextRules;
 
-                _logger.LogInformation("✅ SINGLETON UPDATED: AppSettings singleton instance updated with new values - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}",
-                    _appSettings.Validation.AutoReplaceTitles, _appSettings.Replacement.EnableHyperlinkReplacement);
+                // Update Backup settings
+                _appSettings.Backup.BackupDirectory = newSettings.Backup.BackupDirectory;
+                _appSettings.Backup.CreateTimestampedBackups = newSettings.Backup.CreateTimestampedBackups;
+                _appSettings.Backup.CompressBackups = newSettings.Backup.CompressBackups;
+                _appSettings.Backup.AutoCleanupOldBackups = newSettings.Backup.AutoCleanupOldBackups;
+                _appSettings.Backup.MaxBackupAge = newSettings.Backup.MaxBackupAge;
+
+                _logger.LogInformation("✅ SINGLETON UPDATED: AppSettings singleton instance updated with new values - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}, BackupDirectory: {BackupDir}",
+                    _appSettings.Validation.AutoReplaceTitles, _appSettings.Replacement.EnableHyperlinkReplacement, _appSettings.Backup.BackupDirectory);
             }
             catch (Exception ex)
             {
