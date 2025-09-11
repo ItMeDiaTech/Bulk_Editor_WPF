@@ -527,6 +527,9 @@ namespace BulkEditor.Infrastructure.Services
                     // Update the hyperlink in the document
                     await UpdateHyperlinkTitleInDocumentAsync(document.FilePath, hyperlink, newDisplayText, cancellationToken);
 
+                    // CRITICAL FIX: Mark hyperlink for document update so title change gets written to file
+                    hyperlink.RequiresUpdate = true;
+
                     titleComparison.WasReplaced = true;
                     titleComparison.ActionTaken = "Title replaced with API response using Last 6 of Content_ID format";
 
@@ -541,7 +544,7 @@ namespace BulkEditor.Infrastructure.Services
                         Details = $"Content ID: {titleComparison.ContentId}, Last 6: {last6OfContentId}, Full new title: {newDisplayText}"
                     });
 
-                    _logger.LogInformation("Replaced hyperlink title: '{OldTitle}' -> '{NewTitle}' (Content ID: {ContentId}, Last 6: {Last6})",
+                    _logger.LogInformation("✓ TITLE REPLACEMENT APPLIED: '{OldTitle}' -> '{NewTitle}' (Content ID: {ContentId}, Last 6: {Last6}) - Hyperlink marked for document update",
                         titleComparison.CurrentTitle, cleanApiTitle, titleComparison.ContentId, last6OfContentId);
                 }
                 else if (validationSettings.ReportTitleDifferences)
@@ -2093,6 +2096,13 @@ namespace BulkEditor.Infrastructure.Services
 
                 _logger.LogInformation("Updating {Count} hyperlinks in document session using atomic VBA logic: {FileName}", hyperlinksToUpdate.Count, document.FileName);
 
+                // Enhanced logging: Log which hyperlinks are being updated and why
+                var titleReplacements = hyperlinksToUpdate.Where(h => h.DisplayText != null && h.DisplayText.Contains("(")).ToList();
+                if (titleReplacements.Any())
+                {
+                    _logger.LogInformation("✓ PROCESSING {Count} TITLE REPLACEMENTS in document session", titleReplacements.Count);
+                }
+
                 var hyperlinks = mainPart.Document.Body?.Descendants<OpenXmlHyperlink>().ToList() ?? new List<OpenXmlHyperlink>();
                 var processedRelationships = new HashSet<string>();
 
@@ -2344,7 +2354,7 @@ namespace BulkEditor.Infrastructure.Services
                         // CRITICAL FIX: Save the document after display text changes
                         mainPart.Document.Save();
 
-                        _logger.LogInformation("Applied display text changes to document: '{OldText}' -> '{NewText}'", openXmlHyperlink.InnerText, newDisplayText);
+                        _logger.LogInformation("✓ DISPLAY TEXT UPDATED IN DOCUMENT: '{OldText}' -> '{NewText}' (RelId: {RelId})", openXmlHyperlink.InnerText, newDisplayText, relationshipId);
                     }
                     catch (Exception textEx)
                     {
