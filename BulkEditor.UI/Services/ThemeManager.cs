@@ -68,13 +68,16 @@ namespace BulkEditor.UI.Services
         public void ApplyTheme(ThemeSettings themeSettings)
         {
             if (themeSettings == null)
-                throw new ArgumentNullException(nameof(themeSettings));
+            {
+                System.Diagnostics.Debug.WriteLine("ThemeSettings is null, using default theme");
+                themeSettings = new ThemeSettings();
+            }
 
             _currentTheme = themeSettings;
 
             try
             {
-                // Get current theme
+                // Get current theme - handle case where Material Design isn't loaded
                 var theme = _paletteHelper.GetTheme();
 
                 // Apply base theme (Light/Dark)
@@ -120,9 +123,22 @@ namespace BulkEditor.UI.Services
             }
             catch (Exception ex)
             {
-                // Log error and fallback to default theme
-                System.Diagnostics.Debug.WriteLine($"Error applying theme: {ex.Message}");
-                ApplyDefaultTheme();
+                // Log error and fallback to basic theme application
+                System.Diagnostics.Debug.WriteLine($"Error applying Material Design theme: {ex.Message}");
+                
+                // Try basic fallback - just apply custom colors without Material Design palette
+                try
+                {
+                    ApplyCustomColors(themeSettings.Colors);
+                    ApplyTypography(themeSettings.Typography);
+                    ApplyLayout(themeSettings.Layout);
+                    System.Diagnostics.Debug.WriteLine("Applied basic theme without Material Design palette");
+                }
+                catch (Exception fallbackEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Fallback theme application also failed: {fallbackEx.Message}");
+                    // If even the fallback fails, just continue - the app will use default WPF styling
+                }
             }
         }
 

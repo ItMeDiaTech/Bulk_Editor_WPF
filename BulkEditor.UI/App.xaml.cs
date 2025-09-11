@@ -155,18 +155,27 @@ namespace BulkEditor.UI
                 var databaseService = _serviceProvider.GetRequiredService<BulkEditor.Core.Services.IDatabaseService>();
                 await databaseService.InitializeAsync().WaitAsync(cts.Token).ConfigureAwait(false);
 
-                // Initialize theme on UI thread
+                // Initialize theme on UI thread after main window is shown
                 await Dispatcher.BeginInvoke(() =>
                 {
                     try
                     {
+                        // Ensure we have valid theme configuration
+                        if (appSettings.UI?.ThemeConfiguration == null)
+                        {
+                            appSettings.UI ??= new UiSettings();
+                            appSettings.UI.ThemeConfiguration = new ThemeSettings();
+                            Log.Information("Created default theme configuration");
+                        }
+
                         var themeManager = _serviceProvider.GetRequiredService<BulkEditor.UI.Services.IThemeManager>();
                         themeManager.ApplyTheme(appSettings.UI.ThemeConfiguration);
                         Log.Information("Theme applied successfully");
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "Failed to apply theme, using defaults");
+                        Log.Warning(ex, "Failed to apply theme, application will use default styling: {Message}", ex.Message);
+                        // Don't let theme errors prevent startup
                     }
                 });
 
@@ -337,6 +346,18 @@ namespace BulkEditor.UI
                     NetworkTimeoutSeconds = 10,
                     ShowOfflineIndicator = true,
                     CacheLastKnownNetworkState = true
+                },
+                UI = new UiSettings
+                {
+                    Theme = "Light",
+                    Language = "en-US",
+                    ShowProgressDetails = true,
+                    MinimizeToSystemTray = false,
+                    ConfirmBeforeProcessing = true,
+                    AutoSaveSettings = true,
+                    ConsultantEmail = string.Empty,
+                    Window = new WindowSettings(),
+                    ThemeConfiguration = new ThemeSettings()
                 }
             };
         }

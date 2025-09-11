@@ -35,8 +35,8 @@
             </Grid.RowDefinitions>
 
             <!-- Material Design App Bar -->
-            <materialDesign:ColorZone Grid.Row="0"
-                                    Mode="PrimaryMid"
+            <materialDesign:ColorZone Grid.Row="0" 
+                                    Mode="PrimaryMid" 
                                     Padding="{DynamicResource LargeSpacing}"
                                     materialDesign:ElevationAssist.Elevation="Dp4">
                 <DockPanel>
@@ -100,8 +100,8 @@
                 </materialDesign:Card>
 
                 <!-- Splitter -->
-                <GridSplitter Grid.Column="1"
-                            Width="{DynamicResource SmallSpacingValue}"
+                <GridSplitter Grid.Column="1" 
+                            Width="{DynamicResource SmallSpacing}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Stretch"
                             Background="{DynamicResource DividerBrush}"
@@ -111,39 +111,39 @@
                 <materialDesign:Card Grid.Column="2"
                                    Style="{StaticResource ModernCardStyle}"
                                    materialDesign:ElevationAssist.Elevation="Dp2">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" 
                                 materialDesign:ScrollViewerAssist.IsAutoHideEnabled="True">
                         <StackPanel>
 
                             <!-- Processing Section -->
-                            <Expander Header="Processing"
+                            <Expander Header="Processing" 
                                     IsExpanded="True"
                                     Style="{StaticResource MaterialDesignExpander}"
-                                    Margin="{DynamicResource LargeSpacingBottom}">
+                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
                                 <Expander.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}"
                                                  Style="{StaticResource SectionHeaderStyle}"/>
                                     </DataTemplate>
                                 </Expander.HeaderTemplate>
-                                <StackPanel Margin="{DynamicResource MediumSpacingTop}">
+                                <StackPanel Margin="0,{DynamicResource MediumSpacing},0,0">
                                     <Button Content="PROCESS DOCUMENTS"
                                             Command="{Binding ProcessDocumentsCommand}"
                                             Style="{StaticResource PrimaryActionButtonStyle}"
-                                            Margin="{DynamicResource MediumSpacingBottom}"
+                                            Margin="0,0,0,{DynamicResource MediumSpacing}"
                                             HorizontalAlignment="Stretch"/>
 
                                     <Button Content="PROCESSING OPTIONS"
                                             Command="{Binding OpenProcessingSettingsCommand}"
                                             Style="{StaticResource MaterialDesignOutlinedButton}"
                                             materialDesign:ButtonAssist.CornerRadius="{DynamicResource ButtonCornerRadius}"
-                                            Margin="{DynamicResource MediumSpacingBottom}"
+                                            Margin="0,0,0,{DynamicResource MediumSpacing}"
                                             HorizontalAlignment="Stretch"/>
 
                                     <Button Content="REVERT LAST PROCESS"
                                             Command="{Binding RevertLastSessionCommand}"
                                             Style="{StaticResource WarningButtonStyle}"
-                                            Margin="{DynamicResource MediumSpacingBottom}"
+                                            Margin="0,0,0,{DynamicResource MediumSpacing}"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="{Binding IsRevertEnabled}"
                                             Visibility="{Binding IsRevertEnabled, Converter={StaticResource BoolToVisibilityConverter}}"/>
@@ -157,60 +157,60 @@
                             </Expander>
 
                             <!-- Progress Section -->
-                            <Expander Header="Progress"
+                            <Expander Header="Progress" 
                                     IsExpanded="True"
                                     Style="{StaticResource MaterialDesignExpander}"
                                     Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    Margin="{DynamicResource LargeSpacingBottom}">
+                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
                                 <Expander.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}"
                                                  Style="{StaticResource SectionHeaderStyle}"/>
                                     </DataTemplate>
                                 </Expander.HeaderTemplate>
-                                <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp1"
-                                                   Margin="{DynamicResource MediumSpacingTop}">
+                                <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp1" 
+                                                   Margin="0,{DynamicResource MediumSpacing},0,0">
                                     <StackPanel Margin="{DynamicResource ContentPadding}">
                                         <!-- Overall Progress -->
-                                        <Grid Margin="{DynamicResource MediumSpacingBottom}">
+                                        <Grid Margin="0,0,0,{DynamicResource MediumSpacing}">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="Overall Progress"
+                                            <TextBlock Text="Overall Progress" 
                                                      Style="{StaticResource BodyTextStyle}"
                                                      FontWeight="{DynamicResource SubtitleFontWeight}"/>
-                                            <TextBlock Grid.Column="1"
-                                                     Text="{Binding OverallProgress, StringFormat='{}{0:F1}%'}"
+                                            <TextBlock Grid.Column="1" 
+                                                     Text="{Binding OverallProgress, StringFormat='{}{0:F1}%'}" 
                                                      Style="{StaticResource BodyTextStyle}"
-                                                     FontWeight="SemiBold"
+                                                     FontWeight="SemiBold" 
                                                      Foreground="{DynamicResource SuccessBrush}"/>
                                         </Grid>
-
+                                        
                                         <ProgressBar Value="{Binding OverallProgress}"
                                                    Maximum="100"
                                                    Height="8"
                                                    Style="{StaticResource MaterialDesignLinearProgressBar}"
                                                    Foreground="{DynamicResource SuccessBrush}"
-                                                   Margin="{DynamicResource MediumSpacingBottom}"/>
-
+                                                   Margin="0,0,0,{DynamicResource MediumSpacing}"/>
+                                        
                                         <!-- Status and Stats -->
-                                        <Grid Margin="{DynamicResource MediumSpacingBottom}">
+                                        <Grid Margin="0,0,0,{DynamicResource MediumSpacing}">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <materialDesign:Chip Grid.Column="0"
+                                            <materialDesign:Chip Grid.Column="0" 
                                                                Content="{Binding ProcessedDocuments, StringFormat='{}{0} / {}{1} docs', ConverterParameter={Binding TotalDocuments}}"
                                                                Background="{DynamicResource InfoBrush}"
                                                                Foreground="White"/>
-                                            <materialDesign:Chip Grid.Column="2"
+                                            <materialDesign:Chip Grid.Column="2" 
                                                                Content="{Binding ElapsedTime}"
                                                                Background="{DynamicResource WarningBrush}"
                                                                Foreground="White"/>
                                         </Grid>
-
+                                        
                                         <!-- Current Operation -->
                                         <TextBlock Text="{Binding CurrentOperation}"
                                                  Style="{StaticResource CaptionTextStyle}"
@@ -221,18 +221,18 @@
                             </Expander>
 
                             <!-- Statistics Section -->
-                            <Expander Header="Statistics"
+                            <Expander Header="Statistics" 
                                     IsExpanded="True"
                                     Style="{StaticResource MaterialDesignExpander}"
-                                    Margin="{DynamicResource LargeSpacingBottom}">
+                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
                                 <Expander.HeaderTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}"
                                                  Style="{StaticResource SectionHeaderStyle}"/>
                                     </DataTemplate>
                                 </Expander.HeaderTemplate>
-                                <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp1"
-                                                   Margin="{DynamicResource MediumSpacingTop}">
+                                <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp1" 
+                                                   Margin="0,{DynamicResource MediumSpacing},0,0">
                                     <Grid Margin="{DynamicResource ContentPadding}">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
@@ -244,32 +244,32 @@
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Document Stats -->
-                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="{DynamicResource MediumSpacingRight}">
-                                            <materialDesign:Card Background="{DynamicResource SuccessBrush}"
-                                                               Padding="{DynamicResource MediumSpacing}"
-                                                               Margin="{DynamicResource SmallSpacingBottom}">
+                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,{DynamicResource MediumSpacing},0">
+                                            <materialDesign:Card Background="{DynamicResource SuccessBrush}" 
+                                                               Padding="{DynamicResource MediumSpacing}" 
+                                                               Margin="0,0,0,{DynamicResource SmallSpacing}">
                                                 <StackPanel>
-                                                    <TextBlock Text="{Binding ProcessedDocuments}"
+                                                    <TextBlock Text="{Binding ProcessedDocuments}" 
                                                              Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Processed"
+                                                    <TextBlock Text="Processed" 
                                                              Style="{StaticResource CaptionTextStyle}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </materialDesign:Card>
-
-                                            <materialDesign:Card Background="{DynamicResource ErrorBrush}"
+                                            
+                                            <materialDesign:Card Background="{DynamicResource ErrorBrush}" 
                                                                Padding="{DynamicResource MediumSpacing}">
                                                 <StackPanel>
-                                                    <TextBlock Text="{Binding FailedDocuments}"
+                                                    <TextBlock Text="{Binding FailedDocuments}" 
                                                              Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Failed"
+                                                    <TextBlock Text="Failed" 
                                                              Style="{StaticResource CaptionTextStyle}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </materialDesign:Card>
@@ -277,52 +277,52 @@
 
                                         <!-- Hyperlink Stats -->
                                         <StackPanel Grid.Row="0" Grid.Column="1">
-                                            <materialDesign:Card Background="{DynamicResource InfoBrush}"
-                                                               Padding="{DynamicResource MediumSpacing}"
-                                                               Margin="{DynamicResource SmallSpacingBottom}">
+                                            <materialDesign:Card Background="{DynamicResource InfoBrush}" 
+                                                               Padding="{DynamicResource MediumSpacing}" 
+                                                               Margin="0,0,0,{DynamicResource SmallSpacing}">
                                                 <StackPanel>
-                                                    <TextBlock Text="{Binding TotalHyperlinksFound}"
+                                                    <TextBlock Text="{Binding TotalHyperlinksFound}" 
                                                              Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Links Found"
+                                                    <TextBlock Text="Links Found" 
                                                              Style="{StaticResource CaptionTextStyle}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </materialDesign:Card>
-
-                                            <materialDesign:Card Background="{DynamicResource WarningBrush}"
+                                            
+                                            <materialDesign:Card Background="{DynamicResource WarningBrush}" 
                                                                Padding="{DynamicResource MediumSpacing}">
                                                 <StackPanel>
-                                                    <TextBlock Text="{Binding TotalHyperlinksUpdated}"
+                                                    <TextBlock Text="{Binding TotalHyperlinksUpdated}" 
                                                              Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              HorizontalAlignment="Center"/>
-                                                    <TextBlock Text="Links Updated"
+                                                    <TextBlock Text="Links Updated" 
                                                              Style="{StaticResource CaptionTextStyle}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              HorizontalAlignment="Center"/>
                                                 </StackPanel>
                                             </materialDesign:Card>
                                         </StackPanel>
 
                                         <!-- Status -->
-                                        <materialDesign:Card Grid.Row="1" Grid.ColumnSpan="2"
-                                                           Background="{DynamicResource SurfaceBrush}"
-                                                           Padding="{DynamicResource MediumSpacing}"
-                                                           Margin="{DynamicResource MediumSpacingTop}">
+                                        <materialDesign:Card Grid.Row="1" Grid.ColumnSpan="2" 
+                                                           Background="{DynamicResource SurfaceBrush}" 
+                                                           Padding="{DynamicResource MediumSpacing}" 
+                                                           Margin="0,{DynamicResource MediumSpacing},0,0">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <materialDesign:PackIcon Kind="Information"
-                                                                       VerticalAlignment="Center"
+                                                <materialDesign:PackIcon Kind="Information" 
+                                                                       VerticalAlignment="Center" 
                                                                        Foreground="{DynamicResource InfoBrush}"
-                                                                       Margin="{DynamicResource MediumSpacingRight}"/>
-                                                <TextBlock Grid.Column="1"
-                                                         Text="{Binding StatusMessage}"
+                                                                       Margin="0,0,{DynamicResource MediumSpacing},0"/>
+                                                <TextBlock Grid.Column="1" 
+                                                         Text="{Binding StatusMessage}" 
                                                          Style="{StaticResource BodyTextStyle}"
                                                          TextTrimming="CharacterEllipsis"
                                                          VerticalAlignment="Center"/>
@@ -333,44 +333,44 @@
                             </Expander>
 
                             <!-- Recent Errors Section -->
-                            <Expander Header="Recent Issues"
+                            <Expander Header="Recent Issues" 
                                     IsExpanded="False"
                                     Style="{StaticResource MaterialDesignExpander}"
                                     Visibility="{Binding RecentErrors.Count, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    Margin="{DynamicResource LargeSpacingBottom}">
+                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
                                 <Expander.HeaderTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="AlertCircle"
-                                                                   Foreground="{DynamicResource ErrorBrush}"
-                                                                   VerticalAlignment="Center"
-                                                                   Margin="{DynamicResource SmallSpacingRight}"/>
+                                            <materialDesign:PackIcon Kind="AlertCircle" 
+                                                                   Foreground="{DynamicResource ErrorBrush}" 
+                                                                   VerticalAlignment="Center" 
+                                                                   Margin="0,0,{DynamicResource SmallSpacing},0"/>
                                             <TextBlock Text="{Binding}"
                                                      Style="{StaticResource SectionHeaderStyle}"
                                                      Foreground="{DynamicResource ErrorBrush}"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </Expander.HeaderTemplate>
-                                <ItemsControl ItemsSource="{Binding RecentErrors}"
-                                            Margin="{DynamicResource MediumSpacingTop}">
+                                <ItemsControl ItemsSource="{Binding RecentErrors}" 
+                                            Margin="0,{DynamicResource MediumSpacing},0,0">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <materialDesign:Card Background="{DynamicResource ErrorBrush}"
-                                                               Margin="{DynamicResource SmallSpacingBottom}"
+                                            <materialDesign:Card Background="{DynamicResource ErrorBrush}" 
+                                                               Margin="0,0,0,{DynamicResource SmallSpacing}"
                                                                Padding="{DynamicResource MediumSpacing}">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <materialDesign:PackIcon Kind="Error"
-                                                                           Foreground="White"
-                                                                           VerticalAlignment="Top"
-                                                                           Margin="{DynamicResource MediumSpacingRight}"/>
-                                                    <TextBlock Grid.Column="1"
-                                                             Text="{Binding}"
+                                                    <materialDesign:PackIcon Kind="Error" 
+                                                                           Foreground="White" 
+                                                                           VerticalAlignment="Top" 
+                                                                           Margin="0,0,{DynamicResource MediumSpacing},0"/>
+                                                    <TextBlock Grid.Column="1" 
+                                                             Text="{Binding}" 
                                                              Style="{StaticResource BodyTextStyle}"
-                                                             Foreground="White"
+                                                             Foreground="White" 
                                                              TextWrapping="Wrap"/>
                                                 </Grid>
                                             </materialDesign:Card>
@@ -380,18 +380,18 @@
                             </Expander>
 
                             <!-- Background Tasks Section -->
-                            <Expander Header="Active Tasks"
+                            <Expander Header="Active Tasks" 
                                     IsExpanded="True"
                                     Style="{StaticResource MaterialDesignExpander}"
                                     Visibility="{Binding ActiveTasks.Count, Converter={StaticResource CountToVisibilityConverter}}"
-                                    Margin="{DynamicResource LargeSpacingBottom}">
+                                    Margin="0,0,0,{DynamicResource LargeSpacing}">
                                 <Expander.HeaderTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="Cog"
-                                                                   Foreground="{DynamicResource InfoBrush}"
-                                                                   VerticalAlignment="Center"
-                                                                   Margin="{DynamicResource SmallSpacingRight}">
+                                            <materialDesign:PackIcon Kind="Cog" 
+                                                                   Foreground="{DynamicResource InfoBrush}" 
+                                                                   VerticalAlignment="Center" 
+                                                                   Margin="0,0,{DynamicResource SmallSpacing},0">
                                                 <materialDesign:PackIcon.RenderTransform>
                                                     <RotateTransform/>
                                                 </materialDesign:PackIcon.RenderTransform>
@@ -399,7 +399,7 @@
                                                     <EventTrigger RoutedEvent="Loaded">
                                                         <BeginStoryboard>
                                                             <Storyboard RepeatBehavior="Forever">
-                                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle"
+                                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle" 
                                                                                From="0" To="360" Duration="0:0:2"/>
                                                             </Storyboard>
                                                         </BeginStoryboard>
@@ -412,12 +412,12 @@
                                         </StackPanel>
                                     </DataTemplate>
                                 </Expander.HeaderTemplate>
-                                <ItemsControl ItemsSource="{Binding ActiveTasks}"
-                                            Margin="{DynamicResource MediumSpacingTop}">
+                                <ItemsControl ItemsSource="{Binding ActiveTasks}" 
+                                            Margin="0,{DynamicResource MediumSpacing},0,0">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <materialDesign:Card Background="{DynamicResource InfoBrush}"
-                                                               Margin="{DynamicResource SmallSpacingBottom}"
+                                            <materialDesign:Card Background="{DynamicResource InfoBrush}" 
+                                                               Margin="0,0,0,{DynamicResource SmallSpacing}"
                                                                Padding="{DynamicResource MediumSpacing}">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
@@ -425,23 +425,23 @@
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
                                                     <StackPanel Grid.Column="0">
-                                                        <TextBlock Text="{Binding Name}"
+                                                        <TextBlock Text="{Binding Name}" 
                                                                  Style="{StaticResource BodyTextStyle}"
                                                                  FontWeight="SemiBold"
                                                                  Foreground="White"/>
-                                                        <TextBlock Text="{Binding Description}"
+                                                        <TextBlock Text="{Binding Description}" 
                                                                  Style="{StaticResource CaptionTextStyle}"
                                                                  Foreground="White"
                                                                  TextWrapping="Wrap"
-                                                                 Margin="{DynamicResource SmallSpacingTop}"/>
+                                                                 Margin="0,{DynamicResource SmallSpacing},0,0"/>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                                                        <materialDesign:Chip Content="{Binding Status}"
-                                                                           Background="White"
+                                                        <materialDesign:Chip Content="{Binding Status}" 
+                                                                           Background="White" 
                                                                            Foreground="{DynamicResource InfoBrush}"
                                                                            FontSize="{DynamicResource CaptionFontSize}"
-                                                                           Margin="{DynamicResource SmallSpacingBottom}"/>
-                                                        <TextBlock Text="{Binding ElapsedTime, StringFormat='hh\\:mm\\:ss'}"
+                                                                           Margin="0,0,0,{DynamicResource SmallSpacing}"/>
+                                                        <TextBlock Text="{Binding ElapsedTime, StringFormat='hh\\:mm\\:ss'}" 
                                                                  Style="{StaticResource CaptionTextStyle}"
                                                                  Foreground="White"
                                                                  HorizontalAlignment="Right"/>
@@ -454,7 +454,7 @@
                             </Expander>
 
                             <!-- Quick Actions Section -->
-                            <Expander Header="Quick Actions"
+                            <Expander Header="Quick Actions" 
                                     IsExpanded="True"
                                     Style="{StaticResource MaterialDesignExpander}">
                                 <Expander.HeaderTemplate>
@@ -463,13 +463,13 @@
                                                  Style="{StaticResource SectionHeaderStyle}"/>
                                     </DataTemplate>
                                 </Expander.HeaderTemplate>
-                                <StackPanel Margin="{DynamicResource MediumSpacingTop}">
+                                <StackPanel Margin="0,{DynamicResource MediumSpacing},0,0">
                                     <Button Content="EXPORT RESULTS"
                                             Command="{Binding ExportResultsCommand}"
                                             Style="{StaticResource SecondaryButtonStyle}"
                                             HorizontalAlignment="Stretch"
-                                            Margin="{DynamicResource MediumSpacingBottom}"/>
-
+                                            Margin="0,0,0,{DynamicResource MediumSpacing}"/>
+                                    
                                     <Button Content="OPEN LOGS FOLDER"
                                             Style="{StaticResource FlatButtonStyle}"
                                             HorizontalAlignment="Stretch"/>
@@ -482,8 +482,8 @@
             </Grid>
 
             <!-- Material Design Status Bar -->
-            <materialDesign:ColorZone Grid.Row="2"
-                                    Mode="PrimaryLight"
+            <materialDesign:ColorZone Grid.Row="2" 
+                                    Mode="PrimaryLight" 
                                     Padding="{DynamicResource LargeSpacing}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -498,7 +498,7 @@
                                            Kind="{Binding StatusIcon}"
                                            Foreground="{Binding StatusIconColor}"
                                            VerticalAlignment="Center"
-                                           Margin="{DynamicResource MediumSpacingRight}"
+                                           Margin="0,0,{DynamicResource MediumSpacing},0"
                                            Visibility="{Binding ShowStatusIcon, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
                     <!-- Status Message -->
@@ -508,8 +508,8 @@
                              VerticalAlignment="Center"/>
 
                     <!-- Progress Info -->
-                    <StackPanel Grid.Column="2"
-                               Orientation="Horizontal"
+                    <StackPanel Grid.Column="2" 
+                               Orientation="Horizontal" 
                                VerticalAlignment="Center"
                                Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
                                Margin="24,0">
@@ -518,7 +518,7 @@
                                    Width="120"
                                    Height="6"
                                    Style="{StaticResource MaterialDesignLinearProgressBar}"
-                                   Margin="{DynamicResource MediumSpacingRight}"/>
+                                   Margin="0,0,{DynamicResource MediumSpacing},0"/>
                         <TextBlock Text="{Binding ProgressValue, StringFormat='{}{0:F0}%'}"
                                  Style="{StaticResource CaptionTextStyle}"
                                  VerticalAlignment="Center"/>
@@ -546,7 +546,7 @@
                                    Height="6"
                                    IsIndeterminate="True"
                                    Style="{StaticResource MaterialDesignLinearProgressBar}"
-                                   Margin="{DynamicResource LargeSpacingBottom}"/>
+                                   Margin="0,0,0,{DynamicResource LargeSpacing}"/>
                         <TextBlock Text="{Binding BusyMessage}"
                                  Style="{StaticResource BodyTextStyle}"
                                  HorizontalAlignment="Center"

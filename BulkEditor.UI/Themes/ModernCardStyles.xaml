@@ -2,8 +2,25 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
 
-    <!-- Modern Card Style -->
-    <Style x:Key="ModernCardStyle" TargetType="{x:Type materialDesign:Card}">
+    <!-- Material Design Card Styles with Fallbacks -->
+
+    <!-- Fallback MaterialDesign Card Style in case the main one doesn't load -->
+    <Style x:Key="MaterialDesignCard" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="8"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="6" ShadowDepth="2"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Modern Card Style that extends MaterialDesign -->
+    <Style x:Key="ModernCardStyle" TargetType="{x:Type materialDesign:Card}" BasedOn="{StaticResource MaterialDesignCard}">
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="Padding" Value="{DynamicResource CardPadding}"/>
         <Setter Property="Margin" Value="{DynamicResource MediumSpacing}"/>
@@ -15,37 +32,48 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Fallback Modern Card Style for Border in case materialDesign:Card fails -->
+    <Style x:Key="ModernCardStyleBorder" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="8"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="6" ShadowDepth="2"/>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="12" ShadowDepth="4"/>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Content Card Style -->
     <Style x:Key="ContentCardStyle" TargetType="{x:Type Border}">
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource CardCornerRadius}"/>
-        <Setter Property="Padding" Value="{DynamicResource CardPadding}"/>
-        <Setter Property="Margin" Value="{DynamicResource MediumSpacing}"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Margin" Value="8"/>
         <Setter Property="Effect">
             <Setter.Value>
-                <DropShadowEffect Color="Black" 
-                                Opacity="{DynamicResource ShadowOpacity}" 
-                                BlurRadius="{DynamicResource ShadowBlurRadius}" 
-                                ShadowDepth="{DynamicResource ShadowDepth}" 
-                                Direction="270"/>
+                <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="6" ShadowDepth="2"/>
             </Setter.Value>
         </Setter>
         <Style.Triggers>
-            <DataTrigger Binding="{DynamicResource EnableShadows}" Value="False">
-                <Setter Property="Effect" Value="{x:Null}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-            </DataTrigger>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Effect">
                     <Setter.Value>
-                        <DropShadowEffect Color="Black" 
-                                        Opacity="{DynamicResource ShadowOpacity}" 
-                                        BlurRadius="12" 
-                                        ShadowDepth="4" 
-                                        Direction="270"/>
+                        <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="12" ShadowDepth="4"/>
                     </Setter.Value>
                 </Setter>
             </Trigger>
@@ -64,119 +92,23 @@
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource CornerRadius}"/>
+        <Setter Property="CornerRadius" Value="4"/>
         <Setter Property="Padding" Value="16,12"/>
         <Setter Property="Margin" Value="4,2"/>
         <Setter Property="Effect">
             <Setter.Value>
-                <DropShadowEffect Color="Black" 
-                                Opacity="0.06" 
-                                BlurRadius="4" 
-                                ShadowDepth="1" 
-                                Direction="270"/>
+                <DropShadowEffect Color="Black" Opacity="0.06" BlurRadius="4" ShadowDepth="1"/>
             </Setter.Value>
         </Setter>
         <Style.Triggers>
-            <DataTrigger Binding="{DynamicResource EnableShadows}" Value="False">
-                <Setter Property="Effect" Value="{x:Null}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-            </DataTrigger>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Effect">
                     <Setter.Value>
-                        <DropShadowEffect Color="Black" 
-                                        Opacity="0.12" 
-                                        BlurRadius="8" 
-                                        ShadowDepth="2" 
-                                        Direction="270"/>
+                        <DropShadowEffect Color="Black" Opacity="0.12" BlurRadius="8" ShadowDepth="2"/>
                     </Setter.Value>
                 </Setter>
             </Trigger>
         </Style.Triggers>
-    </Style>
-
-    <!-- Panel Container Style -->
-    <Style x:Key="PanelContainerStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource CornerRadius}"/>
-        <Setter Property="Padding" Value="{DynamicResource ContentPadding}"/>
-        <Setter Property="Margin" Value="{DynamicResource SmallSpacing}"/>
-    </Style>
-
-    <!-- Section Header Style -->
-    <Style x:Key="SectionHeaderStyle" TargetType="{x:Type TextBlock}">
-        <Setter Property="FontSize" Value="{DynamicResource TitleFontSize}"/>
-        <Setter Property="FontWeight" Value="{DynamicResource TitleFontWeight}"/>
-        <Setter Property="FontFamily" Value="{DynamicResource HeadlineFontFamily}"/>
-        <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
-        <Setter Property="Margin" Value="0,0,0,16"/>
-    </Style>
-
-    <!-- Section Subheader Style -->
-    <Style x:Key="SectionSubheaderStyle" TargetType="{x:Type TextBlock}">
-        <Setter Property="FontSize" Value="{DynamicResource SubtitleFontSize}"/>
-        <Setter Property="FontWeight" Value="{DynamicResource SubtitleFontWeight}"/>
-        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
-        <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
-        <Setter Property="Margin" Value="0,0,0,12"/>
-    </Style>
-
-    <!-- Body Text Style -->
-    <Style x:Key="BodyTextStyle" TargetType="{x:Type TextBlock}">
-        <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
-        <Setter Property="FontWeight" Value="{DynamicResource BodyFontWeight}"/>
-        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
-        <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
-        <Setter Property="TextWrapping" Value="Wrap"/>
-        <Setter Property="LineHeight" Value="1.5"/>
-    </Style>
-
-    <!-- Caption Text Style -->
-    <Style x:Key="CaptionTextStyle" TargetType="{x:Type TextBlock}">
-        <Setter Property="FontSize" Value="{DynamicResource CaptionFontSize}"/>
-        <Setter Property="FontWeight" Value="{DynamicResource CaptionFontWeight}"/>
-        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
-        <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
-        <Setter Property="Opacity" Value="0.7"/>
-    </Style>
-
-    <!-- Success Status Style -->
-    <Style x:Key="SuccessStatusStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
-        <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="8,4"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-
-    <!-- Warning Status Style -->
-    <Style x:Key="WarningStatusStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
-        <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="8,4"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-
-    <!-- Error Status Style -->
-    <Style x:Key="ErrorStatusStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="{DynamicResource ErrorBrush}"/>
-        <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="8,4"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-
-    <!-- Info Status Style -->
-    <Style x:Key="InfoStatusStyle" TargetType="{x:Type Border}">
-        <Setter Property="Background" Value="{DynamicResource InfoBrush}"/>
-        <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="8,4"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
 </ResourceDictionary>

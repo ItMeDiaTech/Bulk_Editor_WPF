@@ -1128,7 +1128,7 @@ namespace BulkEditor.UI.ViewModels
         /// CRITICAL FIX: Async method to open processing settings without blocking UI thread
         /// </summary>
         [RelayCommand]
-        private async Task OpenProcessingSettingsAsync()
+        private void OpenProcessingSettings()
         {
             try
             {

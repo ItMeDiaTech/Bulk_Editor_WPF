@@ -1,0 +1,50 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Minimal working Material Design theme overrides -->
+    
+    <!-- Basic spacing resources -->
+    <Thickness x:Key="SmallSpacing">4</Thickness>
+    <Thickness x:Key="MediumSpacing">8</Thickness>
+    <Thickness x:Key="LargeSpacing">16</Thickness>
+    <Thickness x:Key="ExtraLargeSpacing">24</Thickness>
+    
+    <!-- Common spacing patterns -->
+    <Thickness x:Key="SmallSpacingBottom">0,0,0,4</Thickness>
+    <Thickness x:Key="MediumSpacingBottom">0,0,0,8</Thickness>
+    <Thickness x:Key="LargeSpacingBottom">0,0,0,16</Thickness>
+    <Thickness x:Key="SmallSpacingTop">0,8,0,0</Thickness>
+    <Thickness x:Key="MediumSpacingTop">0,8,0,0</Thickness>
+    <Thickness x:Key="LargeSpacingTop">0,16,0,0</Thickness>
+    <Thickness x:Key="SmallSpacingRight">0,0,4,0</Thickness>
+    <Thickness x:Key="MediumSpacingRight">0,0,8,0</Thickness>
+    
+    <system:Double x:Key="SmallSpacingValue" xmlns:system="clr-namespace:System;assembly=mscorlib">4</system:Double>
+    
+    <!-- Simple text styles -->
+    <Style x:Key="SectionHeaderStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <Style x:Key="BodyTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="CaptionTextStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Opacity" Value="0.7"/>
+    </Style>
+
+    <Style x:Key="MaterialDesignHeadline4TextBlock" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="34"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="Margin" Value="0,8,0,8"/>
+    </Style>
+
+</ResourceDictionary>
