@@ -1352,16 +1352,45 @@ namespace BulkEditor.Infrastructure.Services
 
                     if (!string.Equals(titleWithoutContentId, rec.Title, StringComparison.OrdinalIgnoreCase))
                     {
-                        document.ChangeLog.Changes.Add(new ChangeEntry
+                        if (_appSettings.Validation.AutoReplaceTitles)
                         {
-                            Type = ChangeType.PossibleTitleChange,
-                            Description = "Possible Title Change",
-                            OldValue = titleWithoutContentId,
-                            NewValue = rec.Title,
-                            ElementId = hyperlink.Id,
-                            Details = $"Content ID: {rec.Content_ID}"
-                        });
-                        _logger.LogInformation("Detected title difference: Current='{Current}', API='{Api}'", titleWithoutContentId, rec.Title);
+                            // AUTO REPLACE TITLES: Actually replace the title with API response
+                            var cleanApiTitle = rec.Title.TrimEnd();
+                            var last6OfContentId = rec.Content_ID.Length >= 6 ? 
+                                rec.Content_ID.Substring(rec.Content_ID.Length - 6) : rec.Content_ID;
+                            var newDisplayText = $"{cleanApiTitle} ({last6OfContentId})";
+                            
+                            hyperlink.DisplayText = newDisplayText;
+                            hyperlink.RequiresUpdate = true;
+                            
+                            // Log the replacement
+                            document.ChangeLog.Changes.Add(new ChangeEntry
+                            {
+                                Type = ChangeType.TitleReplaced,
+                                Description = "Title replaced with API response using VBA workflow",
+                                OldValue = titleWithoutContentId,
+                                NewValue = cleanApiTitle,
+                                ElementId = hyperlink.Id,
+                                Details = $"Content ID: {rec.Content_ID}, Last 6: {last6OfContentId}, Full new title: {newDisplayText}"
+                            });
+                            
+                            _logger.LogInformation("✓ VBA TITLE REPLACEMENT: '{OldTitle}' -> '{NewTitle}' (Content ID: {ContentId}, Last 6: {Last6}) - Hyperlink marked for update", 
+                                titleWithoutContentId, cleanApiTitle, rec.Content_ID, last6OfContentId);
+                        }
+                        else if (_appSettings.Validation.ReportTitleDifferences)
+                        {
+                            // REPORT ONLY: Log title difference to changelog without replacing
+                            document.ChangeLog.Changes.Add(new ChangeEntry
+                            {
+                                Type = ChangeType.PossibleTitleChange,
+                                Description = "Possible Title Change",
+                                OldValue = titleWithoutContentId,
+                                NewValue = rec.Title,
+                                ElementId = hyperlink.Id,
+                                Details = $"Content ID: {rec.Content_ID}"
+                            });
+                            _logger.LogInformation("Detected title difference: Current='{Current}', API='{Api}'", titleWithoutContentId, rec.Title);
+                        }
                     }
                 }
 
