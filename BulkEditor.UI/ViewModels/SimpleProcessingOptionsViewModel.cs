@@ -22,6 +22,7 @@ namespace BulkEditor.UI.ViewModels
         private readonly ILoggingService _logger;
         private readonly INotificationService _notificationService;
         private readonly BulkEditor.Core.Services.IConfigurationService _configurationService;
+        private readonly BulkEditor.Core.Configuration.AppSettings _appSettings;
 
         // Processing Options
         [ObservableProperty]
@@ -72,11 +73,13 @@ namespace BulkEditor.UI.ViewModels
         public SimpleProcessingOptionsViewModel(
             ILoggingService logger,
             INotificationService notificationService,
-            BulkEditor.Core.Services.IConfigurationService configurationService)
+            BulkEditor.Core.Services.IConfigurationService configurationService,
+            BulkEditor.Core.Configuration.AppSettings appSettings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
+            _appSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
 
             InitializeDefaultSettings();
             // CRITICAL FIX: Don't load settings synchronously in constructor
@@ -219,6 +222,9 @@ namespace BulkEditor.UI.ViewModels
                 await _configurationService.SaveSettingsAsync(currentSettings).ConfigureAwait(false);
 
                 _logger.LogInformation("Processing options saved successfully to configuration file");
+
+                // CRITICAL FIX: Update the singleton AppSettings instance so changes take effect immediately
+                UpdateSingletonAppSettings(currentSettings);
 
                 // CRITICAL FIX: UI updates must happen on UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
@@ -511,6 +517,43 @@ namespace BulkEditor.UI.ViewModels
         }
 
         #endregion
+
+        /// <summary>
+        /// Updates the singleton AppSettings instance with new values so changes take effect immediately
+        /// </summary>
+        private void UpdateSingletonAppSettings(BulkEditor.Core.Configuration.AppSettings newSettings)
+        {
+            try
+            {
+                // Update Processing settings
+                _appSettings.Processing.UpdateHyperlinks = newSettings.Processing.UpdateHyperlinks;
+                _appSettings.Processing.AddContentIds = newSettings.Processing.AddContentIds;
+                _appSettings.Processing.CreateBackupBeforeProcessing = newSettings.Processing.CreateBackupBeforeProcessing;
+                _appSettings.Processing.MaxConcurrentDocuments = newSettings.Processing.MaxConcurrentDocuments;
+                _appSettings.Processing.TimeoutPerDocument = newSettings.Processing.TimeoutPerDocument;
+                _appSettings.Processing.OptimizeText = newSettings.Processing.OptimizeText;
+
+                // Update Validation settings (CRITICAL: AutoReplaceTitles)
+                _appSettings.Validation.CheckExpiredContent = newSettings.Validation.CheckExpiredContent;
+                _appSettings.Validation.AutoReplaceTitles = newSettings.Validation.AutoReplaceTitles;
+                _appSettings.Validation.ReportTitleDifferences = newSettings.Validation.ReportTitleDifferences;
+                _appSettings.Validation.ValidateTitlesOnly = newSettings.Validation.ValidateTitlesOnly;
+
+                // Update Replacement settings
+                _appSettings.Replacement.EnableHyperlinkReplacement = newSettings.Replacement.EnableHyperlinkReplacement;
+                _appSettings.Replacement.EnableTextReplacement = newSettings.Replacement.EnableTextReplacement;
+                _appSettings.Replacement.HyperlinkRules = newSettings.Replacement.HyperlinkRules;
+                _appSettings.Replacement.TextRules = newSettings.Replacement.TextRules;
+
+                _logger.LogInformation("✅ SINGLETON UPDATED: AppSettings singleton instance updated with new values - AutoReplaceTitles: {AutoReplace}, EnableHyperlinkReplacement: {HyperlinkReplace}",
+                    _appSettings.Validation.AutoReplaceTitles, _appSettings.Replacement.EnableHyperlinkReplacement);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating singleton AppSettings instance");
+                throw;
+            }
+        }
 
         public override void Cleanup()
         {

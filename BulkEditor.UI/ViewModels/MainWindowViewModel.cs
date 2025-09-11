@@ -1138,7 +1138,8 @@ namespace BulkEditor.UI.ViewModels
                 var processingOptionsViewModel = new SimpleProcessingOptionsViewModel(
                     _logger,
                     _notificationService,
-                    _serviceProvider.GetRequiredService<BulkEditor.Core.Services.IConfigurationService>());
+                    _serviceProvider.GetRequiredService<BulkEditor.Core.Services.IConfigurationService>(),
+                    _appSettings);
 
                 var processingOptionsWindow = new Views.ProcessingOptionsWindow(processingOptionsViewModel)
                 {
