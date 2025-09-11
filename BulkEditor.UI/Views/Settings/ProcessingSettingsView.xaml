@@ -83,29 +83,9 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Concurrency Settings -->
-            <GroupBox Header="Concurrency">
+            <!-- Batch Processing Settings -->
+            <GroupBox Header="Batch Processing">
                 <StackPanel>
-                    <Grid Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Maximum Concurrent Documents:" VerticalAlignment="Center"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Slider Name="MaxConcurrentSlider"
-                                    Value="{Binding MaxConcurrentDocuments}"
-                                    Minimum="1" Maximum="50"
-                                    Width="150"
-                                    TickFrequency="5"
-                                    IsSnapToTickEnabled="True"/>
-                            <TextBlock Text="{Binding ElementName=MaxConcurrentSlider, Path=Value}"
-                                       Margin="8,0,0,0"
-                                       VerticalAlignment="Center"
-                                       MinWidth="30"/>
-                        </StackPanel>
-                    </Grid>
-
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -128,38 +108,19 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Basic Processing Options -->
-            <GroupBox Header="Basic Processing Options">
+            <!-- Processing Options -->
+            <GroupBox Header="Processing Options">
                 <StackPanel>
-                    <CheckBox Content="Create backup before processing"
-                              IsChecked="{Binding CreateBackupBeforeProcessing}"
-                              Margin="0,0,0,8"/>
-                    
-                    <TextBlock Text="All detailed processing options have been moved to the dedicated 'Processing Options' window."
+                    <TextBlock Text="All detailed processing options including backup settings, concurrency controls, and timeout settings have been moved to the dedicated 'Processing Options' window."
                                FontStyle="Italic" 
                                Foreground="Gray" 
-                               Margin="0,8,0,8"
+                               Margin="0,0,0,8"
                                TextWrapping="Wrap"/>
-                    <TextBlock Text="Click the 'Processing Options' button next to 'Process Documents' to configure detailed processing settings."
+                    <TextBlock Text="Click the 'Processing Options' button next to 'Process Documents' to configure these settings."
                                FontStyle="Italic" 
                                Foreground="#2196F3" 
                                Margin="0,0,0,8"
                                TextWrapping="Wrap"/>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Timeout Settings -->
-            <GroupBox Header="Timeout Settings">
-                <StackPanel>
-                    <Grid Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Timeout per document (minutes):" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding TimeoutPerDocumentMinutes}"
-                                 HorizontalAlignment="Stretch"/>
-                    </Grid>
                 </StackPanel>
             </GroupBox>
 

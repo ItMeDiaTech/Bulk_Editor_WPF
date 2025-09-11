@@ -111,8 +111,6 @@ namespace BulkEditor.UI.ViewModels
             UpdateSettings.NotifyOnUpdatesAvailable = _currentSettings.Update.NotifyOnUpdatesAvailable;
             UpdateSettings.CreateBackupBeforeUpdate = _currentSettings.Update.CreateBackupBeforeUpdate;
             UpdateSettings.IncludePrerelease = _currentSettings.Update.IncludePrerelease;
-            UpdateSettings.GitHubOwner = _currentSettings.Update.GitHubOwner;
-            UpdateSettings.GitHubRepository = _currentSettings.Update.GitHubRepository;
 
             // Load replacement rules into collections
             ReplacementSettings.HyperlinkRules.Clear();
@@ -184,8 +182,6 @@ namespace BulkEditor.UI.ViewModels
             _currentSettings.Update.NotifyOnUpdatesAvailable = UpdateSettings.NotifyOnUpdatesAvailable;
             _currentSettings.Update.CreateBackupBeforeUpdate = UpdateSettings.CreateBackupBeforeUpdate;
             _currentSettings.Update.IncludePrerelease = UpdateSettings.IncludePrerelease;
-            _currentSettings.Update.GitHubOwner = UpdateSettings.GitHubOwner;
-            _currentSettings.Update.GitHubRepository = UpdateSettings.GitHubRepository;
 
             // Update replacement rules from collections
             _currentSettings.Replacement.HyperlinkRules.Clear();
@@ -442,21 +438,6 @@ namespace BulkEditor.UI.ViewModels
                 return false;
             }
 
-            // Validate GitHub repository settings if auto-update is enabled
-            if (UpdateSettings.AutoUpdateEnabled)
-            {
-                if (string.IsNullOrWhiteSpace(UpdateSettings.GitHubOwner))
-                {
-                    _logger.LogWarning("GitHub owner is required when auto-update is enabled");
-                    return false;
-                }
-
-                if (string.IsNullOrWhiteSpace(UpdateSettings.GitHubRepository))
-                {
-                    _logger.LogWarning("GitHub repository is required when auto-update is enabled");
-                    return false;
-                }
-            }
 
             return true;
         }
@@ -589,8 +570,6 @@ namespace BulkEditor.UI.ViewModels
                     InstallSecurityUpdatesAutomatically = true,
                     NotifyOnUpdatesAvailable = true,
                     CreateBackupBeforeUpdate = true,
-                    GitHubOwner = "DiaTech",
-                    GitHubRepository = "Bulk_Editor",
                     IncludePrerelease = false
                 }
             };

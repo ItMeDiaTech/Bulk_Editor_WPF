@@ -321,8 +321,6 @@ namespace BulkEditor.Infrastructure.Services
                     InstallSecurityUpdatesAutomatically = true,
                     NotifyOnUpdatesAvailable = true,
                     CreateBackupBeforeUpdate = true,
-                    GitHubOwner = "DiaTech",
-                    GitHubRepository = "Bulk_Editor",
                     IncludePrerelease = false
                 }
             };

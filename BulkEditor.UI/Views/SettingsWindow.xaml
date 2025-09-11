@@ -46,13 +46,9 @@
                 <views:ValidationSettingsView DataContext="{Binding ValidationSettings}"/>
             </TabItem>
 
-            <!-- Backup Settings -->
-            <TabItem Header="Backup">
-                <views:BackupSettingsView DataContext="{Binding BackupSettings}"/>
-            </TabItem>
 
             <!-- Logging Settings -->
-            <TabItem Header="Logging">
+            <TabItem Header="Error Logging">
                 <views:LoggingSettingsView DataContext="{Binding LoggingSettings}"/>
             </TabItem>
 

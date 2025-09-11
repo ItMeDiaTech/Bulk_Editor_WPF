@@ -30,25 +30,6 @@ namespace BulkEditor.UI.ViewModels.Settings
         [ObservableProperty]
         private bool _includePrerelease;
 
-        [ObservableProperty]
-        private string _gitHubOwner = string.Empty;
-
-        [ObservableProperty]
-        private string _gitHubRepository = string.Empty;
-
-        // Default hardcoded repository settings
-        private const string DEFAULT_GITHUB_OWNER = "ItMeDiaTech";
-        private const string DEFAULT_GITHUB_REPOSITORY = "Bulk_Editor_WPF";
-
-        /// <summary>
-        /// Gets the effective GitHub owner (uses default if field is empty)
-        /// </summary>
-        public string EffectiveGitHubOwner => string.IsNullOrWhiteSpace(GitHubOwner) ? DEFAULT_GITHUB_OWNER : GitHubOwner;
-
-        /// <summary>
-        /// Gets the effective GitHub repository (uses default if field is empty)
-        /// </summary>
-        public string EffectiveGitHubRepository => string.IsNullOrWhiteSpace(GitHubRepository) ? DEFAULT_GITHUB_REPOSITORY : GitHubRepository;
 
         // Version Information
         [ObservableProperty]

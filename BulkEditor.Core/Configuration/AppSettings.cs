@@ -164,8 +164,8 @@ namespace BulkEditor.Core.Configuration
         public bool InstallSecurityUpdatesAutomatically { get; set; } = true;
         public bool NotifyOnUpdatesAvailable { get; set; } = true;
         public bool CreateBackupBeforeUpdate { get; set; } = true;
-        public string GitHubOwner { get; set; } = "DiaTech";
-        public string GitHubRepository { get; set; } = "Bulk_Editor";
+        public string GitHubOwner { get; } = "ItMeDiaTech";
+        public string GitHubRepository { get; } = "Bulk_Editor_WPF";
         public DateTime LastUpdateCheck { get; set; } = DateTime.MinValue;
         public bool IncludePrerelease { get; set; } = false;
     }
