@@ -92,6 +92,7 @@ namespace BulkEditor.Core.Configuration
         public bool AutoSaveSettings { get; set; } = true;
         public string ConsultantEmail { get; set; } = string.Empty; // CORRECT LOCATION
         public WindowSettings Window { get; set; } = new();
+        public ThemeSettings ThemeConfiguration { get; set; } = new();
     }
 
     /// <summary>
@@ -182,5 +183,155 @@ namespace BulkEditor.Core.Configuration
         public int NetworkTimeoutSeconds { get; set; } = 10;
         public bool ShowOfflineIndicator { get; set; } = true;
         public bool CacheLastKnownNetworkState { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Comprehensive theme configuration settings
+    /// </summary>
+    public class ThemeSettings
+    {
+        // Base Theme Settings
+        public string BaseTheme { get; set; } = "Light"; // Light, Dark, Auto
+        public bool UseSystemTheme { get; set; } = true;
+        public bool EnableMaterialDesign { get; set; } = true;
+        
+        // Color Scheme
+        public ColorScheme Colors { get; set; } = new();
+        
+        // Typography
+        public TypographySettings Typography { get; set; } = new();
+        
+        // Layout and Spacing
+        public LayoutSettings Layout { get; set; } = new();
+        
+        // Visual Effects
+        public EffectsSettings Effects { get; set; } = new();
+        
+        // Advanced Settings
+        public bool EnableCustomPalette { get; set; } = false;
+        public string CustomThemeName { get; set; } = "Custom";
+        public DateTime LastModified { get; set; } = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Color scheme configuration
+    /// </summary>
+    public class ColorScheme
+    {
+        // Primary Colors
+        public string PrimaryColor { get; set; } = "#2196F3"; // Material Blue
+        public string PrimaryVariant { get; set; } = "#1976D2";
+        public string PrimaryLight { get; set; } = "#BBDEFB";
+        
+        // Secondary Colors
+        public string SecondaryColor { get; set; } = "#03DAC6"; // Material Teal
+        public string SecondaryVariant { get; set; } = "#018786";
+        public string SecondaryLight { get; set; } = "#B2DFDB";
+        
+        // Surface Colors
+        public string SurfaceColor { get; set; } = "#FFFFFF";
+        public string BackgroundColor { get; set; } = "#FAFAFA";
+        public string CardColor { get; set; } = "#FFFFFF";
+        public string DialogColor { get; set; } = "#FFFFFF";
+        
+        // Text Colors
+        public string OnPrimaryColor { get; set; } = "#FFFFFF";
+        public string OnSecondaryColor { get; set; } = "#000000";
+        public string OnSurfaceColor { get; set; } = "#212121";
+        public string OnBackgroundColor { get; set; } = "#212121";
+        
+        // State Colors
+        public string ErrorColor { get; set; } = "#F44336";
+        public string WarningColor { get; set; } = "#FF9800";
+        public string SuccessColor { get; set; } = "#4CAF50";
+        public string InfoColor { get; set; } = "#2196F3";
+        
+        // Neutral Colors
+        public string DisabledColor { get; set; } = "#BDBDBD";
+        public string BorderColor { get; set; } = "#E0E0E0";
+        public string DividerColor { get; set; } = "#EEEEEE";
+        public string HoverColor { get; set; } = "#F5F5F5";
+    }
+
+    /// <summary>
+    /// Typography settings
+    /// </summary>
+    public class TypographySettings
+    {
+        public string FontFamily { get; set; } = "Segoe UI";
+        public string HeadlineFontFamily { get; set; } = "Segoe UI";
+        public double FontSizeScale { get; set; } = 1.0; // Scale factor for all fonts
+        
+        // Font Sizes
+        public double HeadlineSize { get; set; } = 24;
+        public double TitleSize { get; set; } = 20;
+        public double SubtitleSize { get; set; } = 16;
+        public double BodySize { get; set; } = 14;
+        public double CaptionSize { get; set; } = 12;
+        
+        // Font Weights
+        public string HeadlineWeight { get; set; } = "SemiBold";
+        public string TitleWeight { get; set; } = "Medium";
+        public string SubtitleWeight { get; set; } = "Medium";
+        public string BodyWeight { get; set; } = "Normal";
+        public string CaptionWeight { get; set; } = "Normal";
+    }
+
+    /// <summary>
+    /// Layout and spacing settings
+    /// </summary>
+    public class LayoutSettings
+    {
+        // Base spacing unit (Material Design recommends 8dp)
+        public double BaseSpacing { get; set; } = 8;
+        
+        // Spacing multipliers
+        public double SmallSpacing { get; set; } = 0.5; // 4dp
+        public double MediumSpacing { get; set; } = 1.0; // 8dp
+        public double LargeSpacing { get; set; } = 2.0; // 16dp
+        public double ExtraLargeSpacing { get; set; } = 3.0; // 24dp
+        
+        // Corner radius
+        public double CornerRadius { get; set; } = 6;
+        public double CardRadius { get; set; } = 12;
+        public double ButtonRadius { get; set; } = 6;
+        
+        // Padding and margins
+        public double ContentPadding { get; set; } = 16;
+        public double CardPadding { get; set; } = 24;
+        public double ButtonPadding { get; set; } = 16;
+        
+        // Layout density
+        public string Density { get; set; } = "Normal"; // Compact, Normal, Comfortable
+    }
+
+    /// <summary>
+    /// Visual effects settings
+    /// </summary>
+    public class EffectsSettings
+    {
+        // Shadows and elevation
+        public bool EnableShadows { get; set; } = true;
+        public double ShadowOpacity { get; set; } = 0.1;
+        public double ShadowBlurRadius { get; set; } = 8;
+        public double ShadowDepth { get; set; } = 2;
+        
+        // Animations
+        public bool EnableAnimations { get; set; } = true;
+        public double AnimationSpeed { get; set; } = 1.0; // Speed multiplier
+        public string AnimationEasing { get; set; } = "QuadraticEase";
+        
+        // Ripple effects
+        public bool EnableRipple { get; set; } = true;
+        public double RippleOpacity { get; set; } = 0.1;
+        
+        // Transitions
+        public bool EnableTransitions { get; set; } = true;
+        public int TransitionDuration { get; set; } = 200; // milliseconds
+        
+        // Visual enhancements
+        public bool EnableBlur { get; set; } = false;
+        public double BlurRadius { get; set; } = 5;
+        public bool EnableGradients { get; set; } = true;
     }
 }

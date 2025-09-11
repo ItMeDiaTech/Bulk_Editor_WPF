@@ -2,6 +2,7 @@ using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Core.Services;
 using BulkEditor.UI.ViewModels.Settings;
+using BulkEditor.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -26,6 +27,7 @@ namespace BulkEditor.UI.ViewModels
         private readonly AppSettings _originalSettings;
         private readonly AppSettings _currentSettings;
         private readonly IHttpService _httpService;
+        private readonly IThemeManager _themeManager;
 
         public event EventHandler<bool?>? RequestClose;
 
@@ -35,14 +37,16 @@ namespace BulkEditor.UI.ViewModels
         public LoggingSettingsViewModel LoggingSettings { get; }
         public ReplacementSettingsViewModel ReplacementSettings { get; }
         public UpdateSettingsViewModel UpdateSettings { get; }
+        public ThemeSettingsViewModel ThemeSettings { get; }
 
-        public SettingsViewModel(AppSettings appSettings, ILoggingService logger, IConfigurationService configurationService, IUpdateService updateService, IHttpService httpService, IThemeService themeService)
+        public SettingsViewModel(AppSettings appSettings, ILoggingService logger, IConfigurationService configurationService, IUpdateService updateService, IHttpService httpService, IThemeService themeService, IThemeManager themeManager)
         {
             _originalSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
             _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
             _httpService = httpService ?? throw new ArgumentNullException(nameof(httpService));
+            _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
 
             // Create a copy of the settings to work with
             _currentSettings = CloneSettings(appSettings);
@@ -53,6 +57,7 @@ namespace BulkEditor.UI.ViewModels
             LoggingSettings = new LoggingSettingsViewModel();
             ReplacementSettings = new ReplacementSettingsViewModel();
             UpdateSettings = new UpdateSettingsViewModel(logger, updateService);
+            ThemeSettings = new ThemeSettingsViewModel(themeManager);
 
             Title = "Settings";
             LoadSettingsIntoViewModels();
@@ -189,6 +194,21 @@ namespace BulkEditor.UI.ViewModels
 
             _currentSettings.Replacement.TextRules.Clear();
             _currentSettings.Replacement.TextRules.AddRange(ReplacementSettings.TextRules);
+
+            // Theme Settings
+            _currentSettings.UI.ThemeConfiguration = ThemeSettings.GetThemeSettings();
+            _logger.LogInformation("Theme settings updated");
+
+            // Apply theme immediately
+            try
+            {
+                _themeManager.ApplyTheme(_currentSettings.UI.ThemeConfiguration);
+                _logger.LogInformation("Theme applied successfully during settings save");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to apply theme during settings save: {Message}", ex.Message);
+            }
         }
 
         [RelayCommand]

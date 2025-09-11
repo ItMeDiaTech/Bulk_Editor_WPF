@@ -392,3 +392,214 @@ Logs/
 # Temporary files
 TempFiles/
 BackupFiles/
+
+# Internal testing and development files
+TestDocuments/
+SampleFiles/
+TestData/
+*.test
+*.temp
+*.tmp
+test_*
+*_test.*
+*_temp.*
+scratch.*
+sandbox.*
+experimental/
+playground/
+dev_*
+*_dev.*
+
+# Personal development files
+TODO.txt
+NOTES.txt
+notes.*
+todo.*
+scratch.*
+*_personal.*
+*_private.*
+
+# Screenshots and test images (unless explicitly needed)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+!**/Assets/**
+!**/Resources/**
+!**/Images/**
+
+# Test output files
+test_output/
+test_results/
+TestResults/
+coverage_report/
+benchmark_results/
+
+# Development databases and local data
+*.db
+*.sqlite
+*.sqlite3
+LocalDatabase/
+TestDB/
+
+# IDE and editor temporary files
+*.swp
+*.swo
+*~
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+
+# Performance profiling files
+*.dtp
+*.psess
+*.vsp
+*.vspx
+
+# Local configuration files that shouldn't be shared
+local.settings.json
+user.config
+developer.config
+*.local.json
+
+# Build artifacts and temporary build files
+BuildOutput/
+PublishOutput/
+*.nupkg.bak
+*_wpftmp.*
+
+# Documentation and markdown files (except official project docs)
+*.md
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!LICENSE.md
+!SECURITY.md
+!CODE_OF_CONDUCT.md
+Docs/
+Documentation/
+docs/
+documentation/
+
+# Claude AI and assistant files
+*.claude
+claude.*
+*claude*
+.claude/
+claude_*
+*_claude.*
+assistant_*
+*_assistant.*
+ai_*
+*_ai.*
+
+# Random text and document files
+*.txt
+!LICENSE.txt
+!CHANGELOG.txt
+!README.txt
+*.docx
+*.doc
+*.rtf
+*.pdf
+!**/Assets/**/*.pdf
+!**/Resources/**/*.pdf
+!**/Documentation/**/*.pdf
+
+# Old installer and release files
+*.msi
+*.exe
+!**/bin/Release/**/*.exe
+!**/bin/Debug/**/*.exe
+*.zip
+!**/Assets/**/*.zip
+!**/Resources/**/*.zip
+Setup/
+Installer/
+Installers/
+Releases/
+releases/
+Archives/
+archives/
+
+# Random project files and artifacts
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+*_backup.*
+*_old.*
+*_orig.*
+*_save.*
+*_copy.*
+*_draft.*
+
+# Email and communication files
+*.eml
+*.msg
+*.ost
+*.pst
+
+# Random data files
+*.csv
+*.json
+!**/appsettings*.json
+!**/package*.json
+!**/tsconfig*.json
+!**/project.json
+*.xml
+!**/packages.config
+!**/*.csproj
+!**/*.vbproj
+!**/*.fsproj
+!**/*.props
+!**/*.targets
+!**/*.xaml
+!**/*.resx
+!**/*.config
+*.yml
+*.yaml
+!.github/**/*.yml
+!.github/**/*.yaml
+
+# Random media files
+*.mp3
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.wav
+*.flac
+*.m4a
+
+# Random archive and compressed files
+*.rar
+*.7z
+*.tar
+*.gz
+*.bz2
+
+# Version-specific files (keeping only current)
+*-v[0-9]*.*
+*_v[0-9]*.*
+*-version-*
+*_version_*
+BulkEditor-Setup-*.msi
+BulkEditor-v*.zip
+*-old-version*
+*-previous-*
+*-backup-*
+
+# Miscellaneous irrelevant files
+*.tmp
+*.temp
+*.cache
+*.lock
+*.pid
+desktop.ini
+Thumbs.db
+.DS_Store
+*.lnk
+*.url

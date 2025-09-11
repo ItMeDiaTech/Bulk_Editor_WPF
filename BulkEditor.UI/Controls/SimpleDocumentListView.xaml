@@ -4,214 +4,171 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vm="clr-namespace:BulkEditor.UI.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800"
+             TextElement.Foreground="{DynamicResource OnSurfaceBrush}"
+             TextElement.FontWeight="{DynamicResource BodyFontWeight}"
+             TextElement.FontSize="{DynamicResource BodyFontSize}"
+             TextElement.FontFamily="{DynamicResource AppFontFamily}">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
         
-        <!-- Style for Remove Button -->
-        <Style x:Key="RemoveButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#F44336"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="20"/>
-            <Setter Property="Height" Value="20"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="10"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}">
-                            <TextBlock Text="×"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Foreground="{TemplateBinding Foreground}"
-                                       FontSize="{TemplateBinding FontSize}"
-                                       FontWeight="{TemplateBinding FontWeight}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FFEBEE"/>
-                                <Setter Property="Foreground" Value="#D32F2F"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- Modern Material Design Document Item Template -->
 
-        <!-- Style for Action Buttons -->
-        <Style x:Key="ActionButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#2196F3"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
-                            <TextBlock Text="{TemplateBinding Content}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Foreground="{TemplateBinding Foreground}"
-                                       FontSize="{TemplateBinding FontSize}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#1976D2"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#BDBDBD"/>
-                                <Setter Property="Foreground" Value="#757575"/>
-                                <Setter Property="Cursor" Value="Arrow"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Status Button Template -->
+        <!-- Material Design Status Chip Template -->
         <DataTemplate x:Key="StatusTemplate" DataType="{x:Type vm:DocumentListItemViewModel}">
-            <Border Background="{Binding StatusBackgroundColor}"
-                    CornerRadius="12"
-                    Padding="8,4"
-                    MinWidth="80"
-                    MaxWidth="120">
-                <Grid>
-                    <!-- Single line status -->
-                    <TextBlock Text="{Binding StatusDisplayText}"
+            <materialDesign:Chip Background="{Binding StatusBackgroundColor}"
                                Foreground="White"
-                               FontSize="10"
-                               FontWeight="Bold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               TextWrapping="Wrap">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsMultiLineStatus}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    
-                    <!-- Multi-line status for "Completed With Errors" -->
-                    <StackPanel HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Visibility="{Binding IsMultiLineStatus, Converter={StaticResource BoolToVisConverter}}">
-                        <TextBlock Text="{Binding StatusTopText}"
-                                   Foreground="White"
-                                   FontSize="9"
-                                   FontWeight="Bold"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding StatusBottomText}"
-                                   Foreground="White"
-                                   FontSize="9"
-                                   FontWeight="Bold"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- Document List Item Template -->
-        <DataTemplate x:Key="DocumentItemTemplate" DataType="{x:Type vm:DocumentListItemViewModel}">
-            <Border Background="White"
-                    BorderBrush="Transparent"
-                    BorderThickness="0"
-                    CornerRadius="8"
-                    Padding="16,12"
-                    Margin="8,4">
-                <Border.Effect>
-                    <DropShadowEffect Color="Black" Opacity="0.06" BlurRadius="4" ShadowDepth="1" Direction="270"/>
-                </Border.Effect>
-                <Border.Style>
-                    <Style TargetType="Border">
+                               Content="{Binding StatusDisplayText}"
+                               FontSize="{DynamicResource CaptionFontSize}"
+                               FontWeight="Medium"
+                               Margin="{DynamicResource SmallSpacing}"
+                               ToolTip="{Binding StatusDisplayText}"
+                               IsEnabled="False">
+                <materialDesign:Chip.Style>
+                    <Style TargetType="materialDesign:Chip" BasedOn="{StaticResource {x:Type materialDesign:Chip}}">
                         <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Effect">
+                            <DataTrigger Binding="{Binding IsMultiLineStatus}" Value="True">
+                                <Setter Property="Content">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="Black" Opacity="0.12" BlurRadius="8" ShadowDepth="2" Direction="270"/>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding StatusTopText}"
+                                                     Foreground="White"
+                                                     FontSize="{DynamicResource CaptionFontSize}"
+                                                     FontWeight="Medium"
+                                                     HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding StatusBottomText}"
+                                                     Foreground="White"
+                                                     FontSize="{DynamicResource CaptionFontSize}"
+                                                     FontWeight="Medium"
+                                                     HorizontalAlignment="Center"/>
+                                        </StackPanel>
                                     </Setter.Value>
                                 </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </materialDesign:Chip.Style>
+            </materialDesign:Chip>
+        </DataTemplate>
+
+        <!-- Modern Material Design Document Item Template -->
+        <DataTemplate x:Key="DocumentItemTemplate" DataType="{x:Type vm:DocumentListItemViewModel}">
+            <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp1"
+                               Margin="0,0,0,{DynamicResource SmallSpacing}"
+                               Background="{DynamicResource CardBrush}"
+                               Padding="{DynamicResource ContentPadding}">
+                <materialDesign:Card.Style>
+                    <Style TargetType="materialDesign:Card">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp4"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
-                </Border.Style>
-                <Border.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Copy Document Title" Command="{Binding CopyTitleCommand}" InputGestureText="Ctrl+C"/>
-                        <MenuItem Header="Copy Document Path" Command="{Binding CopyPathCommand}"/>
-                        <MenuItem Header="Copy Document Info" Command="{Binding CopyInfoCommand}"/>
+                </materialDesign:Card.Style>
+                <materialDesign:Card.ContextMenu>
+                    <ContextMenu Style="{StaticResource MaterialDesignContextMenu}">
+                        <MenuItem Header="Copy Document Title" 
+                                Command="{Binding CopyTitleCommand}" 
+                                InputGestureText="Ctrl+C">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="ContentCopy"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Copy Document Path" 
+                                Command="{Binding CopyPathCommand}">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="FolderOutline"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Copy Document Info" 
+                                Command="{Binding CopyInfoCommand}">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="InformationOutline"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
                         <Separator/>
-                        <MenuItem Header="Open Location" Command="{Binding OpenLocationCommand}"/>
-                        <MenuItem Header="Remove" Command="{Binding RemoveCommand}"/>
+                        <MenuItem Header="Open Location" 
+                                Command="{Binding OpenLocationCommand}">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="FolderOpen"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Remove" 
+                                Command="{Binding RemoveCommand}">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="Delete" Foreground="{DynamicResource ErrorBrush}"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
                     </ContextMenu>
-                </Border.ContextMenu>
-                <Grid>
+                </materialDesign:Card.ContextMenu>
+                <Grid Margin="{DynamicResource ContentPadding}">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
+                    <!-- Document Type Icon -->
+                    <materialDesign:PackIcon Grid.Column="0"
+                                           Kind="FileDocumentOutline"
+                                           Width="24" Height="24"
+                                           Foreground="{DynamicResource PrimaryBrush}"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"/>
+
                     <!-- Document Info -->
-                    <StackPanel Grid.Column="0" Orientation="Vertical">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Title}"
-                                   FontWeight="Bold"
-                                   FontSize="14"
-                                   Foreground="#333333"
-                                   TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding Title}"/>
+                                 Style="{StaticResource BodyTextStyle}"
+                                 FontWeight="{DynamicResource SubtitleFontWeight}"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip="{Binding Title}"/>
                         <TextBlock Text="{Binding Location}"
-                                   FontSize="12"
-                                   Foreground="#666666"
-                                   Opacity="0.8"
-                                   TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding Location}"
-                                   Margin="0,2,0,0"/>
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip="{Binding Location}"
+                                 Margin="0,4,0,0"/>
                     </StackPanel>
 
                     <!-- Status Display -->
-                    <ContentPresenter Grid.Column="1"
-                                      ContentTemplate="{StaticResource StatusTemplate}"
-                                      Content="{Binding}"
-                                      Margin="8,0"/>
+                    <ContentPresenter Grid.Column="2"
+                                    ContentTemplate="{StaticResource StatusTemplate}"
+                                    Content="{Binding}"
+                                    VerticalAlignment="Center"
+                                    Margin="8,0"/>
 
                     <!-- Action Buttons -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0">
-                        <Button Content="View Details"
-                                Command="{Binding ViewDetailsCommand}"
-                                IsEnabled="{Binding CanViewDetails}"
-                                Style="{StaticResource ActionButtonStyle}"/>
-                        <Button Content="Open Location"
-                                Command="{Binding OpenLocationCommand}"
-                                Style="{StaticResource ActionButtonStyle}"/>
+                    <StackPanel Grid.Column="3" 
+                              Orientation="Horizontal" 
+                              VerticalAlignment="Center"
+                              Margin="8,0">
+                        <Button Content="DETAILS"
+                              Command="{Binding ViewDetailsCommand}"
+                              IsEnabled="{Binding CanViewDetails}"
+                              Style="{StaticResource CardActionButtonStyle}"/>
+                        <Button Content="OPEN"
+                              Command="{Binding OpenLocationCommand}"
+                              Style="{StaticResource CardActionButtonStyle}"/>
                     </StackPanel>
 
                     <!-- Remove Button -->
-                    <Button Grid.Column="3"
-                            Command="{Binding RemoveCommand}"
-                            Style="{StaticResource RemoveButtonStyle}"
-                            Margin="8,0,0,0"
-                            ToolTip="Remove document from list"/>
+                    <Button Grid.Column="4"
+                          Command="{Binding RemoveCommand}"
+                          Style="{StaticResource IconButtonStyle}"
+                          Width="32" Height="32"
+                          ToolTip="Remove document from list"
+                          VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="Close" 
+                                               Foreground="{DynamicResource ErrorBrush}"/>
+                    </Button>
                 </Grid>
-            </Border>
+            </materialDesign:Card>
         </DataTemplate>
     </UserControl.Resources>
 
@@ -221,12 +178,11 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0"
-                Background="#F5F5F5"
-                Padding="16,12"
-                BorderBrush="#E0E0E0"
-                BorderThickness="0,0,0,1">
+        <!-- Material Design Header -->
+        <materialDesign:ColorZone Grid.Row="0"
+                                Mode="PrimaryLight"
+                                Padding="{DynamicResource ContentPadding}"
+                                materialDesign:ElevationAssist.Elevation="Dp1">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -236,84 +192,78 @@
                 <!-- Title Row -->
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0"
-                               Text="Documents"
-                               FontSize="18"
-                               FontWeight="Medium"
-                               VerticalAlignment="Center"/>
+                    <materialDesign:PackIcon Grid.Column="0"
+                                           Kind="FileMultiple"
+                                           Width="20" Height="20"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,8,0"/>
 
                     <TextBlock Grid.Column="1"
-                               Text="{Binding DocumentItems.Count, StringFormat='Total: {0} documents'}"
-                               FontSize="14"
-                               Foreground="#757575"
-                               VerticalAlignment="Center"/>
+                             Text="Documents"
+                             Style="{StaticResource SectionHeaderStyle}"
+                             VerticalAlignment="Center"/>
+
+                    <materialDesign:Chip Grid.Column="2"
+                                       Content="{Binding DocumentItems.Count, StringFormat='{}{0} docs'}"
+                                       Background="{DynamicResource PrimaryBrush}"
+                                       Foreground="{DynamicResource OnPrimaryBrush}"
+                                       FontSize="{DynamicResource CaptionFontSize}"
+                                       VerticalAlignment="Center"/>
                 </Grid>
                 
-                <!-- Search Row -->
-                <Grid Grid.Row="1" Margin="0,12,0,0">
+                <!-- Material Design Search Row -->
+                <Grid Grid.Row="1" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
                     <TextBox Grid.Column="0"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="14"
-                             Padding="12,8"
-                             Background="White"
-                             BorderBrush="#CCCCCC"
-                             BorderThickness="1"
-                             VerticalAlignment="Center">
-                        <TextBox.Style>
-                            <Style TargetType="TextBox">
-                                <Style.Triggers>
-                                    <Trigger Property="Text" Value="">
-                                        <Setter Property="Background">
-                                            <Setter.Value>
-                                                <VisualBrush AlignmentX="Left" AlignmentY="Center" Stretch="None">
-                                                    <VisualBrush.Visual>
-                                                        <TextBlock Text="Search by title or file path..." 
-                                                                  Foreground="#999999" 
-                                                                  FontSize="14"/>
-                                                    </VisualBrush.Visual>
-                                                </VisualBrush>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBox.Style>
-                    </TextBox>
+                           Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                           Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                           materialDesign:HintAssist.Hint="Search by title or file path..."
+                           materialDesign:HintAssist.IsFloating="True"
+                           materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                           materialDesign:TextFieldAssist.LeadingIcon="Magnify"
+                           FontSize="{DynamicResource BodyFontSize}"
+                           VerticalAlignment="Center"/>
                     
                     <Button Grid.Column="1"
-                            Content="Clear"
-                            Command="{Binding ClearSearchCommand}"
-                            FontSize="12"
-                            Padding="12,6"
-                            Margin="8,0,0,0"
-                            Background="#FF6B6B"
-                            Foreground="White"
-                            BorderThickness="0"
-                            Visibility="{Binding HasSearchText, Converter={StaticResource BoolToVisConverter}}"/>
+                          Command="{Binding ClearSearchCommand}"
+                          Style="{StaticResource IconButtonStyle}"
+                          ToolTip="Clear search"
+                          Margin="8,0,0,0"
+                          Visibility="{Binding HasSearchText, Converter={StaticResource BoolToVisConverter}}">
+                        <materialDesign:PackIcon Kind="Close" 
+                                               Foreground="{DynamicResource ErrorBrush}"/>
+                    </Button>
                 </Grid>
             </Grid>
-        </Border>
+        </materialDesign:ColorZone>
 
         <!-- Document List -->
         <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto">
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled"
+                    materialDesign:ScrollViewerAssist.IsAutoHideEnabled="True"
+                    Padding="{DynamicResource ContentPadding}">
             <ItemsControl ItemsSource="{Binding DocumentItems}"
-                          ItemTemplate="{StaticResource DocumentItemTemplate}"
-                          Background="Transparent"
-                          Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisConverter}}"/>
+                        ItemTemplate="{StaticResource DocumentItemTemplate}"
+                        Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisConverter}}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel VirtualizationMode="Recycling"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
         </ScrollViewer>
 
-        <!-- Empty State -->
+        <!-- Material Design Empty State -->
         <Grid Grid.Row="1">
             <Grid.Style>
                 <Style TargetType="Grid">
@@ -326,22 +276,22 @@
                 </Style>
             </Grid.Style>
             <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Opacity="0.6">
-                <TextBlock Text="📄"
-                           FontSize="48"
-                           HorizontalAlignment="Center"
-                           Margin="0,0,0,16"/>
+                      VerticalAlignment="Center"
+                      Opacity="0.7">
+                <materialDesign:PackIcon Kind="FileDocumentMultiple"
+                                       Width="64" Height="64"
+                                       Foreground="{DynamicResource DisabledBrush}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,{DynamicResource LargeSpacing}"/>
                 <TextBlock Text="No documents added"
-                           FontSize="16"
-                           FontWeight="Medium"
-                           HorizontalAlignment="Center"
-                           Foreground="#757575"/>
-                <TextBlock Text="Select files to begin processing"
-                           FontSize="14"
-                           HorizontalAlignment="Center"
-                           Foreground="#999999"
-                           Margin="0,4,0,0"/>
+                         Style="{StaticResource SubtitleTextStyle}"
+                         HorizontalAlignment="Center"
+                         Foreground="{DynamicResource DisabledBrush}"/>
+                <TextBlock Text="Drag and drop files here or use the Select Files button"
+                         Style="{StaticResource CaptionTextStyle}"
+                         HorizontalAlignment="Center"
+                         Foreground="{DynamicResource DisabledBrush}"
+                         Margin="0,4,0,0"/>
             </StackPanel>
         </Grid>
     </Grid>

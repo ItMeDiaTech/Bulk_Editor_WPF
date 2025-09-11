@@ -36,6 +36,11 @@
         <!-- Settings Content -->
         <TabControl Grid.Row="0" Margin="16">
 
+            <!-- Theme Settings -->
+            <TabItem Header="Theme">
+                <views:ThemeSettingsView DataContext="{Binding ThemeSettings}"/>
+            </TabItem>
+
             <!-- General Settings -->
             <TabItem Header="General">
                 <views:ProcessingSettingsView DataContext="{Binding ProcessingSettings}"/>
@@ -45,7 +50,6 @@
             <TabItem Header="Validation">
                 <views:ValidationSettingsView DataContext="{Binding ValidationSettings}"/>
             </TabItem>
-
 
             <!-- Logging Settings -->
             <TabItem Header="Error Logging">

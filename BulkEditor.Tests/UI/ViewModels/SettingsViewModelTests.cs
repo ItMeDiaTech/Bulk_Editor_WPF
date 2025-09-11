@@ -2,6 +2,7 @@ using BulkEditor.Core.Configuration;
 using BulkEditor.Core.Interfaces;
 using BulkEditor.Core.Services;
 using BulkEditor.UI.ViewModels;
+using BulkEditor.UI.Services;
 using Moq;
 using System.Threading.Tasks;
 using Xunit;
@@ -18,6 +19,7 @@ namespace BulkEditor.Tests.UI.ViewModels
         private readonly Mock<IUpdateService> _mockUpdateService;
         private readonly Mock<IHttpService> _mockHttpService;
         private readonly Mock<IThemeService> _mockThemeService;
+        private readonly Mock<IThemeManager> _mockThemeManager;
         private readonly AppSettings _appSettings;
         private readonly SettingsViewModel _viewModel;
 
@@ -28,13 +30,17 @@ namespace BulkEditor.Tests.UI.ViewModels
             _mockUpdateService = new Mock<IUpdateService>();
             _mockHttpService = new Mock<IHttpService>();
             _mockThemeService = new Mock<IThemeService>();
+            _mockThemeManager = new Mock<IThemeManager>();
             
             // Setup theme service mock
             _mockThemeService.Setup(x => x.AvailableThemes).Returns(new[] { "Light", "Purple", "Pink", "Light Blue", "Green", "Dark", "Auto" });
             _mockThemeService.Setup(x => x.CurrentTheme).Returns("Light");
             
+            // Setup theme manager mock
+            _mockThemeManager.Setup(x => x.GetCurrentTheme()).Returns(new BulkEditor.Core.Configuration.ThemeSettings());
+            
             _appSettings = CreateTestAppSettings();
-            _viewModel = new SettingsViewModel(_appSettings, _mockLogger.Object, _mockConfigurationService.Object, _mockUpdateService.Object, _mockHttpService.Object, _mockThemeService.Object);
+            _viewModel = new SettingsViewModel(_appSettings, _mockLogger.Object, _mockConfigurationService.Object, _mockUpdateService.Object, _mockHttpService.Object, _mockThemeService.Object, _mockThemeManager.Object);
         }
 
         [Fact]

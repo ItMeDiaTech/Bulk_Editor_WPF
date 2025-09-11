@@ -128,6 +128,7 @@ namespace BulkEditor.UI
             // Register UI Services
             services.AddSingleton<BulkEditor.UI.Services.INotificationService, BulkEditor.UI.Services.NotificationService>();
             services.AddSingleton<BulkEditor.Core.Interfaces.IThemeService, BulkEditor.UI.Services.ThemeService>();
+            services.AddSingleton<BulkEditor.UI.Services.IThemeManager, BulkEditor.UI.Services.ThemeManager>();
 
             // Register ViewModels and Views
             services.AddTransient<MainWindowViewModel>();
@@ -153,6 +154,21 @@ namespace BulkEditor.UI
                 // Initialize database with timeout
                 var databaseService = _serviceProvider.GetRequiredService<BulkEditor.Core.Services.IDatabaseService>();
                 await databaseService.InitializeAsync().WaitAsync(cts.Token).ConfigureAwait(false);
+
+                // Initialize theme on UI thread
+                await Dispatcher.BeginInvoke(() =>
+                {
+                    try
+                    {
+                        var themeManager = _serviceProvider.GetRequiredService<BulkEditor.UI.Services.IThemeManager>();
+                        themeManager.ApplyTheme(appSettings.UI.ThemeConfiguration);
+                        Log.Information("Theme applied successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Failed to apply theme, using defaults");
+                    }
+                });
 
                 // Initialize update manager with timeout and offline mode respect (non-critical, can fail)
                 if (!appSettings.Offline.OfflineModeEnabled || !appSettings.Offline.SkipUpdateCheckWhenOffline)
