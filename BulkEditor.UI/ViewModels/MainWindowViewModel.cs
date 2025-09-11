@@ -200,6 +200,9 @@ namespace BulkEditor.UI.ViewModels
         [ObservableProperty]
         private double _overallProgress = 0;
 
+        [ObservableProperty]
+        private bool _isCompactView = false;
+
         [RelayCommand]
         private void ClearSearch()
         {
@@ -1163,6 +1166,43 @@ namespace BulkEditor.UI.ViewModels
                 _logger.LogError(ex, "Error opening processing options window asynchronously");
                 _notificationService.ShowError("Processing Options Error", "Failed to open processing options window.", ex);
                 SetStatusError("Failed to open processing options");
+            }
+        }
+
+        /// <summary>
+        /// Toggles between detailed and compact document view modes
+        /// </summary>
+        [RelayCommand]
+        private void ToggleViewMode()
+        {
+            IsCompactView = !IsCompactView;
+            _logger.LogInformation("Document view mode toggled to: {ViewMode}", IsCompactView ? "Compact" : "Detailed");
+            
+            // Force refresh of the document items to trigger template selector re-evaluation
+            RefreshDocumentViewItems();
+        }
+        
+        /// <summary>
+        /// Forces the ItemsControl to refresh the templates by triggering a collection change
+        /// </summary>
+        private void RefreshDocumentViewItems()
+        {
+            try
+            {
+                // Create a temporary list to hold the items
+                var tempItems = DocumentItems.ToList();
+                
+                // Clear and repopulate to force ItemsControl refresh
+                DocumentItems.Clear();
+                
+                foreach (var item in tempItems)
+                {
+                    DocumentItems.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing document view items");
             }
         }
 

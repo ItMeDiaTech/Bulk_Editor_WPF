@@ -349,10 +349,27 @@ namespace BulkEditor.UI.ViewModels
         [RelayCommand]
         private void RemoveHyperlinkRule(HyperlinkReplacementRule? rule)
         {
-            if (rule != null && HyperlinkRules.Contains(rule))
+            try
             {
-                HyperlinkRules.Remove(rule);
-                _logger.LogInformation("Hyperlink rule removed: {Rule}", rule.TitleToMatch);
+                if (rule != null && HyperlinkRules.Contains(rule))
+                {
+                    HyperlinkRules.Remove(rule);
+                    _logger.LogInformation("Hyperlink rule removed: {Rule}", rule.TitleToMatch);
+                    _notificationService.ShowInfo("Rule Removed", $"Hyperlink rule '{rule.TitleToMatch}' has been removed.");
+                }
+                else if (rule == null && HyperlinkRules.Count == 0)
+                {
+                    _notificationService.ShowInfo("No Rules to Remove", "There are no hyperlink rules to remove.");
+                }
+                else if (rule == null)
+                {
+                    _notificationService.ShowInfo("No Selection", "Please select a hyperlink rule to remove.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing hyperlink rule");
+                _notificationService.ShowError("Remove Error", "Failed to remove hyperlink rule.", ex);
             }
         }
 
@@ -462,10 +479,27 @@ namespace BulkEditor.UI.ViewModels
         [RelayCommand]
         private void RemoveTextRule(TextReplacementRule? rule)
         {
-            if (rule != null && TextRules.Contains(rule))
+            try
             {
-                TextRules.Remove(rule);
-                _logger.LogInformation("Text rule removed: {Rule}", rule.SourceText);
+                if (rule != null && TextRules.Contains(rule))
+                {
+                    TextRules.Remove(rule);
+                    _logger.LogInformation("Text rule removed: {Rule}", rule.SourceText);
+                    _notificationService.ShowInfo("Rule Removed", $"Text rule '{rule.SourceText}' has been removed.");
+                }
+                else if (rule == null && TextRules.Count == 0)
+                {
+                    _notificationService.ShowInfo("No Rules to Remove", "There are no text rules to remove.");
+                }
+                else if (rule == null)
+                {
+                    _notificationService.ShowInfo("No Selection", "Please select a text rule to remove.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing text rule");
+                _notificationService.ShowError("Remove Error", "Failed to remove text rule.", ex);
             }
         }
 

@@ -3,105 +3,136 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title="Processing Options - Bulk Document Editor"
         Height="650" Width="900"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         MinHeight="600" MinWidth="800"
+        Style="{StaticResource MaterialDesignWindow}"
+        Background="{DynamicResource BackgroundBrush}"
+        TextElement.Foreground="{DynamicResource OnBackgroundBrush}"
+        TextElement.FontWeight="Medium"
+        TextElement.FontSize="14"
+        FontFamily="{StaticResource PrimaryFontFamily}"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        materialDesign:ElevationAssist.Elevation="Dp4"
         Loaded="Window_Loaded">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <Style TargetType="GroupBox">
-            <Setter Property="Margin" Value="8"/>
-            <Setter Property="Padding" Value="12"/>
-            <Setter Property="BorderBrush" Value="#333333"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#FAFAFA"/>
+        
+        <!-- MD3 Processing Options Specific Styles -->
+        <Style x:Key="OptionsGroupCardStyle" TargetType="{x:Type materialDesign:Card}" BasedOn="{StaticResource SettingsCardStyle}">
+            <Setter Property="Margin" Value="{StaticResource MediumVerticalSpacing}"/>
+            <Setter Property="Padding" Value="{StaticResource SectionPadding}"/>
         </Style>
-        <Style TargetType="TextBlock" x:Key="SectionHeader">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="Foreground" Value="#2196F3"/>
+        
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleMediumTextStyle}">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Margin" Value="0,4"/>
-            <Setter Property="FontSize" Value="14"/>
+        
+        <Style x:Key="OptionsCheckBoxStyle" TargetType="CheckBox" BasedOn="{StaticResource MaterialDesignCheckBox}">
+            <Setter Property="Margin" Value="{StaticResource ItemMargin}"/>
+            <Setter Property="FontSize" Value="{StaticResource BodyMediumFontSize}"/>
+            <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
         </Style>
-        <Style TargetType="TabItem">
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
+        
+        <Style x:Key="OptionsTabStyle" TargetType="TabItem" BasedOn="{StaticResource MaterialDesignTabItem}">
+            <Setter Property="Padding" Value="{StaticResource ButtonPadding}"/>
+            <Setter Property="FontSize" Value="{StaticResource LabelLargeFontSize}"/>
+            <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
         </Style>
-        <Style TargetType="DataGrid">
+        
+        <Style x:Key="OptionsDataGridStyle" TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
             <Setter Property="CanUserDeleteRows" Value="True"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="SelectionMode" Value="Single"/>
-            <Setter Property="BorderBrush" Value="#333333"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
         </Style>
     </Window.Resources>
 
-    <Grid Background="#F8F8F8">
+    <Grid Background="{DynamicResource BackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Processing Options Content -->
-        <TabControl Grid.Row="0" Margin="16" Background="White" BorderBrush="#333333" BorderThickness="1">
+        <materialDesign:Card Grid.Row="0" 
+                           Style="{StaticResource DashboardCardStyle}"
+                           Margin="{StaticResource LargeSpacing}">
+            <TabControl Style="{StaticResource MaterialDesignFilledTabControl}"
+                       Background="Transparent"
+                       BorderThickness="0">
 
             <!-- Processing Options Tab -->
-            <TabItem Header="Processing Options">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="16">
+            <TabItem Header="Processing Options" Style="{StaticResource OptionsTabStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="{StaticResource MediumSpacing}">
+                    <StackPanel>
 
                         <!-- TheSource Hyperlink Operations -->
-                        <GroupBox Header="theSource Hyperlink Operations">
+                        <materialDesign:Card Style="{StaticResource OptionsGroupCardStyle}">
                             <StackPanel>
+                                <TextBlock Text="theSource Hyperlink Operations" 
+                                         Style="{StaticResource SectionHeaderStyle}"/>
                                 <CheckBox Content="Update URLs of theSource Hyperlinks"
                                           IsChecked="{Binding UpdateTheSourceHyperlinkUrls}"
+                                          Style="{StaticResource OptionsCheckBoxStyle}"
                                           ToolTip="Updates hyperlink URLs to point to correct documents"/>
                                 <CheckBox Content="Append Content IDs to theSource Hyperlinks"
                                           IsChecked="{Binding AppendContentIdsToTheSourceHyperlinks}"
+                                          Style="{StaticResource OptionsCheckBoxStyle}"
                                           ToolTip="Adds Content IDs to hyperlink display text"/>
                                 <CheckBox Content="Check for Expired Content"
                                           IsChecked="{Binding CheckForExpiredContent}"
+                                          Style="{StaticResource OptionsCheckBoxStyle}"
                                           ToolTip="Identifies and marks expired content with status indicators"/>
                             </StackPanel>
-                        </GroupBox>
+                        </materialDesign:Card>
 
                         <!-- Title Operations -->
-                        <GroupBox Header="Title Operations">
+                        <materialDesign:Card Style="{StaticResource OptionsGroupCardStyle}">
                             <StackPanel>
+                                <TextBlock Text="Title Operations" 
+                                         Style="{StaticResource SectionHeaderStyle}"/>
                                 <CheckBox Content="Auto Replace Outdated Titles"
                                           IsChecked="{Binding AutoReplaceOutdatedTitles}"
+                                          Style="{StaticResource OptionsCheckBoxStyle}"
                                           ToolTip="Automatically replaces outdated document titles with current versions"/>
                                 <CheckBox Content="Report Title Differences in Changelog"
                                           IsChecked="{Binding ReportTitleDifferencesInChangelog}"
+                                          Style="{StaticResource OptionsCheckBoxStyle}"
                                           ToolTip="Logs title differences for manual review"/>
                             </StackPanel>
-                        </GroupBox>
+                        </materialDesign:Card>
 
                         <!-- Custom Replacement Operations -->
-                        <GroupBox Header="Custom Replacement Operations">
+                        <materialDesign:Card Style="{StaticResource OptionsGroupCardStyle}">
                             <StackPanel>
+                                <TextBlock Text="Custom Replacement Operations" 
+                                         Style="{StaticResource SectionHeaderStyle}"/>
                                 <CheckBox Content="Replace Custom User Defined Hyperlinks"
                                           IsChecked="{Binding ReplaceCustomUserDefinedHyperlinks}"
+                                          Style="{StaticResource OptionsCheckBoxStyle}"
                                           ToolTip="Applies user-defined hyperlink replacement rules"/>
                                 <CheckBox Content="Replace Custom User Defined Text"
                                           IsChecked="{Binding ReplaceCustomUserDefinedText}"
+                                          Style="{StaticResource OptionsCheckBoxStyle}"
                                           ToolTip="Applies user-defined text replacement rules"/>
                                 <CheckBox Content="Optimize Text Formatting"
                                           IsChecked="{Binding OptimizeTextFormatting}"
+                                          Style="{StaticResource OptionsCheckBoxStyle}"
                                           ToolTip="Optimizes document text formatting and structure"/>
                             </StackPanel>
-                        </GroupBox>
+                        </materialDesign:Card>
 
 
                     </StackPanel>
@@ -109,37 +140,82 @@
             </TabItem>
 
             <!-- Replacement Hyperlinks Tab -->
-            <TabItem Header="Replacement Hyperlinks">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="16">
+            <TabItem Header="Replacement Hyperlinks" Style="{StaticResource OptionsTabStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="{StaticResource MediumSpacing}">
+                    <StackPanel>
 
                         <!-- Hyperlink Replacement Rules -->
-                        <GroupBox Header="Hyperlink Replacement Rules">
-                            <StackPanel>
-                                <TextBlock Text="Define rules to replace hyperlink titles with specific content IDs."
-                                           FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>
+                        <materialDesign:Card Style="{StaticResource OptionsGroupCardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*" MinHeight="250"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                                <Grid Margin="0,0,0,8">
+                                <!-- Header Section -->
+                                <StackPanel Grid.Row="0">
+                                    <TextBlock Text="Hyperlink Replacement Rules" 
+                                             Style="{StaticResource SectionHeaderStyle}"/>
+                                    <TextBlock Text="Define rules to replace hyperlink titles with specific content IDs."
+                                               FontStyle="Italic" 
+                                               Foreground="{DynamicResource OnSurfaceVariantBrush}" 
+                                               Margin="0,0,0,16"
+                                               FontSize="{StaticResource BodySmallFontSize}"/>
+                                </StackPanel>
+
+                                <!-- Control Bar -->
+                                <Grid Grid.Row="1" Margin="0,0,0,16">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Hyperlink Rules:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Hyperlink Rules:" 
+                                                 VerticalAlignment="Center" 
+                                                 FontWeight="SemiBold"
+                                                 Style="{StaticResource LabelLargeTextStyle}"
+                                                 Margin="0,0,12,0"/>
+                                        <Border Background="{DynamicResource PrimaryContainerBrush}" 
+                                                CornerRadius="12" 
+                                                Padding="8,4">
+                                            <TextBlock Text="{Binding HyperlinkRules.Count, StringFormat='{}Rules: {0}'}"
+                                                     FontSize="12"
+                                                     Foreground="{DynamicResource OnPrimaryContainerBrush}"/>
+                                        </Border>
+                                    </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <Button Content="Add Rule" Padding="12,6" Margin="0,0,8,0"
                                                 Command="{Binding AddHyperlinkRuleCommand}"
-                                                Background="#4CAF50" Foreground="White"/>
-                                        <Button Content="Remove Selected" Padding="12,6"
+                                                Style="{StaticResource MD3FilledButtonStyle}"/>
+                                        <Button Content="Remove Selected" Padding="12,6" Margin="0,0,8,0"
                                                 Command="{Binding RemoveHyperlinkRuleCommand}"
                                                 CommandParameter="{Binding SelectedItem, ElementName=HyperlinkRulesGrid}"
-                                                Background="#F44336" Foreground="White"/>
+                                                Style="{StaticResource MD3OutlinedButtonStyle}"
+                                                Foreground="{DynamicResource ErrorBrush}"/>
+                                        <Button Content="Clear All Rules" Padding="12,6"
+                                                Command="{Binding ClearAllHyperlinkRulesCommand}"
+                                                Style="{StaticResource MD3OutlinedButtonStyle}"
+                                                Foreground="{DynamicResource ErrorBrush}"/>
                                     </StackPanel>
                                 </Grid>
 
-                                <DataGrid Name="HyperlinkRulesGrid" ItemsSource="{Binding HyperlinkRules}"
-                                          Height="300" Margin="0,0,0,8"
+                                <!-- Separator -->
+                                <Border Grid.Row="2" Height="1" 
+                                        Background="{DynamicResource OutlineVariantBrush}" 
+                                        Margin="0,0,0,12"/>
+
+                                <!-- DataGrid Section -->
+                                <DataGrid Grid.Row="3" Name="HyperlinkRulesGrid" 
+                                          ItemsSource="{Binding HyperlinkRules}"
+                                          Style="{StaticResource OptionsDataGridStyle}"
                                           ClipboardCopyMode="IncludeHeader"
-                                          SelectionMode="Extended">
+                                          SelectionMode="Extended"
+                                          AutoGenerateColumns="False"
+                                          GridLinesVisibility="Horizontal"
+                                          AlternatingRowBackground="{DynamicResource SurfaceVariantBrush}">
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"/>
@@ -149,60 +225,104 @@
                                         </ContextMenu>
                                     </DataGrid.ContextMenu>
                                     <DataGrid.Columns>
-                                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80"/>
-                                        <DataGridTextColumn Header="Title to Match" Binding="{Binding TitleToMatch}" Width="300"/>
-                                        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="200"/>
-                                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="120" IsReadOnly="True"/>
+                                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80" MinWidth="60"/>
+                                        <DataGridTextColumn Header="Title to Match" Binding="{Binding TitleToMatch}" Width="*" MinWidth="200"/>
+                                        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="0.6*" MinWidth="150"/>
+                                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="120" MinWidth="100" IsReadOnly="True"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
 
-                                <TextBlock Text="Example: Title='User Guide' → Content ID='CMS-DOC-123456'"
-                                           FontSize="12" FontStyle="Italic" Foreground="Gray"/>
-
-                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                    <Button Content="Clear All Rules" Padding="16,8"
-                                            Command="{Binding ClearAllHyperlinkRulesCommand}"
-                                            Background="#FF6B6B" Foreground="White"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </GroupBox>
+                                <!-- Footer Section -->
+                                <TextBlock Grid.Row="4" 
+                                           Text="Example: Title='User Guide' → Content ID='CMS-DOC-123456'"
+                                           FontSize="{StaticResource BodySmallFontSize}" 
+                                           FontStyle="Italic" 
+                                           Foreground="{DynamicResource OnSurfaceVariantBrush}"
+                                           Margin="0,12,0,0"/>
+                            </Grid>
+                        </materialDesign:Card>
 
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
 
             <!-- Replacement Text Tab -->
-            <TabItem Header="Replacement Text">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="16">
+            <TabItem Header="Replacement Text" Style="{StaticResource OptionsTabStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="{StaticResource MediumSpacing}">
+                    <StackPanel>
 
                         <!-- Text Replacement Rules -->
-                        <GroupBox Header="Text Replacement Rules">
-                            <StackPanel>
-                                <TextBlock Text="Define rules to replace specific text patterns in documents."
-                                           FontStyle="Italic" Foreground="Gray" Margin="0,0,0,8"/>
+                        <materialDesign:Card Style="{StaticResource OptionsGroupCardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*" MinHeight="250"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                                <Grid Margin="0,0,0,8">
+                                <!-- Header Section -->
+                                <StackPanel Grid.Row="0">
+                                    <TextBlock Text="Text Replacement Rules" 
+                                             Style="{StaticResource SectionHeaderStyle}"/>
+                                    <TextBlock Text="Define rules to replace specific text patterns in documents."
+                                               FontStyle="Italic" 
+                                               Foreground="{DynamicResource OnSurfaceVariantBrush}" 
+                                               Margin="0,0,0,16"
+                                               FontSize="{StaticResource BodySmallFontSize}"/>
+                                </StackPanel>
+
+                                <!-- Control Bar -->
+                                <Grid Grid.Row="1" Margin="0,0,0,16">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Text Rules:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Text Rules:" 
+                                                 VerticalAlignment="Center" 
+                                                 FontWeight="SemiBold"
+                                                 Style="{StaticResource LabelLargeTextStyle}"
+                                                 Margin="0,0,12,0"/>
+                                        <Border Background="{DynamicResource SecondaryContainerBrush}" 
+                                                CornerRadius="12" 
+                                                Padding="8,4">
+                                            <TextBlock Text="{Binding TextRules.Count, StringFormat='{}Rules: {0}'}"
+                                                     FontSize="12"
+                                                     Foreground="{DynamicResource OnSecondaryContainerBrush}"/>
+                                        </Border>
+                                    </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <Button Content="Add Rule" Padding="12,6" Margin="0,0,8,0"
                                                 Command="{Binding AddTextRuleCommand}"
-                                                Background="#4CAF50" Foreground="White"/>
-                                        <Button Content="Remove Selected" Padding="12,6"
+                                                Style="{StaticResource MD3FilledButtonStyle}"/>
+                                        <Button Content="Remove Selected" Padding="12,6" Margin="0,0,8,0"
                                                 Command="{Binding RemoveTextRuleCommand}"
                                                 CommandParameter="{Binding SelectedItem, ElementName=TextRulesGrid}"
-                                                Background="#F44336" Foreground="White"/>
+                                                Style="{StaticResource MD3OutlinedButtonStyle}"
+                                                Foreground="{DynamicResource ErrorBrush}"/>
+                                        <Button Content="Clear All Rules" Padding="12,6"
+                                                Command="{Binding ClearAllTextRulesCommand}"
+                                                Style="{StaticResource MD3OutlinedButtonStyle}"
+                                                Foreground="{DynamicResource ErrorBrush}"/>
                                     </StackPanel>
                                 </Grid>
 
-                                <DataGrid Name="TextRulesGrid" ItemsSource="{Binding TextRules}"
-                                          Height="300" Margin="0,0,0,8"
+                                <!-- Separator -->
+                                <Border Grid.Row="2" Height="1" 
+                                        Background="{DynamicResource OutlineVariantBrush}" 
+                                        Margin="0,0,0,12"/>
+
+                                <!-- DataGrid Section -->
+                                <DataGrid Grid.Row="3" Name="TextRulesGrid" 
+                                          ItemsSource="{Binding TextRules}"
+                                          Style="{StaticResource OptionsDataGridStyle}"
                                           ClipboardCopyMode="IncludeHeader"
-                                          SelectionMode="Extended">
+                                          SelectionMode="Extended"
+                                          AutoGenerateColumns="False"
+                                          GridLinesVisibility="Horizontal"
+                                          AlternatingRowBackground="{DynamicResource SurfaceVariantBrush}">
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Copy" Command="ApplicationCommands.Copy" InputGestureText="Ctrl+C"/>
@@ -212,23 +332,22 @@
                                         </ContextMenu>
                                     </DataGrid.ContextMenu>
                                     <DataGrid.Columns>
-                                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80"/>
-                                        <DataGridTextColumn Header="Source Text" Binding="{Binding SourceText}" Width="350"/>
-                                        <DataGridTextColumn Header="Replacement Text" Binding="{Binding ReplacementText}" Width="350"/>
-                                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="120" IsReadOnly="True"/>
+                                        <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="80" MinWidth="60"/>
+                                        <DataGridTextColumn Header="Source Text" Binding="{Binding SourceText}" Width="*" MinWidth="200"/>
+                                        <DataGridTextColumn Header="Replacement Text" Binding="{Binding ReplacementText}" Width="*" MinWidth="200"/>
+                                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="120" MinWidth="100" IsReadOnly="True"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
 
-                                <TextBlock Text="Example: Source='Old Company Name' → Replacement='New Company Name'"
-                                           FontSize="12" FontStyle="Italic" Foreground="Gray"/>
-
-                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                    <Button Content="Clear All Rules" Padding="16,8"
-                                            Command="{Binding ClearAllTextRulesCommand}"
-                                            Background="#FF6B6B" Foreground="White"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </GroupBox>
+                                <!-- Footer Section -->
+                                <TextBlock Grid.Row="4" 
+                                           Text="Example: Source='Old Company Name' → Replacement='New Company Name'"
+                                           FontSize="{StaticResource BodySmallFontSize}" 
+                                           FontStyle="Italic" 
+                                           Foreground="{DynamicResource OnSurfaceVariantBrush}"
+                                           Margin="0,12,0,0"/>
+                            </Grid>
+                        </materialDesign:Card>
 
                     </StackPanel>
                 </ScrollViewer>
@@ -322,29 +441,28 @@
             </TabItem>
 
         </TabControl>
+        </materialDesign:Card>
 
         <!-- Action Buttons -->
-        <Border Grid.Row="1" Background="#E8E8E8" Padding="16,12" BorderBrush="#333333" BorderThickness="0,1,0,0">
+        <materialDesign:Card Grid.Row="1" 
+                           Background="{DynamicResource SurfaceVariantBrush}"
+                           materialDesign:ElevationAssist.Elevation="Dp1"
+                           Margin="0"
+                           Padding="{StaticResource SectionPadding}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Reset to Defaults"
                         Command="{Binding ResetToDefaultsCommand}"
-                        Margin="0,0,8,0"
-                        Padding="16,8"
-                        Background="#9E9E9E"
-                        Foreground="White"/>
+                        Style="{StaticResource MD3OutlinedButtonStyle}"
+                        Margin="0,0,16,0"/>
                 <Button Content="Cancel"
                         Command="{Binding CancelCommand}"
-                        Margin="0,0,8,0"
-                        Padding="16,8"
-                        Background="#9E9E9E"
-                        Foreground="White"/>
+                        Style="{StaticResource MD3OutlinedButtonStyle}"
+                        Margin="0,0,16,0"/>
                 <Button Content="Save Settings"
                         Command="{Binding SaveSettingsCommand}"
-                        Background="#4CAF50"
-                        Foreground="White"
-                        Padding="16,8"/>
+                        Style="{StaticResource MD3FilledButtonStyle}"/>
             </StackPanel>
-        </Border>
+        </materialDesign:Card>
 
     </Grid>
 </Window>

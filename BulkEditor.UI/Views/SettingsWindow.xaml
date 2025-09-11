@@ -3,84 +3,97 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:views="clr-namespace:BulkEditor.UI.Views.Settings"
         mc:Ignorable="d"
         Title="Settings - Bulk Document Editor"
         Height="600" Width="800"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
-        MinHeight="500" MinWidth="700">
+        MinHeight="500" MinWidth="700"
+        Style="{x:Null}"
+        Background="#FEFBFF"
+        TextElement.Foreground="#1C1B1F"
+        TextElement.FontWeight="Medium"
+        TextElement.FontSize="14"
+        FontFamily="Segoe UI"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        materialDesign:ElevationAssist.Elevation="Dp4">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <Style TargetType="GroupBox">
-            <Setter Property="Margin" Value="8"/>
-            <Setter Property="Padding" Value="12"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-        <Style TargetType="TextBlock" x:Key="SectionHeader">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="Foreground" Value="#2196F3"/>
+        
+        <!-- MD3 Settings Window Specific Styles -->
+        <Style x:Key="SettingsTabStyle" TargetType="TabItem">
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="#FEFBFF">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Settings Content -->
-        <TabControl Grid.Row="0" Margin="16">
+        <materialDesign:Card Grid.Row="0" 
+                           Style="{StaticResource DashboardCardStyle}"
+                           Margin="24">
+            <TabControl Style="{x:Null}"
+                       Background="Transparent"
+                       BorderThickness="0">
 
-            <!-- Theme Settings -->
-            <TabItem Header="Theme">
+            <!-- Theme Settings - DISABLED FOR TESTING -->
+            <!--<TabItem Header="Theme" Style="{StaticResource SettingsTabStyle}">
                 <views:ThemeSettingsView DataContext="{Binding ThemeSettings}"/>
-            </TabItem>
+            </TabItem>-->
 
             <!-- General Settings -->
-            <TabItem Header="General">
+            <TabItem Header="General" Style="{StaticResource SettingsTabStyle}">
                 <views:ProcessingSettingsView DataContext="{Binding ProcessingSettings}"/>
             </TabItem>
 
             <!-- Validation Settings -->
-            <TabItem Header="Validation">
+            <TabItem Header="Validation" Style="{StaticResource SettingsTabStyle}">
                 <views:ValidationSettingsView DataContext="{Binding ValidationSettings}"/>
             </TabItem>
 
             <!-- Logging Settings -->
-            <TabItem Header="Error Logging">
+            <TabItem Header="Error Logging" Style="{StaticResource SettingsTabStyle}">
                 <views:LoggingSettingsView DataContext="{Binding LoggingSettings}"/>
             </TabItem>
 
             <!-- Update Settings -->
-            <TabItem Header="Updates">
+            <TabItem Header="Updates" Style="{StaticResource SettingsTabStyle}">
                 <views:UpdateSettingsView DataContext="{Binding UpdateSettings}"/>
             </TabItem>
 
         </TabControl>
+        </materialDesign:Card>
 
         <!-- Action Buttons -->
-        <Border Grid.Row="1" Background="#F5F5F5" Padding="16,12">
+        <materialDesign:Card Grid.Row="1" 
+                           Background="#F4EFF4"
+                           materialDesign:ElevationAssist.Elevation="Dp1"
+                           Margin="0"
+                           Padding="24,16">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Reset to Defaults"
                         Command="{Binding ResetToDefaultsCommand}"
-                        Margin="0,0,8,0"
-                        Padding="16,8"/>
+                        Style="{StaticResource MD3OutlinedButtonStyle}"
+                        Margin="0,0,16,0"/>
                 <Button Content="Cancel"
                         Command="{Binding CancelCommand}"
-                        Margin="0,0,8,0"
-                        Padding="16,8"/>
+                        Style="{StaticResource MD3OutlinedButtonStyle}"
+                        Margin="0,0,16,0"/>
                 <Button Content="Save Settings"
                         Command="{Binding SaveSettingsCommand}"
-                        Background="#2196F3"
-                        Foreground="White"
-                        Padding="16,8"/>
+                        Style="{StaticResource MD3FilledButtonStyle}"/>
             </StackPanel>
-        </Border>
+        </materialDesign:Card>
 
     </Grid>
 </Window>

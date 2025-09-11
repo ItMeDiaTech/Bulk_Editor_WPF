@@ -54,4 +54,9 @@
     </None>
   </ItemGroup>
 
+  <PropertyGroup>
+    <!-- Suppress common warnings -->
+    <NoWarn>NETSDK1206;CS1591;CS8618;CS8625;CS8601;CS8602;CS8603;CS8604;CA1014;CA2007;NETSDK1187</NoWarn>
+  </PropertyGroup>
+
 </Project>

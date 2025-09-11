@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- Suppress common warnings -->
+    <NoWarn>CS1591;CS8618;CS8625;CS8601;CS8602;CS8603;CS8604;CA1014;CA2007;NETSDK1187</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -7,6 +7,9 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <UseWPF>true</UseWPF>
+
+    <!-- Suppress common warnings -->
+    <NoWarn>CS1591;CS8618;CS8625;CS8601;CS8602;CS8603;CS8604;CA1014;CA2007;xUnit1004;NETSDK1187</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
