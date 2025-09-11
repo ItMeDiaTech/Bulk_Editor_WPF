@@ -596,6 +596,58 @@ namespace BulkEditor.Infrastructure.Services
         }
 
         /// <summary>
+        /// Standalone title validation and update workflow
+        /// Validates and updates hyperlink titles without processing URLs
+        /// </summary>
+        public async Task<IEnumerable<Hyperlink>> ValidateAndUpdateTitlesAsync(BulkEditor.Core.Entities.Document document, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!document.Hyperlinks.Any())
+                {
+                    _logger.LogDebug("No hyperlinks found for title validation in document: {FileName}", document.FileName);
+                    return document.Hyperlinks;
+                }
+
+                var validationSettings = _appSettings.Validation;
+                if (!validationSettings.AutoReplaceTitles)
+                {
+                    _logger.LogDebug("AutoReplaceTitles disabled - skipping title validation for: {FileName}", document.FileName);
+                    return document.Hyperlinks;
+                }
+
+                _logger.LogInformation("✓ TITLE-ONLY VALIDATION: Starting for {Count} hyperlinks in {FileName}", document.Hyperlinks.Count, document.FileName);
+
+                // Validate hyperlinks to get title comparison data
+                var validationResults = await _hyperlinkValidator.ValidateHyperlinksAsync(document.Hyperlinks, cancellationToken).ConfigureAwait(false);
+
+                var titlesUpdated = 0;
+                
+                // Process title differences
+                foreach (var result in validationResults)
+                {
+                    var hyperlink = document.Hyperlinks.FirstOrDefault(h => h.Id == result.HyperlinkId);
+                    if (hyperlink != null && result.TitleComparison != null && result.TitleComparison.TitlesDiffer)
+                    {
+                        await HandleTitleDifferenceAsync(document, hyperlink, result.TitleComparison, cancellationToken);
+                        if (result.TitleComparison.WasReplaced)
+                        {
+                            titlesUpdated++;
+                        }
+                    }
+                }
+
+                _logger.LogInformation("✓ TITLE-ONLY VALIDATION COMPLETED: {UpdatedCount} titles updated in {FileName}", titlesUpdated, document.FileName);
+                return document.Hyperlinks;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in standalone title validation for document: {FileName}", document.FileName);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Optimizes memory usage by clearing unnecessary caches and forcing garbage collection
         /// </summary>
         public async Task OptimizeMemoryAsync(CancellationToken cancellationToken = default)
@@ -1556,6 +1608,10 @@ namespace BulkEditor.Infrastructure.Services
                     bool skipApiCalls = string.IsNullOrWhiteSpace(_appSettings.Api.BaseUrl) ||
                                        _appSettings.Api.BaseUrl.Equals("Test", StringComparison.OrdinalIgnoreCase);
 
+                    // Enhanced logging: Show processing workflow decision
+                    _logger.LogInformation("📋 PROCESSING WORKFLOW DECISION: UpdateHyperlinks={Update}, ValidateHyperlinks={Validate}, ValidateTitlesOnly={TitlesOnly}, HasHyperlinks={HasLinks}, SkipApiCalls={SkipApi}",
+                        _appSettings.Processing.UpdateHyperlinks, _appSettings.Processing.ValidateHyperlinks, _appSettings.Validation.ValidateTitlesOnly, document.Hyperlinks.Any(), skipApiCalls);
+
                     if (_appSettings.Processing.UpdateHyperlinks && _appSettings.Processing.ValidateHyperlinks && document.Hyperlinks.Any() && !skipApiCalls)
                     {
                         progress?.Report("Processing hyperlinks using VBA methodology...");
@@ -1589,6 +1645,24 @@ namespace BulkEditor.Infrastructure.Services
                     else
                     {
                         _logger.LogInformation("Hyperlink processing skipped for {FileName}: No hyperlinks found in document", document.FileName);
+                    }
+
+                    // STEP 9.5: Alternative title-only validation workflow (if enabled and hyperlink processing was skipped)
+                    if (_appSettings.Validation.ValidateTitlesOnly && !(_appSettings.Processing.UpdateHyperlinks && _appSettings.Processing.ValidateHyperlinks && document.Hyperlinks.Any() && !skipApiCalls))
+                    {
+                        progress?.Report("Validating titles only...");
+                        _logger.LogInformation("Starting title-only validation workflow for {FileName}", document.FileName);
+                        
+                        await ValidateAndUpdateTitlesAsync(document, cancellationToken).ConfigureAwait(false);
+                        
+                        // Apply title updates to the document if any hyperlinks were marked for update
+                        var titleUpdates = document.Hyperlinks.Where(h => h.RequiresUpdate).ToList();
+                        if (titleUpdates.Any())
+                        {
+                            progress?.Report("Applying title updates to document...");
+                            await UpdateHyperlinksInSessionAsync(mainPart, document, cancellationToken).ConfigureAwait(false);
+                            _logger.LogInformation("Applied {Count} title updates to document: {FileName}", titleUpdates.Count, document.FileName);
+                        }
                     }
 
                     // STEP 11: Validate after hyperlink updates

@@ -50,6 +50,7 @@ namespace BulkEditor.Core.Configuration
         public List<string> SkipDomains { get; set; } = new();
         public bool AutoReplaceTitles { get; set; } = false;
         public bool ReportTitleDifferences { get; set; } = true;
+        public bool ValidateTitlesOnly { get; set; } = false;
     }
 
     /// <summary>
