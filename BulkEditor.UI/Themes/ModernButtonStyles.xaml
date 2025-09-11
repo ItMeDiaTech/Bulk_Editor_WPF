@@ -2,101 +2,227 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
 
-    <!-- Modern Material Design Button Style -->
-    <Style x:Key="ModernButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+    <!-- Enhanced Modern Button Styles for 2024 -->
+
+    <!-- Primary Button Style - Material Design 3 Inspired -->
+    <Style x:Key="PrimaryButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="{DynamicResource ButtonPadding}"/>
-        <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
-        <Setter Property="FontWeight" Value="{DynamicResource BodyFontWeight}"/>
+        <Setter Property="Padding" Value="{StaticResource ButtonPadding}"/>
+        <Setter Property="Height" Value="{StaticResource LargeButtonHeight}"/>
+        <Setter Property="MinWidth" Value="{StaticResource MinButtonWidth}"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
-        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="{DynamicResource ButtonCornerRadius}"/>
+        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="12"/>
         <Setter Property="materialDesign:RippleAssist.IsDisabled" Value="False"/>
-        <Setter Property="Margin" Value="{DynamicResource SmallSpacing}"/>
+        <Setter Property="Margin" Value="{StaticResource SmallSpacing}"/>
     </Style>
 
-    <!-- Primary Action Button Style -->
-    <Style x:Key="PrimaryActionButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource ModernButtonStyle}">
-        <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="Padding" Value="24,12"/>
-        <Setter Property="FontSize" Value="16"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp4"/>
-    </Style>
-
-    <!-- Secondary Button Style -->
-    <Style x:Key="SecondaryButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+    <!-- Secondary Button Style - Outlined Design -->
+    <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="{DynamicResource ButtonPadding}"/>
-        <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
-        <Setter Property="FontWeight" Value="{DynamicResource BodyFontWeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource OutlineBrush}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource ThinBorder}"/>
+        <Setter Property="Padding" Value="{StaticResource ButtonPadding}"/>
+        <Setter Property="Height" Value="{StaticResource LargeButtonHeight}"/>
+        <Setter Property="MinWidth" Value="{StaticResource MinButtonWidth}"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelMediumFontSize}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LabelFontWeight}"/>
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="{DynamicResource ButtonCornerRadius}"/>
-        <Setter Property="Margin" Value="{DynamicResource SmallSpacing}"/>
+        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="12"/>
+        <Setter Property="Margin" Value="{StaticResource SmallSpacing}"/>
     </Style>
 
-    <!-- Flat Button Style -->
-    <Style x:Key="FlatButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MaterialDesignFlatButton}">
+    <!-- Text Button Style - Modern Flat Design -->
+    <Style x:Key="TextButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="{DynamicResource ButtonPadding}"/>
-        <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
-        <Setter Property="FontWeight" Value="{DynamicResource BodyFontWeight}"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="{DynamicResource ButtonCornerRadius}"/>
-        <Setter Property="Margin" Value="{DynamicResource SmallSpacing}"/>
+        <Setter Property="Margin" Value="4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="8"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SurfaceVariantBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SurfaceVariantBrush}"/>
+                            <Setter Property="Opacity" Value="0.8"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
-    <!-- Warning Button Style -->
-    <Style x:Key="WarningButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource ModernButtonStyle}">
-        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
-    </Style>
-
-    <!-- Danger Button Style -->
-    <Style x:Key="DangerButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource ModernButtonStyle}">
-        <Setter Property="Background" Value="{DynamicResource ErrorBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
-    </Style>
-
-    <!-- Icon Button Style -->
-    <Style x:Key="IconButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MaterialDesignIconButton}">
-        <Setter Property="Width" Value="40"/>
-        <Setter Property="Height" Value="40"/>
+    <!-- Enhanced Icon Button Style -->
+    <Style x:Key="IconButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="48"/>
+        <Setter Property="Height" Value="48"/>
         <Setter Property="Padding" Value="8"/>
         <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
-        <Setter Property="materialDesign:RippleAssist.ClipToBounds" Value="True"/>
-        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="20"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="12"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SurfaceVariantBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SurfaceVariantBrush}"/>
+                            <Setter Property="Opacity" Value="0.8"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
-    <!-- Floating Action Button Style -->
-    <Style x:Key="FloatingActionButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource MaterialDesignFloatingActionButton}">
-        <Setter Property="Background" Value="{DynamicResource SecondaryBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp6"/>
+    <!-- Modern FAB Style -->
+    <Style x:Key="FABStyle" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource PrimaryContainerBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnPrimaryContainerBrush}"/>
         <Setter Property="Width" Value="56"/>
         <Setter Property="Height" Value="56"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="28">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="8" ShadowDepth="4"/>
+                        </Border.Effect>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource PrimaryContainerHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource PrimaryContainerPressedBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Semantic Button Styles -->
+    <Style x:Key="SuccessButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnSuccessBrush}"/>
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+    </Style>
+
+    <Style x:Key="WarningButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnWarningBrush}"/>
+    </Style>
+
+    <Style x:Key="ErrorButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource ErrorBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnErrorBrush}"/>
+    </Style>
+
+    <Style x:Key="InfoButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource InfoBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnInfoBrush}"/>
     </Style>
 
     <!-- Card Action Button Style -->
-    <Style x:Key="CardActionButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource FlatButtonStyle}">
+    <Style x:Key="CardActionButtonStyle" TargetType="Button" BasedOn="{StaticResource TextButtonStyle}">
         <Setter Property="Padding" Value="8,4"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{StaticResource LabelSmallFontSize}"/>
+        <Setter Property="Height" Value="{StaticResource SmallButtonHeight}"/>
         <Setter Property="Margin" Value="4,2"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
     </Style>
 
-    <!-- Toggle Button Style -->
-    <Style x:Key="ToggleButtonStyle" TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource MaterialDesignSwitchToggleButton}">
+    <!-- Enhanced Toggle Button Style -->
+    <Style x:Key="ModernToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource MaterialDesignSwitchToggleButton}">
         <Setter Property="materialDesign:ToggleButtonAssist.SwitchTrackOnBackground" Value="{DynamicResource PrimaryBrush}"/>
-        <Setter Property="materialDesign:ToggleButtonAssist.SwitchTrackOffBackground" Value="#BDBDBD"/>
+        <Setter Property="materialDesign:ToggleButtonAssist.SwitchTrackOffBackground" Value="{DynamicResource SurfaceVariantBrush}"/>
     </Style>
+
+    <!-- Navigation Rail Button Style -->
+    <Style x:Key="NavigationRailButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource OnSurfaceVariantBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Width" Value="64"/>
+        <Setter Property="Height" Value="64"/>
+        <Setter Property="Padding" Value="{StaticResource SmallSpacing}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="16"/>
+        <Setter Property="materialDesign:RippleAssist.IsDisabled" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            CornerRadius="16"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource SurfaceVariantBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource OnSurfaceBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource SurfaceVariantBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                            <Setter Property="Opacity" Value="0.8"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.38"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Legacy Aliases for Compatibility -->
+    <Style x:Key="ModernButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}"/>
+    <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SuccessButtonStyle}"/>
+    <Style x:Key="FlatButtonStyle" TargetType="Button" BasedOn="{StaticResource TextButtonStyle}"/>
+    <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource ErrorButtonStyle}"/>
+    <Style x:Key="FloatingActionButtonStyle" TargetType="Button" BasedOn="{StaticResource FABStyle}"/>
+    <Style x:Key="ToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource ModernToggleStyle}"/>
 
 </ResourceDictionary>

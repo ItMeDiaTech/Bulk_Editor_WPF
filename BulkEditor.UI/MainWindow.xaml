@@ -11,11 +11,12 @@
         Height="800" Width="1400"
         MinHeight="700" MinWidth="1100"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource BackgroundBrush}"
-        TextElement.Foreground="{DynamicResource OnBackgroundBrush}"
-        TextElement.FontWeight="{DynamicResource BodyFontWeight}"
-        TextElement.FontSize="{DynamicResource BodyFontSize}"
-        TextElement.FontFamily="{DynamicResource AppFontFamily}"
+        Style="{StaticResource MaterialDesignWindow}"
+        Background="{DynamicResource MaterialDesign.Brush.Background}"
+        TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
+        TextElement.FontWeight="Medium"
+        TextElement.FontSize="14"
+        FontFamily="{materialDesign:MaterialDesignFont}"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Auto"
         materialDesign:ElevationAssist.Elevation="Dp4">
@@ -25,7 +26,7 @@
         <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
     </Window.Resources>
 
-    <!-- Simplified Working MaterialDesign UI -->
+    <!-- Modern Card-Based Layout with Professional Design -->
     <Grid Background="{DynamicResource BackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -33,94 +34,370 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="{DynamicResource PrimaryBrush}" Padding="20">
-            <StackPanel>
-                <TextBlock Text="Bulk Document Editor" 
-                          FontSize="24" FontWeight="Bold" 
-                          Foreground="White" 
-                          HorizontalAlignment="Center"/>
-                <TextBlock Text="Enterprise document processing with advanced hyperlink management" 
-                          FontSize="14" 
-                          Foreground="White" 
-                          HorizontalAlignment="Center" 
-                          Opacity="0.9" 
-                          Margin="0,5,0,0"/>
-            </StackPanel>
-        </Border>
+        <!-- Modern Header with Gradient -->
+        <materialDesign:Card Grid.Row="0" 
+                           Style="{StaticResource HeaderCardStyle}"
+                           materialDesign:ElevationAssist.Elevation="Dp4"
+                           Margin="0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Bulk Document Editor" 
+                             Style="{StaticResource HeadlineMediumTextStyle}"
+                             Foreground="{DynamicResource OnPrimaryBrush}" 
+                             HorizontalAlignment="Left"/>
+                    <TextBlock Text="Enterprise document processing with advanced hyperlink management" 
+                             Style="{StaticResource BodyLargeTextStyle}"
+                             Foreground="{DynamicResource OnPrimaryBrush}" 
+                             HorizontalAlignment="Left" 
+                             Opacity="0.9" 
+                             Margin="{StaticResource SmallVerticalSpacing}"/>
+                </StackPanel>
+                
+                <!-- Quick Actions Toolbar -->
+                <StackPanel Grid.Column="1" 
+                          Orientation="Horizontal" 
+                          VerticalAlignment="Center"
+                          Margin="{StaticResource MediumHorizontalSpacing}">
+                    <Button Style="{StaticResource IconButtonStyle}"
+                            Command="{Binding OpenSettingsCommand}"
+                            ToolTip="Application Settings"
+                            Foreground="{DynamicResource OnPrimaryBrush}"
+                            Margin="{StaticResource SmallHorizontalSpacing}">
+                        <materialDesign:PackIcon Kind="Settings" Width="{StaticResource MediumIconSize}" Height="{StaticResource MediumIconSize}"/>
+                    </Button>
+                    <Button Style="{StaticResource IconButtonStyle}"
+                            Command="{Binding ShowHelpCommand}"
+                            ToolTip="Help and Documentation"
+                            Foreground="{DynamicResource OnPrimaryBrush}"
+                            Margin="{StaticResource SmallHorizontalSpacing}">
+                        <materialDesign:PackIcon Kind="Help" Width="{StaticResource MediumIconSize}" Height="{StaticResource MediumIconSize}"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
 
-        <!-- Main Content -->
-        <Grid Grid.Row="1" Margin="20">
+        <!-- Main Dashboard Layout -->
+        <Grid Grid.Row="1" Margin="{StaticResource LargeSpacing}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="280" MinWidth="240"/>
+                <ColumnDefinition Width="*" MinWidth="400"/>
+                <ColumnDefinition Width="320" MinWidth="280"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Document List Area -->
-            <Border Grid.Column="0" 
-                    Background="White" 
-                    BorderBrush="#E0E0E0" 
-                    BorderThickness="1" 
-                    CornerRadius="4" 
-                    Padding="20" 
-                    Margin="0,0,10,0">
+            <!-- Navigation & Quick Actions Panel -->
+            <materialDesign:Card Grid.Column="0" 
+                               Style="{StaticResource DashboardCardStyle}"
+                               Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="Documents" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
-                    <TextBlock Text="Drag and drop Word documents here or use the Select Files button" 
-                              FontSize="14" 
-                              Foreground="Gray" 
-                              HorizontalAlignment="Center" 
-                              VerticalAlignment="Center"/>
+                    <!-- Section Header -->
+                    <TextBlock Text="Quick Actions" 
+                             Style="{StaticResource TitleLargeTextStyle}"
+                             Margin="{StaticResource SectionMargin}"/>
+                    
+                    <!-- Primary Actions -->
+                    <StackPanel Margin="{StaticResource MediumVerticalSpacing}">
+                        <Button Content="SELECT FILES" 
+                                Command="{Binding SelectFilesCommand}" 
+                                Style="{StaticResource SuccessButtonStyle}"
+                                Margin="{StaticResource ItemMargin}"
+                                Width="220"
+                                HorizontalAlignment="Left">
+                            <Button.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Button.RenderTransform>
+                        </Button>
+                        
+                        <Button Content="PROCESS DOCUMENTS" 
+                                Command="{Binding ProcessDocumentsCommand}" 
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Margin="{StaticResource ItemMargin}"
+                                Width="220"
+                                HorizontalAlignment="Left">
+                            <Button.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Button.RenderTransform>
+                        </Button>
+                        
+                        <Button Content="CLEAR ALL" 
+                                Command="{Binding ClearDocumentsCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Margin="{StaticResource ItemMargin}"
+                                Width="220"
+                                HorizontalAlignment="Left">
+                            <Button.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Button.RenderTransform>
+                        </Button>
+                    </StackPanel>
+                    
+                    <!-- Separator -->
+                    <Border Height="1" 
+                          Background="{DynamicResource DividerBrush}" 
+                          Margin="{StaticResource MediumVerticalSpacing}"/>
+                    
+                    <!-- Secondary Actions -->
+                    <TextBlock Text="Tools" 
+                             Style="{StaticResource TitleMediumTextStyle}"
+                             Margin="{StaticResource MediumVerticalSpacing}"/>
+                    
+                    <StackPanel>
+                        <Button Content="Processing Options" 
+                                Command="{Binding OpenProcessingOptionsCommand}" 
+                                Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Left"
+                                Margin="{StaticResource SubItemMargin}"/>
+                        
+                        <Button Content="View Logs" 
+                                Command="{Binding OpenLogsCommand}" 
+                                Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Left"
+                                Margin="{StaticResource SubItemMargin}"/>
+                        
+                        <Button Content="Session History" 
+                                Command="{Binding OpenSessionHistoryCommand}" 
+                                Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Left"
+                                Margin="{StaticResource SubItemMargin}"/>
+                    </StackPanel>
                 </StackPanel>
-            </Border>
+            </materialDesign:Card>
 
-            <!-- Control Panel -->
-            <Border Grid.Column="1" 
-                    Background="White" 
-                    BorderBrush="#E0E0E0" 
-                    BorderThickness="1" 
-                    CornerRadius="4" 
-                    Padding="20" 
-                    Margin="10,0,0,0">
+            <!-- Document Workspace -->
+            <materialDesign:Card Grid.Column="1" 
+                               Style="{StaticResource DashboardCardStyle}"
+                               Margin="8,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Workspace Header -->
+                    <Grid Grid.Row="0" Margin="{StaticResource SectionMargin}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" 
+                                 Text="Document Workspace" 
+                                 Style="{StaticResource TitleLargeTextStyle}"/>
+                        
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Style="{StaticResource IconButtonStyle}"
+                                    Command="{Binding RefreshDocumentsCommand}"
+                                    ToolTip="Refresh Document List"
+                                    Margin="{StaticResource SmallHorizontalSpacing}">
+                                <materialDesign:PackIcon Kind="Refresh" Width="{StaticResource SmallIconSize}" Height="{StaticResource SmallIconSize}"/>
+                            </Button>
+                            <Button Style="{StaticResource IconButtonStyle}"
+                                    Command="{Binding ToggleViewModeCommand}"
+                                    ToolTip="Toggle View Mode"
+                                    Margin="{StaticResource SmallHorizontalSpacing}">
+                                <materialDesign:PackIcon Kind="ViewList" Width="{StaticResource SmallIconSize}" Height="{StaticResource SmallIconSize}"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                    
+                    <!-- Document List or Placeholder -->
+                    <Grid Grid.Row="1">
+                        <!-- Empty State -->
+                        <StackPanel HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center"
+                                  Visibility="{Binding HasDocuments, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                            <materialDesign:PackIcon Kind="FileMultiple" 
+                                                   Width="64" Height="64"
+                                                   Foreground="{DynamicResource OutlineVariantBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="{StaticResource LargeVerticalSpacing}"/>
+                            <TextBlock Text="No documents loaded" 
+                                     Style="{StaticResource TitleMediumTextStyle}"
+                                     HorizontalAlignment="Center"
+                                     Foreground="{DynamicResource OnSurfaceVariantBrush}"
+                                     Margin="{StaticResource MediumVerticalSpacing}"/>
+                            <TextBlock Text="Drag and drop Word documents here or use the Select Files button to get started" 
+                                     Style="{StaticResource BodyMediumTextStyle}"
+                                     HorizontalAlignment="Center"
+                                     TextAlignment="Center"
+                                     Foreground="{DynamicResource OnSurfaceVariantBrush}"
+                                     TextWrapping="Wrap"
+                                     MaxWidth="300"/>
+                        </StackPanel>
+                        
+                        <!-- Document List View -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                    HorizontalScrollBarVisibility="Disabled"
+                                    Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <ItemsControl ItemsSource="{Binding Documents}"
+                                        Margin="{StaticResource MediumSpacing}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <materialDesign:Card Style="{StaticResource DocumentCardStyle}"
+                                                           Margin="{StaticResource SubItemMargin}">
+                                            <materialDesign:Card.RenderTransform>
+                                                <TransformGroup>
+                                                    <ScaleTransform/>
+                                                    <TranslateTransform/>
+                                                </TransformGroup>
+                                            </materialDesign:Card.RenderTransform>
+                                            
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <materialDesign:PackIcon Grid.Column="0" 
+                                                                       Kind="FileDocument" 
+                                                                       Width="{StaticResource LargeIconSize}" Height="{StaticResource LargeIconSize}"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource PrimaryBrush}"
+                                                                       Margin="{StaticResource MediumHorizontalSpacing}"/>
+                                                
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding FileName}" 
+                                                             Style="{StaticResource TitleSmallTextStyle}"
+                                                             TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding FilePath}" 
+                                                             Style="{StaticResource BodySmallTextStyle}"
+                                                             TextTrimming="CharacterEllipsis"
+                                                             Margin="{StaticResource SmallVerticalSpacing}"/>
+                                                    <TextBlock Text="{Binding Status}" 
+                                                             Style="{StaticResource LabelSmallTextStyle}"
+                                                             Foreground="{DynamicResource PrimaryBrush}"/>
+                                                </StackPanel>
+                                                
+                                                <Button Grid.Column="2"
+                                                      Style="{StaticResource IconButtonStyle}"
+                                                      Command="{Binding DataContext.RemoveDocumentCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      CommandParameter="{Binding}"
+                                                      ToolTip="Remove Document">
+                                                    <materialDesign:PackIcon Kind="Close" Width="{StaticResource SmallIconSize}" Height="{StaticResource SmallIconSize}"/>
+                                                </Button>
+                                            </Grid>
+                                        </materialDesign:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Status & Analytics Panel -->
+            <materialDesign:Card Grid.Column="2" 
+                               Style="{StaticResource DashboardCardStyle}"
+                               Margin="8,0,0,0">
                 <StackPanel>
-                    <TextBlock Text="Actions" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                    <!-- Status Header -->
+                    <TextBlock Text="Status and Analytics" 
+                             Style="{StaticResource TitleLargeTextStyle}"
+                             Margin="{StaticResource SectionMargin}"/>
                     
-                    <Button Content="SELECT FILES" 
-                            Command="{Binding SelectFilesCommand}" 
-                            Background="{DynamicResource SuccessBrush}" 
-                            Foreground="White" 
-                            Padding="15,10" 
-                            Margin="0,0,0,10" 
-                            BorderThickness="0"/>
-                    
-                    <Button Content="PROCESS DOCUMENTS" 
-                            Command="{Binding ProcessDocumentsCommand}" 
-                            Background="{DynamicResource PrimaryBrush}" 
-                            Foreground="White" 
-                            Padding="15,10" 
-                            Margin="0,0,0,10" 
-                            BorderThickness="0"/>
-                    
-                    <Button Content="SETTINGS" 
-                            Command="{Binding OpenSettingsCommand}" 
-                            Background="{DynamicResource InfoBrush}" 
-                            Foreground="White" 
-                            Padding="15,10" 
-                            Margin="0,0,0,10" 
-                            BorderThickness="0"/>
-                    
-                    <Button Content="CLEAR ALL" 
-                            Command="{Binding ClearDocumentsCommand}" 
-                            Background="{DynamicResource WarningBrush}" 
-                            Foreground="White" 
-                            Padding="15,10" 
-                            BorderThickness="0"/>
+                    <!-- Quick Stats -->
+                    <Grid Margin="{StaticResource MediumVerticalSpacing}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Document Count -->
+                        <materialDesign:Card Grid.Row="0" Style="{StaticResource StatusCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <materialDesign:PackIcon Grid.Column="0" 
+                                                       Kind="FileMultiple" 
+                                                       Width="{StaticResource LargeIconSize}" Height="{StaticResource LargeIconSize}"
+                                                       Foreground="{DynamicResource PrimaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                
+                                <StackPanel Grid.Column="1" 
+                                          VerticalAlignment="Center" 
+                                          Margin="{StaticResource MediumHorizontalSpacing}">
+                                    <TextBlock Text="{Binding TotalDocuments, StringFormat='{}{0}'}" 
+                                             Style="{StaticResource HeadlineSmallTextStyle}"
+                                             Foreground="{DynamicResource PrimaryBrush}"/>
+                                    <TextBlock Text="Documents Loaded" 
+                                             Style="{StaticResource BodySmallTextStyle}"/>
+                                </StackPanel>
+                            </Grid>
+                        </materialDesign:Card>
+                        
+                        <!-- Processing Progress -->
+                        <materialDesign:Card Grid.Row="1" Style="{StaticResource StatusCardStyle}">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock Grid.Column="0" 
+                                             Text="Processing Progress" 
+                                             Style="{StaticResource BodyMediumTextStyle}"/>
+                                    
+                                    <TextBlock Grid.Column="1" 
+                                             Text="{Binding ProcessingProgress, StringFormat='{}{0:P0}'}" 
+                                             Style="{StaticResource LabelMediumTextStyle}"
+                                             Foreground="{DynamicResource PrimaryBrush}"/>
+                                </Grid>
+                                
+                                <ProgressBar Value="{Binding ProcessingProgress}" 
+                                           Maximum="1"
+                                           Style="{StaticResource MaterialDesignLinearProgressBar}"
+                                           Height="4"
+                                           Margin="{StaticResource SmallVerticalSpacing}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+                        
+                        <!-- Last Processing Info -->
+                        <materialDesign:Card Grid.Row="2" Style="{StaticResource StatusCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Last Processing Session" 
+                                         Style="{StaticResource BodyMediumTextStyle}"
+                                         Margin="{StaticResource SubItemMargin}"/>
+                                
+                                <TextBlock Text="{Binding LastProcessingTime}" 
+                                         Style="{StaticResource BodySmallTextStyle}"
+                                         Foreground="{DynamicResource OnSurfaceVariantBrush}"/>
+                                
+                                <TextBlock Text="{Binding LastProcessingStatus}" 
+                                         Style="{StaticResource LabelSmallTextStyle}"
+                                         Foreground="{DynamicResource SuccessBrush}"
+                                         Margin="{StaticResource SmallVerticalSpacing}"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </Grid>
                 </StackPanel>
-            </Border>
+            </materialDesign:Card>
         </Grid>
 
-        <!-- Status Bar -->
-        <Border Grid.Row="2" Background="#F5F5F5" Padding="10">
+        <!-- Modern Status Bar -->
+        <materialDesign:Card Grid.Row="2" 
+                           Background="{DynamicResource SurfaceVariantBrush}"
+                           materialDesign:ElevationAssist.Elevation="Dp1"
+                           Margin="0"
+                           Padding="{StaticResource MediumSpacing}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -129,16 +406,26 @@
                 
                 <TextBlock Grid.Column="0" 
                           Text="{Binding StatusMessage}" 
+                          Style="{StaticResource BodySmallTextStyle}"
                           VerticalAlignment="Center"/>
                 
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <TextBlock Text="{Binding TotalDocuments, StringFormat='{}{0} documents'}" 
-                              Margin="0,0,15,0" 
-                              VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" 
+                          Orientation="Horizontal" 
+                          VerticalAlignment="Center">
                     <TextBlock Text="{Binding ApplicationVersion}" 
-                              VerticalAlignment="Center"/>
+                             Style="{StaticResource LabelSmallTextStyle}"
+                             VerticalAlignment="Center"
+                             Margin="{StaticResource MediumHorizontalSpacing}"/>
+                    
+                    <!-- Connection Status Indicator -->
+                    <Border Background="{DynamicResource SuccessBrush}" 
+                          CornerRadius="8"
+                          Width="8" Height="8"
+                          VerticalAlignment="Center"
+                          ToolTip="System Status: Online"
+                          Margin="{StaticResource SmallHorizontalSpacing}"/>
                 </StackPanel>
             </Grid>
-        </Border>
+        </materialDesign:Card>
     </Grid>
 </Window>

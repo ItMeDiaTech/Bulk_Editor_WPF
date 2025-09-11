@@ -73,7 +73,7 @@ namespace BulkEditor.UI.Themes
                 _logger.LogInformation("Theme changed from '{PreviousTheme}' to '{NewTheme}'", previousTheme, themeName);
                 
                 // Raise theme changed event
-                ThemeChanged?.Invoke(this, new ThemeChangedEventArgs(previousTheme, CurrentTheme));
+                ThemeChanged?.Invoke(this, new BulkEditor.Core.Interfaces.ThemeChangedEventArgs { PreviousTheme = previousTheme, NewTheme = CurrentTheme });
 
                 return true;
             }
@@ -209,18 +209,4 @@ namespace BulkEditor.UI.Themes
         }
     }
 
-    /// <summary>
-    /// Event args for theme change events
-    /// </summary>
-    public class ThemeChangedEventArgs : EventArgs
-    {
-        public string PreviousTheme { get; }
-        public string NewTheme { get; }
-
-        public ThemeChangedEventArgs(string previousTheme, string newTheme)
-        {
-            PreviousTheme = previousTheme;
-            NewTheme = newTheme;
-        }
-    }
 }

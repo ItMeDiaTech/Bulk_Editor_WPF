@@ -11,13 +11,18 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- MaterialDesign Theme - BundledTheme includes all necessary resources -->
-                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="DeepPurple" SecondaryColor="Lime" />
-
-                <!-- Custom Themes - AFTER MaterialDesign -->
+                <!-- Material Design 3 Theme - Official Implementation -->
+                <materialDesign:BundledTheme BaseTheme="Light" 
+                                           PrimaryColor="DeepPurple" 
+                                           SecondaryColor="Lime" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
+                
+                <!-- Custom Extensions (After Material Design) -->
+                <ResourceDictionary Source="Themes/ModernSpacing.xaml" />
+                <ResourceDictionary Source="Themes/ModernTypography.xaml" />
+                <ResourceDictionary Source="Themes/ModernAnimations.xaml" />
                 <ResourceDictionary Source="Themes/ModernCardStyles.xaml" />
                 <ResourceDictionary Source="Themes/ModernButtonStyles.xaml" />
-                <ResourceDictionary Source="Themes/MaterialDesignOverrides.xaml" />
 
             </ResourceDictionary.MergedDictionaries>
 
@@ -25,25 +30,66 @@
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
             <converters:StringToBoolConverter x:Key="StringToBoolConverter"/>
+            <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
 
-            <!-- Core Color Resources -->
+            <!-- Modern Color System - Material Design 3 Inspired -->
+            
+            <!-- Primary Colors -->
             <SolidColorBrush x:Key="PrimaryBrush" Color="#673AB7"/>
+            <SolidColorBrush x:Key="OnPrimaryBrush" Color="White"/>
+            <SolidColorBrush x:Key="PrimaryContainerBrush" Color="#E8DDF7"/>
+            <SolidColorBrush x:Key="OnPrimaryContainerBrush" Color="#21005E"/>
+            <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#5E35B1"/>
+            <SolidColorBrush x:Key="PrimaryPressedBrush" Color="#512DA8"/>
+            
+            <!-- Secondary Colors -->
+            <SolidColorBrush x:Key="SecondaryBrush" Color="#CDDC39"/>
+            <SolidColorBrush x:Key="OnSecondaryBrush" Color="#1A1C00"/>
+            <SolidColorBrush x:Key="SecondaryContainerBrush" Color="#E7F4C1"/>
+            <SolidColorBrush x:Key="OnSecondaryContainerBrush" Color="#161D00"/>
+            
+            <!-- Surface Colors -->
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#FEFBFF"/>
+            <SolidColorBrush x:Key="OnBackgroundBrush" Color="#1C1B1F"/>
+            <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
+            <SolidColorBrush x:Key="OnSurfaceBrush" Color="#1C1B1F"/>
+            <SolidColorBrush x:Key="SurfaceVariantBrush" Color="#F4EFF4"/>
+            <SolidColorBrush x:Key="OnSurfaceVariantBrush" Color="#49454F"/>
+            
+            <!-- Semantic State Colors -->
+            <SolidColorBrush x:Key="SuccessBrush" Color="#4CAF50"/>
+            <SolidColorBrush x:Key="OnSuccessBrush" Color="White"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#FF9800"/>
+            <SolidColorBrush x:Key="OnWarningBrush" Color="White"/>
+            <SolidColorBrush x:Key="ErrorBrush" Color="#F44336"/>
+            <SolidColorBrush x:Key="OnErrorBrush" Color="White"/>
+            <SolidColorBrush x:Key="InfoBrush" Color="#2196F3"/>
+            <SolidColorBrush x:Key="OnInfoBrush" Color="White"/>
+            
+            <!-- Outline and Border Colors -->
+            <SolidColorBrush x:Key="OutlineBrush" Color="#79747E"/>
+            <SolidColorBrush x:Key="OutlineVariantBrush" Color="#CAC4D0"/>
+            <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
+            <SolidColorBrush x:Key="DividerBrush" Color="#E8E8E8"/>
+            
+            <!-- Card and Container Colors -->
+            <SolidColorBrush x:Key="CardBrush" Color="White"/>
+            <SolidColorBrush x:Key="ContainerBrush" Color="#F8F9FA"/>
+            
+            <!-- Interactive State Colors -->
+            <SolidColorBrush x:Key="HoverOverlayBrush" Color="#1A000000"/>
+            <SolidColorBrush x:Key="PressedOverlayBrush" Color="#1F000000"/>
+            <SolidColorBrush x:Key="FocusOverlayBrush" Color="#1A6200EA"/>
+            
+            <!-- Container Hover/Pressed States -->
+            <SolidColorBrush x:Key="PrimaryContainerHoverBrush" Color="#DDD0F0"/>
+            <SolidColorBrush x:Key="PrimaryContainerPressedBrush" Color="#D2C2E9"/>
+            
+            <!-- Legacy Compatibility -->
             <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#512DA8"/>
             <SolidColorBrush x:Key="PrimaryLightBrush" Color="#9575CD"/>
-            <SolidColorBrush x:Key="SecondaryBrush" Color="#CDDC39"/>
-            <SolidColorBrush x:Key="SuccessBrush" Color="#4CAF50"/>
-            <SolidColorBrush x:Key="WarningBrush" Color="#FF9800"/>
-            <SolidColorBrush x:Key="ErrorBrush" Color="#F44336"/>
-            <SolidColorBrush x:Key="InfoBrush" Color="#2196F3"/>
-            <SolidColorBrush x:Key="OnPrimaryBrush" Color="White"/>
-            <SolidColorBrush x:Key="OnSurfaceBrush" Color="#212121"/>
-            <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
-            <SolidColorBrush x:Key="DividerBrush" Color="#E0E0E0"/>
-            <SolidColorBrush x:Key="BackgroundBrush" Color="#FAFAFA"/>
-            <SolidColorBrush x:Key="CardBrush" Color="White"/>
 
             <!-- Missing MaterialDesign Compatibility Resources -->
-            <SolidColorBrush x:Key="OnBackgroundBrush" Color="#212121"/>
             <SolidColorBrush x:Key="MaterialDesignPaper" Color="White"/>
             <SolidColorBrush x:Key="MaterialDesignBody" Color="#212121"/>
             <SolidColorBrush x:Key="MaterialDesignBackground" Color="#FAFAFA"/>
